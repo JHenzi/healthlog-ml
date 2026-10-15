@@ -8,7 +8,8 @@ import pytest
 from sqlalchemy import func, select
 
 from app import backfill, cli
-from app.backfill import collect_files, run_backfill
+from app import ingest as ingest_svc
+from app.backfill import collect_files, run_backfill, split_payload
 from app.models import MetricSample, RawIngest, SleepSession, Workout
 
 
@@ -105,3 +106,48 @@ def test_bad_file_is_skipped_run_continues(db, sample_payload, tmp_path):
     assert summary.failures == 1
     assert summary.stored == 1
     assert _count(db, MetricSample) > 0
+
+
+def test_split_payload_chunks_metrics_and_keeps_sleep_whole():
+    payload = {
+        "data": {
+            "metrics": [
+                {"name": "step_count", "units": "count", "data": [{"qty": i} for i in range(5)]},
+                {"name": "sleep_analysis", "units": "hr", "data": [{"n": i} for i in range(5)]},
+                {"name": "empty", "units": "x", "data": []},
+            ],
+            "workouts": [{"id": i} for i in range(3)],
+        }
+    }
+
+    pieces = list(split_payload(payload, chunk_points=2, chunk_items=2))
+
+    steps = [p["data"]["metrics"][0] for p in pieces if p["data"].get("metrics", [{}])[0].get("name") == "step_count"]
+    assert [len(m["data"]) for m in steps] == [2, 2, 1]
+    assert all(m["units"] == "count" for m in steps)
+    sleep = [p for p in pieces if p["data"].get("metrics", [{}])[0].get("name") == "sleep_analysis"]
+    assert len(sleep) == 1 and len(sleep[0]["data"]["metrics"][0]["data"]) == 5
+    assert [len(p["data"]["workouts"]) for p in pieces if "workouts" in p["data"]] == [2, 1]
+    assert pieces == list(split_payload(payload, chunk_points=2, chunk_items=2))  # deterministic
+
+
+def test_oversized_file_is_split_and_rerun_is_idempotent(db, sample_payload, tmp_path, monkeypatch):
+    f = tmp_path / "export.json"
+    _write(f, sample_payload)
+    whole = ingest_svc.parse_payload(sample_payload)
+
+    monkeypatch.setattr(backfill, "SPLIT_THRESHOLD_BYTES", 0)
+    monkeypatch.setattr(backfill, "SPLIT_CHUNK_POINTS", 1)
+
+    first = run_backfill(db, [f])
+    assert first.stored == 1 and first.failures == 0
+    assert first.metric_rows == len(whole.metric_rows)
+    assert _count(db, MetricSample) == len(whole.metric_rows)
+    assert _count(db, SleepSession) == 1
+    assert _count(db, Workout) == 1
+    assert _count(db, RawIngest) > 1  # one archive row per piece
+
+    raw_after_first = _count(db, RawIngest)
+    second = run_backfill(db, [f])
+    assert second.stored == 0 and second.duplicates == 1
+    assert _count(db, RawIngest) == raw_after_first

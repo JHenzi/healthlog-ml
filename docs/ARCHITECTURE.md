@@ -579,7 +579,11 @@ the narration. All tunables live under `body_battery.*` in `config.yaml`.
   limit (`MAX_PAYLOAD_BYTES`) and the proxy timeout; so it runs **file-based** via the
   CLI `healthlog backfill <path>` (file or directory, `--dry-run` to check) — the same
   `archive_raw → parse → store` pipeline as the endpoint, committed per file,
-  idempotent (re-run = no-op thanks to `content_hash` dedup + upsert).
+  idempotent (re-run = no-op thanks to `content_hash` dedup + upsert). A file too large
+  to archive as one `raw_ingest` row (Postgres caps a `jsonb` value at 256 MB) is split
+  deterministically into self-contained HAE payloads — per metric, in runs of samples;
+  `sleep_analysis` and individual workouts are never split — each archived, parsed and
+  committed on its own, so the `content_hash` dedup still holds per piece.
 - **Time zone:** stored in `TIMESTAMPTZ`; all daily buckets in **local TZ
   (Europe/Vienna)**, since the daily grid is the basis of all analyses.
 - **Robustness & extensibility:** payload size limit, secret header checked in constant

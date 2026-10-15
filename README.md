@@ -291,7 +291,10 @@ docker exec healthlog healthlog backfill /config/import
 ```
 
 Each file is committed on its own; identical re-posts are skipped by content
-hash. Afterwards the nightly HAE automation takes over with deltas.
+hash. Very large exports (over 64 MiB — e.g. per-second step/energy samples) are
+split automatically into smaller pieces, each archived and committed separately,
+since Postgres caps a single archived `jsonb` value at 256 MB; re-runs stay a no-op.
+Afterwards the nightly HAE automation takes over with deltas.
 
 ## Analysis schedule
 
