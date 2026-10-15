@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
+from psycopg.errors import ProgramLimitExceeded
 from sqlalchemy import func, select
+from sqlalchemy.exc import OperationalError
 
 from app import backfill, cli
 from app import ingest as ingest_svc
@@ -136,7 +139,7 @@ def test_oversized_file_is_split_and_rerun_is_idempotent(db, sample_payload, tmp
     _write(f, sample_payload)
     whole = ingest_svc.parse_payload(sample_payload)
 
-    monkeypatch.setattr(backfill, "SPLIT_THRESHOLD_BYTES", 0)
+    monkeypatch.setattr(backfill, "WHOLE_MAX_BYTES", 0)
     monkeypatch.setattr(backfill, "SPLIT_CHUNK_POINTS", 1)
 
     first = run_backfill(db, [f])
@@ -151,3 +154,41 @@ def test_oversized_file_is_split_and_rerun_is_idempotent(db, sample_payload, tmp
     second = run_backfill(db, [f])
     assert second.stored == 0 and second.duplicates == 1
     assert _count(db, RawIngest) == raw_after_first
+
+
+def test_file_rejected_whole_falls_back_to_split(db, sample_payload, tmp_path, monkeypatch):
+    f = tmp_path / "export.json"
+    _write(f, sample_payload)
+    whole_hash = hashlib.sha256(f.read_bytes()).digest()
+    real_archive = ingest_svc.archive_raw
+
+    def archive_raw(db_, payload, content_hash, source_ip):
+        stored = real_archive(db_, payload, content_hash, source_ip)
+        if content_hash == whole_hash:  # mimic Postgres rejecting the oversized jsonb
+            raise OperationalError("INSERT", {}, ProgramLimitExceeded("total size of jsonb array elements"))
+        return stored
+
+    monkeypatch.setattr(ingest_svc, "archive_raw", archive_raw)
+    monkeypatch.setattr(backfill, "SPLIT_CHUNK_POINTS", 1)
+
+    summary = run_backfill(db, [f])
+
+    assert summary.stored == 1 and summary.failures == 0
+    assert summary.metric_rows == len(ingest_svc.parse_payload(sample_payload).metric_rows)
+    hashes = db.execute(select(RawIngest.content_hash)).scalars().all()
+    assert len(hashes) > 1 and whole_hash not in hashes  # whole attempt rolled back, pieces kept
+
+
+def test_other_db_error_on_whole_attempt_is_not_split(db, sample_payload, tmp_path, monkeypatch):
+    f = tmp_path / "export.json"
+    _write(f, sample_payload)
+
+    def archive_raw(*_):
+        raise OperationalError("INSERT", {}, Exception("connection lost"))
+
+    monkeypatch.setattr(ingest_svc, "archive_raw", archive_raw)
+
+    summary = run_backfill(db, [f])
+
+    assert summary.failures == 1 and summary.stored == 0
+    assert _count(db, RawIngest) == 0

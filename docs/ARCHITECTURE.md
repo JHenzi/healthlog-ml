@@ -583,7 +583,9 @@ the narration. All tunables live under `body_battery.*` in `config.yaml`.
   to archive as one `raw_ingest` row (Postgres caps a `jsonb` value at 256 MB) is split
   deterministically into self-contained HAE payloads — per metric, in runs of samples;
   `sleep_analysis` and individual workouts are never split — each archived, parsed and
-  committed on its own, so the `content_hash` dedup still holds per piece.
+  committed on its own, so the `content_hash` dedup still holds per piece. Every file is
+  tried whole first (in a savepoint) and only split when Postgres rejects it as too
+  large, so a file that once fit as one row keeps its original hash.
 - **Time zone:** stored in `TIMESTAMPTZ`; all daily buckets in **local TZ
   (Europe/Vienna)**, since the daily grid is the basis of all analyses.
 - **Robustness & extensibility:** payload size limit, secret header checked in constant

@@ -20,13 +20,14 @@ Each file is committed on its own: a failure midway keeps already-imported
 files persisted, and the dedup (``content_hash``) + upsert make a re-run a
 no-op for what already landed.
 
-A file larger than ``SPLIT_THRESHOLD_BYTES`` (a high-resolution export easily
-runs to hundreds of MB) cannot be archived as one ``raw_ingest`` row — Postgres
-caps a single ``jsonb`` value at 256 MB. Such a file is split into
-self-contained HAE payloads (``split_payload``: each metric's samples in runs of
-``SPLIT_CHUNK_POINTS``, other arrays in runs of ``SPLIT_CHUNK_ITEMS``), and each
-piece is ingested and committed on its own. The split is deterministic, so a
+A file too large to archive as one ``raw_ingest`` row (a high-resolution
+export easily runs to hundreds of MB; Postgres caps a single ``jsonb`` value at
+256 MB) is split into self-contained HAE payloads (``split_payload``: each
+metric's samples in runs of ``SPLIT_CHUNK_POINTS``, other arrays in runs of
+``SPLIT_CHUNK_ITEMS``), and each piece is ingested and committed on its own. The split is deterministic, so a
 re-run hashes every piece identically and skips the ones that already landed.
+Every file is first tried whole and only split when Postgres rejects it, so a
+file that ever fit as one row keeps its original ``content_hash``.
 """
 
 from __future__ import annotations
@@ -39,6 +40,8 @@ from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass, fields
 from pathlib import Path
 
+from psycopg.errors import ProgramLimitExceeded
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from . import ingest as ingest_svc
@@ -48,11 +51,14 @@ from .registry import SLEEP_METRIC
 
 log = logging.getLogger("healthlog.backfill")
 
-# Files above this size are split before archiving (well under the 256 MB
-# per-value jsonb limit, which the archived form of a file can exceed by ~2x).
-SPLIT_THRESHOLD_BYTES = 64 * 1024 * 1024
+# Files above this size skip the whole-file attempt and go straight to the
+# split: Postgres rejects any protocol message over 1 GB, so such a body can
+# never be archived as one row.
+WHOLE_MAX_BYTES = 1024 * 1024 * 1024
 # Samples per metric piece / items per piece for the other ``data`` arrays
-# (workouts, ecg, ...). ~100k compact samples is ~10 MB of JSON.
+# (workouts, ecg, ...). ~100k compact samples is ~10 MB of JSON. Changing either
+# changes every piece's content_hash, so already split files would be archived
+# again on a re-run (the metric upserts stay idempotent; only raw_ingest grows).
 SPLIT_CHUNK_POINTS = 100_000
 SPLIT_CHUNK_ITEMS = 200
 
@@ -160,14 +166,21 @@ def ingest_file(
     is threaded into workout-type normalisation. Returns
     ('stored'|'duplicate', result).
 
-    A file under ``SPLIT_THRESHOLD_BYTES`` is one transaction whose commit is
-    the caller's (``run_backfill`` commits per file). A larger one is split
-    (``split_payload``) and each piece is ingested *and committed* here, so a
-    failure midway keeps the pieces that landed; it counts as 'duplicate' only
-    if every piece was already archived."""
+    The file is first tried whole (inside a savepoint), as one transaction
+    whose commit is the caller's (``run_backfill`` commits per file). Only if
+    Postgres rejects it as too large (or it exceeds ``WHOLE_MAX_BYTES``) is it
+    split (``split_payload``) and each piece ingested *and committed* here, so
+    a failure midway keeps the pieces that landed; it counts as 'duplicate'
+    only if every piece was already archived."""
     body = path.read_bytes()
-    if len(body) <= SPLIT_THRESHOLD_BYTES:
-        return ingest_svc.ingest_bytes(db, body, type_map=type_map)
+    if len(body) <= WHOLE_MAX_BYTES:
+        try:
+            with db.begin_nested():
+                return ingest_svc.ingest_bytes(db, body, type_map=type_map)
+        except DBAPIError as exc:
+            if not isinstance(exc.orig, ProgramLimitExceeded):
+                raise
+        log.info("%s: too large to archive as one row, splitting", path.name)
 
     try:
         payload = json.loads(body)
