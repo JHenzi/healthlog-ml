@@ -2508,23 +2508,21 @@
     "list": [
       {
         "name": "tz",
-        "type": "constant",
+        "type": "query",
         "label": "Timezone",
-        "description": "Hidden constant. Timezone name used only for the SQL-side local clock-hour math of the bedtime/wake-up panels (EXTRACT(HOUR FROM sleep_start AT TIME ZONE ...)), which Grafana's dashboard timezone cannot reach. Change the value here to re-localise those computations.",
-        "query": "Europe/Vienna",
-        "current": {
-          "value": "Europe/Vienna",
-          "text": "Europe/Vienna",
-          "selected": false
+        "description": "Hidden. The configured TZ, read from app_settings.local_tz (written from the TZ environment variable at container start). Used only for the SQL-side local clock-hour math of the bedtime/wake panels, which Grafana's dashboard timezone cannot reach.",
+        "datasource": {
+          "uid": "healthlog-db"
         },
-        "options": [
-          {
-            "text": "Europe/Vienna",
-            "value": "Europe/Vienna",
-            "selected": false
-          }
-        ],
-        "hide": 2
+        "query": "SELECT value FROM app_settings WHERE key = 'local_tz'",
+        "definition": "SELECT value FROM app_settings WHERE key = 'local_tz'",
+        "refresh": 1,
+        "sort": 0,
+        "multi": false,
+        "includeAll": false,
+        "hide": 2,
+        "current": {},
+        "options": []
       }
     ]
   }

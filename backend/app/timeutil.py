@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Iterable
 from zoneinfo import ZoneInfo
 
 # HAE timestamps look like: "2026-06-09 00:00:00 +0200"
@@ -31,3 +32,15 @@ def local_day(ts: dt.datetime, tz: str) -> dt.date:
     *next* day in Europe/Vienna, so we convert before taking the date.
     """
     return ts.astimezone(ZoneInfo(tz)).date()
+
+
+def offset_mismatches(timestamps: Iterable[dt.datetime], tz: str) -> list[dt.datetime]:
+    """Timestamps whose own UTC offset differs from ``tz``'s offset at that instant.
+
+    HAE stamps every sample with the phone's local offset (``... -0400``). If
+    those offsets disagree with the configured ``TZ``, the daily grid is shifted
+    against the user's real days. Compared per instant, so DST transitions on
+    either side are handled. Naive timestamps are ignored.
+    """
+    zone = ZoneInfo(tz)
+    return [ts for ts in timestamps if ts.utcoffset() is not None and ts.utcoffset() != ts.astimezone(zone).utcoffset()]
