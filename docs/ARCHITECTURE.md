@@ -328,6 +328,10 @@ into the key/value table `app_settings` (`key = 'local_tz'`) at every container 
 (`app.db_settings`, run by the s6 `migrate` oneshot right after `alembic upgrade`);
 the view and the dashboards' hidden `$tz` variable read it from there (migration
 `0022_app_settings_local_tz`; before it, the view hard-coded `Europe/Vienna`).
+Daily dashboard panels return each `day` as its local midnight in `$tz`
+(`day::timestamp AT TIME ZONE '$tz'`), not the bare `date` (which Grafana reads as UTC
+midnight), so the dashboards can display in the browser's timezone and every bar still
+lands on its own date.
 The view uses `COALESCE(vavg, qty)` / `COALESCE(vmin, qty)` / `COALESCE(vmax, qty)`
 (migration `0005_daily_metrics_coalesce`), identical to the analysis loader
 `load_daily_series` — so Grafana and the pipeline see the same daily values. `avg` is
