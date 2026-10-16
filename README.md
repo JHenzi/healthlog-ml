@@ -291,7 +291,10 @@ docker exec healthlog healthlog backfill /config/import
 ```
 
 Each file is committed on its own; identical re-posts are skipped by content
-hash. Afterwards the nightly HAE automation takes over with deltas.
+hash. An export too large to archive in one piece (Postgres caps a single `jsonb`
+value at 256 MB — e.g. per-second step/energy samples) is split automatically into
+smaller pieces, each archived and committed separately; re-runs stay a no-op.
+Afterwards the nightly HAE automation takes over with deltas.
 
 ## Analysis schedule
 
@@ -608,13 +611,17 @@ Three independent sources can notify, chosen via `notify.events`:
 
 - **`analysis`** — the nightly analysis run: a crash always pages; the clean OK
   summary is sent only at `level: always`.
-- **`findings`** — health alerts from a run: recent anomalies and recovery
-  alerts (low HRV with high resting heart rate). Sent whenever a run surfaces
-  any, regardless of level.
+- **`findings`** — health alerts from a run: anomalies, recovery alerts (low
+  HRV with high resting heart rate) and training-load (ACWR) alerts. Only
+  alerts that are **new since the previous run** are pushed, listed by metric
+  and date — an anomaly stays in the findings for `anomaly_recent_days` but is
+  reported once; a training-load alert is reported when the ACWR leaves the
+  safe band (or flips direction), not every day it stays out. Sent regardless
+  of level.
 - **`ingest`** — an *empty* HAE sync (a payload that produced no rows) always
   pages; each successful sync is reported only at `level: always`.
 
-Messages carry only counters and metric kinds — never raw health values.
+Messages carry only counters, metric names and dates — never raw health values.
 Notifications are strictly best-effort: a failed or misconfigured push is
 logged and ignored, and never affects ingestion or analysis.
 

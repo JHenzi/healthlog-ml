@@ -19,6 +19,15 @@ Usage (one-shot, typically via ``docker exec``)::
 Each file is committed on its own: a failure midway keeps already-imported
 files persisted, and the dedup (``content_hash``) + upsert make a re-run a
 no-op for what already landed.
+
+A file too large to archive as one ``raw_ingest`` row (a high-resolution
+export easily runs to hundreds of MB; Postgres caps a single ``jsonb`` value at
+256 MB) is split into self-contained HAE payloads (``split_payload``: each
+metric's samples in runs of ``SPLIT_CHUNK_POINTS``, other arrays in runs of
+``SPLIT_CHUNK_ITEMS``), and each piece is ingested and committed on its own. The split is deterministic, so a
+re-run hashes every piece identically and skips the ones that already landed.
+Every file is first tried whole and only split when Postgres rejects it, so a
+file that ever fit as one row keeps its original ``content_hash``.
 """
 
 from __future__ import annotations
@@ -27,17 +36,31 @@ import argparse
 import json
 import logging
 import sys
-from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable, Iterator, Sequence
+from dataclasses import dataclass, fields
 from pathlib import Path
 
+from psycopg.errors import ProgramLimitExceeded
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from . import ingest as ingest_svc
 from .appconfig import get_app_config
 from .cli_support import bootstrap, db_session, module_main
+from .registry import SLEEP_METRIC
 
 log = logging.getLogger("healthlog.backfill")
+
+# Files above this size skip the whole-file attempt and go straight to the
+# split: Postgres rejects any protocol message over 1 GB, so such a body can
+# never be archived as one row.
+WHOLE_MAX_BYTES = 1024 * 1024 * 1024
+# Samples per metric piece / items per piece for the other ``data`` arrays
+# (workouts, ecg, ...). ~100k compact samples is ~10 MB of JSON. Changing either
+# changes every piece's content_hash, so already split files would be archived
+# again on a re-run (the metric upserts stay idempotent; only raw_ingest grows).
+SPLIT_CHUNK_POINTS = 100_000
+SPLIT_CHUNK_ITEMS = 200
 
 
 @dataclass
@@ -88,6 +111,49 @@ def collect_files(paths: Iterable[str | Path], pattern: str = "*.json") -> list[
     return files
 
 
+def split_payload(
+    payload: dict,
+    chunk_points: int = SPLIT_CHUNK_POINTS,
+    chunk_items: int = SPLIT_CHUNK_ITEMS,
+) -> Iterator[dict]:
+    """Split one HAE payload into smaller, self-contained HAE payloads. Pure.
+
+    Every metric's ``data`` is cut into runs of ``chunk_points`` samples, one
+    metric per piece (``sleep_analysis`` stays whole: its rows are consolidated
+    per night within a single store call). Every other list under ``data``
+    (workouts, ecg, ...) is cut into runs of ``chunk_items``; a workout is never
+    split, so its HR samples and route stay with it. Non-list ``data`` keys and
+    top-level keys besides ``data`` ride along on every piece. The output order
+    is deterministic, so the same file always yields the same pieces."""
+    data = payload.get("data") or {}
+    envelope = {k: v for k, v in payload.items() if k != "data"}
+    scalars = {k: v for k, v in data.items() if not isinstance(v, list)}
+
+    def piece(key: str, items: list) -> dict:
+        return {**envelope, "data": {**scalars, key: items}}
+
+    for metric in data.get("metrics") or []:
+        points = metric.get("data") or []
+        size = len(points) if metric.get("name") == SLEEP_METRIC else chunk_points
+        for start in range(0, max(len(points), 1), max(size, 1)):
+            yield piece("metrics", [{**metric, "data": points[start : start + size]}])
+
+    for key, value in data.items():
+        if key == "metrics" or not isinstance(value, list):
+            continue
+        for start in range(0, len(value), chunk_items):
+            yield piece(key, value[start : start + chunk_items])
+
+
+def _merge_results(results: list[ingest_svc.StoreResult]) -> ingest_svc.StoreResult:
+    """Sum the per-piece counters of a split file into one StoreResult."""
+    merged = ingest_svc.StoreResult()
+    for r in results:
+        for f in fields(merged):
+            setattr(merged, f.name, getattr(merged, f.name) + getattr(r, f.name))
+    return merged
+
+
 def ingest_file(
     db: Session,
     path: Path,
@@ -97,9 +163,46 @@ def ingest_file(
 
     Identical to the HTTP endpoint's path (``ingest_svc.ingest_bytes``), so a
     file imported from disk behaves exactly like a posted payload. ``type_map``
-    is threaded into workout-type normalisation. The commit is the caller's
-    (``run_backfill`` commits per file). Returns ('stored'|'duplicate', result)."""
-    return ingest_svc.ingest_bytes(db, path.read_bytes(), type_map=type_map)
+    is threaded into workout-type normalisation. Returns
+    ('stored'|'duplicate', result).
+
+    The file is first tried whole (inside a savepoint), as one transaction
+    whose commit is the caller's (``run_backfill`` commits per file). Only if
+    Postgres rejects it as too large (or it exceeds ``WHOLE_MAX_BYTES``) is it
+    split (``split_payload``) and each piece ingested *and committed* here, so
+    a failure midway keeps the pieces that landed; it counts as 'duplicate'
+    only if every piece was already archived."""
+    body = path.read_bytes()
+    if len(body) <= WHOLE_MAX_BYTES:
+        try:
+            with db.begin_nested():
+                return ingest_svc.ingest_bytes(db, body, type_map=type_map)
+        except DBAPIError as exc:
+            if not isinstance(exc.orig, ProgramLimitExceeded):
+                raise
+        log.info("%s: too large to archive as one row, splitting", path.name)
+
+    try:
+        payload = json.loads(body)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError("Invalid JSON body.") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("Expected a JSON object.")
+    del body
+
+    results: list[ingest_svc.StoreResult] = []
+    n_pieces = 0
+    for sub in split_payload(payload):
+        n_pieces += 1
+        piece_bytes = json.dumps(sub, separators=(",", ":"), ensure_ascii=False).encode()
+        status, result = ingest_svc.ingest_bytes(db, piece_bytes, type_map=type_map)
+        db.commit()
+        if status == "stored":
+            results.append(result)
+    log.info("%s: split into %d piece(s), %d new", path.name, n_pieces, len(results))
+    if not results:
+        return "duplicate", None
+    return "stored", _merge_results(results)
 
 
 def run_backfill(
