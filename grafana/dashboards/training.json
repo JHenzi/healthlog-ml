@@ -39,23 +39,21 @@
     "list": [
       {
         "name": "tz",
-        "type": "constant",
+        "type": "query",
         "label": "Timezone",
-        "description": "Hidden constant. Timezone name used only for the SQL-side local-date bucketing of the TRIMP-by-day panels (DATE(start_time AT TIME ZONE ...)), which Grafana's dashboard timezone cannot reach. Change the value here to re-localise the daily grouping.",
-        "query": "Europe/Vienna",
-        "current": {
-          "value": "Europe/Vienna",
-          "text": "Europe/Vienna",
-          "selected": false
+        "description": "Hidden. The configured TZ, read from app_settings.local_tz (written from the TZ environment variable at container start). Used only for the SQL-side local-date bucketing of the TRIMP-by-day panels and the workout picker, which Grafana's dashboard timezone cannot reach.",
+        "datasource": {
+          "uid": "healthlog-db"
         },
-        "options": [
-          {
-            "text": "Europe/Vienna",
-            "value": "Europe/Vienna",
-            "selected": false
-          }
-        ],
-        "hide": 2
+        "query": "SELECT value FROM app_settings WHERE key = 'local_tz'",
+        "definition": "SELECT value FROM app_settings WHERE key = 'local_tz'",
+        "refresh": 1,
+        "sort": 0,
+        "multi": false,
+        "includeAll": false,
+        "hide": 2,
+        "current": {},
+        "options": []
       },
       {
         "name": "hr_max",

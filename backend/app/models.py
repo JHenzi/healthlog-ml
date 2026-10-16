@@ -312,6 +312,21 @@ class MetricRegistry(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class AppSetting(Base):
+    """Runtime settings mirrored into the DB for SQL-side consumers.
+
+    Views and Grafana queries cannot read environment variables, so values such
+    as ``TZ`` are written here at container start (``app.db_settings``) and read
+    by e.g. the ``daily_metrics`` view (migration 0022).
+    """
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class _FindingColumns:
     """Columns shared by the current snapshot (``findings``) and the
     append-only archive (``findings_history``); declared once so the two

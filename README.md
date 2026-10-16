@@ -318,7 +318,8 @@ Schedule: `INTRADAY_CRON`, default `15 * * * *` (hourly at :15); set it to
 Before trusting the findings, run a read-only data-quality audit — it reports the
 latest findings snapshot, per-metric coverage (flagging core metrics with no data or
 below the ~6-week `analysis.min_overlap` floor), units that diverge from canonical,
-and workout names that map to no canonical sport (map them via `workouts.type_map`):
+workout names that map to no canonical sport (map them via `workouts.type_map`), and
+whether `TZ` matches the UTC offsets Health Auto Export stamps on your data:
 
 ```bash
 docker exec healthlog healthlog audit
@@ -548,7 +549,7 @@ the Ollama host. The steps below use macOS as the example.
 |---|---|---|
 | `DATABASE_URL` | *(required)* | TimescaleDB/Postgres connection (psycopg v3 URL) |
 | `INGEST_SECRET` | *(required)* | shared secret expected in the `X-Ingest-Token` header |
-| `TZ` | `Europe/Vienna` | container clock (log timestamps) **and** the daily-bucket timezone for analysis |
+| `TZ` | `Europe/Vienna` | container clock (log timestamps) **and** the timezone every daily value is bucketed in: the analysis, the `daily_metrics` view and the dashboards' SQL-side `$tz` (mirrored into the `app_settings` table at each start). **Set it to your IANA zone** (e.g. `America/New_York`); after changing it, recreate the container and run `rederive-stress`, `rederive-body-battery` and `analyze`. `healthlog audit` warns when it doesn't match your data |
 | `ANALYSIS_CRON` | `30 3 * * *` | when the nightly analysis runs (5-field cron, in `TZ`) |
 | `INTRADAY_CRON` | `15 * * * *` | when the intraday stress/Body-Battery refresh runs (5-field cron, in `TZ`); `off` disables it |
 | `MAX_PAYLOAD_BYTES` | `33554432` | max accepted ingest body (32 MiB); larger histories use the backfill CLI |

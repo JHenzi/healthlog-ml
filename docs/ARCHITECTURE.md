@@ -321,8 +321,13 @@ indicated by `metric_registry.agg_default`:
 
 ```sql
 daily_metrics (day, metric, avg, vmin, vmax, sum, n)
-  -- (time AT TIME ZONE 'Europe/Vienna')::date  ← local day, NOT UTC!
+  -- (time AT TIME ZONE <app_settings.local_tz>)::date  ← local day (TZ), NOT UTC!
 ```
+The zone is the `TZ` setting. A view can't read the environment, so `TZ` is mirrored
+into the key/value table `app_settings` (`key = 'local_tz'`) at every container start
+(`app.db_settings`, run by the s6 `migrate` oneshot right after `alembic upgrade`);
+the view and the dashboards' hidden `$tz` variable read it from there (migration
+`0022_app_settings_local_tz`; before it, the view hard-coded `Europe/Vienna`).
 The view uses `COALESCE(vavg, qty)` / `COALESCE(vmin, qty)` / `COALESCE(vmax, qty)`
 (migration `0005_daily_metrics_coalesce`), identical to the analysis loader
 `load_daily_series` — so Grafana and the pipeline see the same daily values. `avg` is
@@ -586,8 +591,10 @@ the narration. All tunables live under `body_battery.*` in `config.yaml`.
   committed on its own, so the `content_hash` dedup still holds per piece. Every file is
   tried whole first (in a savepoint) and only split when Postgres rejects it as too
   large, so a file that once fit as one row keeps its original hash.
-- **Time zone:** stored in `TIMESTAMPTZ`; all daily buckets in **local TZ
-  (Europe/Vienna)**, since the daily grid is the basis of all analyses.
+- **Time zone:** stored in `TIMESTAMPTZ`; all daily buckets in the **local `TZ`**
+  (default `Europe/Vienna`; mirrored into `app_settings` for SQL consumers, §4.7), since
+  the daily grid is the basis of all analyses. `healthlog audit` compares `TZ` with the
+  UTC offsets HAE stamps on incoming samples (the phone's zone) and warns on a mismatch.
 - **Robustness & extensibility:** payload size limit, secret header checked in constant
   time. **Unknown metrics are accepted, never rejected** (§4.0): they land in the raw
   archive **and** in `metric_samples` and automatically create a registry stub
