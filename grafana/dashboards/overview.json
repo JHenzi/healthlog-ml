@@ -2271,7 +2271,7 @@
       "id": 36,
       "type": "timeseries",
       "title": "Weight Trend",
-      "description": "Daily body mass (average of the day's readings). Sparse by nature — points appear only on days with a measurement.",
+      "description": "Daily body mass (average of the day's readings). Sparse by nature — points appear only on days with a measurement. Dashed line is the moving average of the last 7 measurement days.",
       "gridPos": {
         "h": 8,
         "w": 18,
@@ -2301,7 +2301,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "7d Trend (h)"
+              "options": "Trend (kg)"
             },
             "properties": [
               {
@@ -2356,7 +2356,7 @@
         },
         {
           "refId": "B",
-          "rawSql": "SELECT (sleep_date::timestamp AT TIME ZONE '$tz') AS time, ROUND(AVG(total_sleep_h) OVER (ORDER BY sleep_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)::numeric, 2) AS \"7d Trend (h)\" FROM sleep_nightly WHERE $__timeFilter((sleep_date::timestamp AT TIME ZONE '$tz')) ORDER BY sleep_date",
+          "rawSql": "SELECT (day::timestamp AT TIME ZONE '$tz') AS time, ROUND(AVG(avg) OVER (ORDER BY day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)::numeric, 1) AS \"Trend (kg)\" FROM daily_metrics WHERE metric = 'weight_body_mass' AND $__timeFilter((day::timestamp AT TIME ZONE '$tz')) ORDER BY day",
           "format": "time_series"
         }
       ]
