@@ -367,6 +367,13 @@ per-kind one-line `detail` string and a display `day` (`ref_date` falling back
 to `window_end`), so the Grafana findings tables share one rendering definition
 instead of each duplicating the CASE expression.
 
+**Complete days only.** The metric series end at the last *complete* local day
+(`complete_days` in `pure.py`): a daily mean/sum over the still-running day is
+biased, not just noisy — at a morning run "today" holds only the night, so its heart
+rate reads low, its HRV high and its step/effort totals small, and it was flagged as
+an anomaly on every run. Sleep (keyed by wake day, so last night is already complete)
+and workout sessions are unaffected.
+
 **Finding types** (snapshot per run, `app/analysis/findings.py`):
 - **correlation** — Spearman on the **residual** series (STL trend *and* seasonal
   components subtracted), so the coefficient measures pure day-to-day co-movement;
