@@ -47,7 +47,7 @@ data accumulates.**
 
 ## M0: Housekeeping (small, now)
 
-- [ ] Move the Grafana service from `docker-compose.yml` to `compose.local.yml`; restore upstream's file.
+- [x] Move the Grafana service from `docker-compose.yml` to `compose.local.yml`; restore upstream's file.
 - [ ] Start logging Apple **State of Mind** on the Watch / iPhone (no code).
 - [ ] Push this branch to the public fork (see the note at the end).
 - [ ] Fix HealthLog's time zone (risks.md L1): `TZ=America/New_York` in `.env`, recreate the container, re-run `analyze`, `rederive-stress` and `rederive-body-battery`.

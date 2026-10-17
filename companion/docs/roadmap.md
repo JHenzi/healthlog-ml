@@ -31,7 +31,7 @@ data means is ours.**
 | A0 | Large-backfill split fix | **merged** (#104; maintainer follow-up #105) |
 | A1 | **State of Mind parsing** (`data.stateOfMind` → table, re-derive from `raw_ingest`) | requested by the maintainer on #107 |
 | A2 | **Registry entries** for lifestyle metrics: caffeine, alcohol, water, symptoms, mindful minutes … (units, bounds, aggregation; which are `core` is discussed in the PR) | requested on #107 |
-| A3 | **Time zone fix**: `daily_metrics` view and Grafana dashboards hard-code `Europe/Vienna` regardless of `TZ`; add a `TZ`-mismatch warning to `healthlog audit` (risks.md L1b) | **PR #108 open** |
+| A3 | **Time zone fix**: `daily_metrics` view and Grafana dashboards hard-code `Europe/Vienna` regardless of `TZ`; add a `TZ`-mismatch warning to `healthlog audit` (risks.md L1b) | **merged** (#108; maintainer follow-ups #109, #110) |
 | A4 | Ingest/parser bugs found along the way | as found |
 
 For reference, the maintainer's suggested order on
