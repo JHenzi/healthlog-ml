@@ -1,7 +1,7 @@
 {
   "uid": "healthlog-overview",
   "title": "HealthLog – Overview",
-  "description": "Daily health snapshot: last night's sleep, HRV & resting heart rate, stress score and Body Battery, sleep trends, overnight vitals, activity, body weight, and the nightly analysis' findings. Stress and Body Battery are derived proxies calibrated to your own baseline, not Garmin-comparable values. Days, bedtime and wake-up hours follow the configured TZ (hidden 'tz' variable, read from the database); times are displayed in your browser's timezone (Settings → Timezone to override). Time window: 30 days.",
+  "description": "Daily health snapshot: last night's sleep, HRV & resting heart rate, stress score and Body Battery, mood (State of Mind), sleep trends, overnight vitals, activity, body weight, and the nightly analysis' findings. Stress and Body Battery are derived proxies calibrated to your own baseline, not Garmin-comparable values. Days, bedtime and wake-up hours follow the configured TZ (hidden 'tz' variable, read from the database); times are displayed in your browser's timezone (Settings → Timezone to override). Time window: 30 days.",
   "schemaVersion": 39,
   "version": 7,
   "timezone": "browser",
@@ -1999,12 +1999,198 @@
       "type": "row"
     },
     {
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 37
+      },
+      "id": 40,
+      "title": "Mood (State of Mind)",
+      "type": "row",
+      "panels": [
+        {
+          "id": 41,
+          "type": "timeseries",
+          "title": "Mood — valence",
+          "description": "Apple Health State of Mind (logged on the iPhone or Watch, exported by Health Auto Export). Valence runs from -1 (very unpleasant) to +1 (very pleasant). The line is the daily mean of all entries (days in the configured TZ); the points are the individual daily moods and momentary emotions. Descriptive only: the nightly analysis does not use mood data yet.",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 38
+          },
+          "datasource": {
+            "uid": "healthlog-db"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": -1,
+              "max": 1,
+              "decimals": 2,
+              "unit": "none",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  },
+                  {
+                    "color": "text",
+                    "value": 0
+                  }
+                ]
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "spanNulls": false,
+                "showPoints": "auto",
+                "pointSize": 5,
+                "thresholdsStyle": {
+                  "mode": "dashed"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": "Daily mood|Momentary emotion"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "points"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 8
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "rawSql": "SELECT (day::timestamp AT TIME ZONE '$tz') AS time, ROUND(AVG(valence)::numeric, 2) AS \"Daily mean\" FROM (SELECT (start_time AT TIME ZONE '$tz')::date AS day, valence FROM state_of_mind WHERE valence IS NOT NULL AND $__timeFilter(start_time)) s GROUP BY day ORDER BY day",
+              "format": "time_series",
+              "datasource": {
+                "uid": "healthlog-db"
+              }
+            },
+            {
+              "refId": "B",
+              "rawSql": "SELECT start_time AS \"time\", valence AS \"Daily mood\" FROM state_of_mind WHERE kind = 'daily_mood' AND valence IS NOT NULL AND $__timeFilter(start_time) ORDER BY start_time",
+              "format": "time_series",
+              "datasource": {
+                "uid": "healthlog-db"
+              }
+            },
+            {
+              "refId": "C",
+              "rawSql": "SELECT start_time AS \"time\", valence AS \"Momentary emotion\" FROM state_of_mind WHERE kind = 'momentary_emotion' AND valence IS NOT NULL AND $__timeFilter(start_time) ORDER BY start_time",
+              "format": "time_series",
+              "datasource": {
+                "uid": "healthlog-db"
+              }
+            }
+          ]
+        },
+        {
+          "id": 42,
+          "type": "table",
+          "title": "Most frequent feelings",
+          "description": "How often each feeling label (Apple's vocabulary, e.g. Calm, Stressed) was logged in the selected range; top 15.",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 46
+          },
+          "datasource": {
+            "uid": "healthlog-db"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "options": {
+            "footer": {
+              "show": false
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "rawSql": "SELECT INITCAP(REPLACE(v, '_', ' ')) AS \"Feeling\", COUNT(*) AS \"Entries\" FROM state_of_mind, UNNEST(labels) AS v WHERE $__timeFilter(start_time) GROUP BY v ORDER BY COUNT(*) DESC, v LIMIT 15",
+              "format": "table",
+              "datasource": {
+                "uid": "healthlog-db"
+              }
+            }
+          ]
+        },
+        {
+          "id": 43,
+          "type": "table",
+          "title": "Most frequent life areas",
+          "description": "How often each life area (Apple's associations, e.g. Work, Family) was attached to an entry in the selected range; top 15.",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 46
+          },
+          "datasource": {
+            "uid": "healthlog-db"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "options": {
+            "footer": {
+              "show": false
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "rawSql": "SELECT INITCAP(REPLACE(v, '_', ' ')) AS \"Life area\", COUNT(*) AS \"Entries\" FROM state_of_mind, UNNEST(associations) AS v WHERE $__timeFilter(start_time) GROUP BY v ORDER BY COUNT(*) DESC, v LIMIT 15",
+              "format": "table",
+              "datasource": {
+                "uid": "healthlog-db"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
       },
       "id": 29,
       "panels": [],
@@ -2020,7 +2206,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 38
+        "y": 39
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2067,7 +2253,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 38
+        "y": 39
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2114,7 +2300,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 46
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2161,7 +2347,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 46
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2205,7 +2391,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 53
       },
       "id": 34,
       "panels": [],
@@ -2221,7 +2407,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 53
+        "y": 54
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2276,7 +2462,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 53
+        "y": 54
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2367,7 +2553,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 62
       },
       "id": 37,
       "panels": [],
@@ -2383,7 +2569,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 63
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2420,7 +2606,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 69
+        "y": 70
       },
       "datasource": {
         "uid": "healthlog-db"

@@ -597,7 +597,10 @@ signal — and an entry without a usable id or start time is dropped and counted
 raw archive keeps both (§4.1). These timestamps are ISO 8601 (`…T…Z`) rather than
 HAE's usual `… +0200` form; the shared parser accepts either, but never an
 offset-less value. State of Mind is mood data, not a metric: it stays out of
-`metric_samples` and the analysis does not read it yet.
+`metric_samples` and the analysis does not read it yet. Grafana shows it descriptively
+only (Overview, row *Mood (State of Mind)*: daily mean valence in `TZ` days plus the
+individual entries, and the most frequent labels / associations); side-by-side
+comparisons with sleep or stress are left to the analysis, where they get FDR control.
 `healthlog rederive-state-of-mind` replays the raw archive into the table for
 payloads ingested before the table existed.
 
