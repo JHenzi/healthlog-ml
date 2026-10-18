@@ -92,3 +92,25 @@ def test_sparkline_keeps_gaps():
     values = {D - dt.timedelta(days=i): float(i) for i in (0, 1, 2, 10, 11)}
     assert len(sparkline(values, D, days=20).split("|")) == 2
     assert sparkline({D: 1.0}, D) == ""
+
+
+def test_coverage_marks_unrecorded_days():
+    from app.metrics_view import coverage
+
+    end = dt.date(2026, 10, 16)
+    cells = coverage({end, end - dt.timedelta(days=2)}, end, days=4)
+    assert cells == [
+        (dt.date(2026, 10, 13), False),
+        (dt.date(2026, 10, 14), True),
+        (dt.date(2026, 10, 15), False),
+        (dt.date(2026, 10, 16), True),
+    ]
+
+
+def test_whole_numbers_print_without_decimals():
+    from app.metrics_view import fmt
+
+    assert fmt(3.0, "cups") == "3 cups"
+    assert fmt(2.5) == "2.50"
+    assert fmt(12.25) == "12.2"
+    assert fmt(None) == "–"

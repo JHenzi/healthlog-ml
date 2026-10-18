@@ -1,27 +1,37 @@
 {% extends "base.html" %}
-{% block title %}Insights · Companion{% endblock %}
+{% block title %}Discoveries · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
 <section class="card">
+  <p class="kicker">Discover</p>
   <div class="row">
-    <h1>Insights</h1>
+    <h1>Discoveries</h1>
     <form method="post" action="/refresh" class="inline">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <button type="submit" class="secondary">Rebuild now</button>
     </form>
   </div>
-  <p class="muted">Patterns in your own data, strongest first. These are associations: they say what tends to go together, not what drives what. Each line shows how many days it rests on.</p>
+  <p>Patterns in your own data, strongest first. These are associations: they say what tends to go together, not what drives what. Each one shows how many days it rests on.</p>
   {% if run %}
   <p class="muted small">Last run {{ run.computed_at[:16].replace("T", " ") }} UTC: {{ "{:,}".format(run.tests) }} patterns tested across {{ run.eligible }} of {{ run.features }} series (a series needs at least {{ run.min_days }} days of data); {{ run.reported }} cleared the bar of at most {{ (run.fdr_q * 100)|round|int }}% false discoveries.</p>
   {% endif %}
-  {% if not any %}<p>Nothing clears the bar yet. With many patterns tested, a strong-looking link on a few weeks of data is still often chance, so the engine waits for more days. Most patterns need 6–8 weeks of consistent data; this list grows as data accumulates.</p>{% endif %}
+  {% if not any %}<p class="tag tag-quiet">Not enough data yet</p>
+  <p>Nothing clears the bar yet. With many patterns tested, a strong-looking link on a few weeks of data is still often chance, so the engine waits for more days. Most patterns need 6–8 weeks of consistent data; this list grows as data accumulates.</p>{% endif %}
 </section>
 {% for title, items in sections %}{% if items %}
 <section class="card">
   <h2>{{ title }}</h2>
-  <ul class="sentences">
-    {% for i in items %}<li>{{ i.sentence }} <a class="small" href="/insights/{{ i.id }}">explain</a></li>{% endfor %}
-  </ul>
+  {% for i in items %}
+  <div class="discovery">
+    <div class="tags">
+      {% if i.n < preliminary_days %}<span class="tag tag-accent">Preliminary</span>{% endif %}
+      <span class="tag tag-quiet">{{ i.strength }}</span>
+      {% if i.kind == "association" and i.lag %}<span class="tag tag-quiet">next day</span>{% endif %}
+    </div>
+    <div class="claim">{{ i.sentence }}</div>
+    <div class="meta">{{ i.n }} days · adjusted p {{ "%.2g"|format(i.p_adj) }} · <a href="/insights/{{ i.id }}">Inspect evidence ›</a></div>
+  </div>
+  {% endfor %}
 </section>
 {% endif %}{% endfor %}
 {% endblock %}

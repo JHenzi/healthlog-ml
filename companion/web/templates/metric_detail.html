@@ -3,7 +3,8 @@
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
 <section class="card">
-  <p class="muted small"><a href="/metrics">Metrics</a> / {{ d.source }}</p>
+  <p class="kicker"><a href="/metrics">‹ Metrics</a></p>
+  <p><span class="tag{% if provenance == 'Logged' %} tag-accent{% endif %}">{{ provenance }}</span> <span class="tag tag-quiet">{{ d.source }}</span></p>
   <h1>{{ d.label }}</h1>
   <p class="muted">{{ s.days }} days of data{% if d.unit %} · {{ d.unit }}{% endif %}</p>
   {% if spark and spark[0] %}

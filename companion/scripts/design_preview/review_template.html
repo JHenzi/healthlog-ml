@@ -1,0 +1,114 @@
+<title>Companion Modernist Look</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap">
+<style>
+/* Layout: one flush-left column of reasoning, then a modular grid of real screens in phone frames. */
+:root {
+  --bg: #f3f2f2; --surface: #eae9e9; --ink: #201e1d; --muted: #5f5b59;
+  --accent: #ec3013; --accent-text: #ae1800; --rule: #201e1d;
+  --divider: color-mix(in srgb, #201e1d 40%, transparent);
+  --font: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #191716; --surface: #23201f; --ink: #f3f2f2; --muted: #aaa4a1;
+  --accent: #ff563c; --accent-text: #ff9783; --rule: #f3f2f2;
+  --divider: color-mix(in srgb, #f3f2f2 40%, transparent); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #191716; --surface: #23201f; --ink: #f3f2f2; --muted: #aaa4a1;
+  --accent: #ff563c; --accent-text: #ff9783; --rule: #f3f2f2;
+  --divider: color-mix(in srgb, #f3f2f2 40%, transparent); color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.55 var(--font); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 12px; max-width: 860px; padding-bottom: 24px; border-bottom: 2px solid var(--rule); }
+.kicker { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font-size: clamp(32px, 5vw, 48px); font-weight: 800; line-height: 1.04; letter-spacing: -.015em; text-wrap: balance; }
+h2 { margin: 0 0 12px; font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent-text); text-underline-offset: 3px; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; background: var(--ink); }
+.sw.red { background: var(--accent); }
+.sw.hatch { background: repeating-linear-gradient(135deg, var(--divider) 0 2px, transparent 2px 5px); outline: 1px solid var(--divider); }
+section { padding-top: 28px; margin-top: 28px; border-top: 2px solid var(--rule); }
+header + section { border-top: 0; margin-top: 0; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); border-top: 2px solid var(--rule); }
+.cols > div { padding: 14px 16px 18px 0; border-bottom: 1px solid var(--divider); min-width: 0; }
+.cols h3 { margin: 0 0 6px; font-size: 15px; font-weight: 800; }
+.cols p { font-size: 14px; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 32px 24px; }
+.phone { margin: 0; display: grid; gap: 10px; min-width: 0; }
+.screen { width: 100%; max-width: 360px; aspect-ratio: 9 / 18; border: 2px solid var(--rule); background: var(--bg); overflow: hidden; }
+.screen iframe { width: 100%; height: 100%; border: 0; display: block; background: #f3f2f2; }
+figcaption { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 14px; max-width: 360px; }
+.ref { grid-row: span 2; align-self: start; font-weight: 800; color: var(--accent-text); border: 1px solid var(--accent); padding: 1px 6px; font-size: 12px; }
+.cap { grid-column: 2; color: var(--muted); font-size: 13px; }
+.desktop { border: 2px solid var(--rule); aspect-ratio: 16 / 10; max-width: 100%; overflow: hidden; }
+.desktop iframe { width: 100%; height: 100%; border: 0; display: block; background: #f3f2f2; }
+ul.plain { margin: 0; padding: 0; list-style: none; border-top: 2px solid var(--rule); max-width: 860px; }
+ul.plain li { padding: 10px 0; border-bottom: 1px solid var(--divider); }
+ul.plain strong { font-weight: 800; }
+ol.q { margin: 0; padding-left: 22px; max-width: 860px; display: grid; gap: 8px; }
+.note { font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="kicker">HealthLog Companion · design review · October 2026</p>
+  <h1>A flat, rule-driven look for the Companion</h1>
+  <p>The Companion is an analysis layer built in a fork next to HealthLog. It reads HealthLog's tables read-only and turns them into plain sentences, discoveries and a daily log. This page shows its proposed new look on the real templates, rendered with synthetic data, for comment before it ships.</p>
+  <div class="legend" aria-label="Legend">
+    <span><span class="sw"></span>Recorded day</span>
+    <span><span class="sw hatch"></span>Not recorded (never zero)</span>
+    <span><span class="sw red"></span>Accent: primary action and preliminary findings only</span>
+  </div>
+</header>
+
+<section aria-labelledby="principles">
+  <h2 id="principles">What changes</h2>
+  <div class="cols">
+    <div><h3>One typeface, three weights</h3><p>Archivo at 400, 600 and 800, self-hosted in the app so no page calls out to a font service.</p></div>
+    <div><h3>Rules instead of cards</h3><p>Sections are separated by 2px ink rules and rows by lighter ones. Nothing floats, nothing is rounded.</p></div>
+    <div><h3>Red is rationed</h3><p>The accent marks the primary action, the current section and preliminary findings. Everything else is ink on a light ground.</p></div>
+    <div><h3>Missing stays missing</h3><p>Unlogged days are hatched in the coverage strip and stay out of every statistic. A count becomes zero only on a reviewed day.</p></div>
+    <div><h3>Evidence on every claim</h3><p>Each finding carries its days and strength, and is tagged Preliminary below 30 days. Wording stays associative.</p></div>
+    <div><h3>Where data comes from</h3><p>Every metric is tagged Imported (Apple Health via HealthLog), Logged (your trackers) or Derived (stress, energy reserve).</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="screens">
+  <h2 id="screens">Screens at phone width</h2>
+  <p class="note" style="margin-bottom:20px">Live HTML from the app's own templates, scrollable inside each frame. Codes refer to the wireframe screens. Buttons and links are inert here. All values are synthetic: 90 days with three planted relationships. The insight sentences are the engine's real output on that data.</p>
+  <div class="grid">
+{{FRAMES}}
+  </div>
+</section>
+
+<section aria-labelledby="desktop">
+  <h2 id="desktop">Overview at desktop width</h2>
+  <p class="note" style="margin-bottom:16px">Above 720px the section tabs move from the bottom bar into the header.</p>
+  <div class="desktop">{{DESKTOP}}</div>
+</section>
+
+<section aria-labelledby="notyet">
+  <h2 id="notyet">From the wireframes, not built yet</h2>
+  <ul class="plain">
+    <li><strong>Evidence intervals (1b, 1c).</strong> The likely-range bar needs confidence intervals from the engine. Today it reports effect, days and adjusted p.</li>
+    <li><strong>Explore (3a).</strong> Aligned timelines, scatter and calendar views with a lag setting.</li>
+    <li><strong>Experiments (4a).</strong> n-of-1 observation periods with their own evidence summary.</li>
+    <li><strong>Settings and data (4b).</strong> Source health, day boundary and export, plus findings from notes once the diary exists.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="questions">
+  <h2 id="questions">Questions for review</h2>
+  <ol class="q">
+    <li>Does the coverage strip make "not enough data yet" clear without feeling like a scold?</li>
+    <li>Are Preliminary tags at under 30 days the right threshold, or should they follow the engine's own minimum of 21?</li>
+    <li>Would any of this look carry over to HealthLog's Grafana dashboards, or should the two stay visually separate?</li>
+  </ol>
+</section>
+</div>

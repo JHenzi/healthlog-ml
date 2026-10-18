@@ -4,11 +4,12 @@
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
 <section class="card">
-  <div class="row">
-    <a href="/review?day={{ prev.isoformat() }}" class="small">← {{ prev.strftime("%a") }}</a>
-    <h1>{{ day.strftime("%A, %B %-d") }}</h1>
-    {% if next %}<a href="/review?day={{ next.isoformat() }}" class="small">{{ next.strftime("%a") }} →</a>{% else %}<span></span>{% endif %}
+  <div class="row kicker">
+    <a href="/review?day={{ prev.isoformat() }}">‹ {{ prev.strftime("%a") }}</a>
+    <span>{% if reviewed %}<span class="tag">Reviewed</span>{% else %}<span class="tag tag-quiet">Not reviewed</span>{% endif %}</span>
+    {% if next %}<a href="/review?day={{ next.isoformat() }}">{{ next.strftime("%a") }} ›</a>{% else %}<span></span>{% endif %}
   </div>
+  <h1>Log · {{ day.strftime("%a, %b %-d") }}</h1>
   <p class="muted">Fill in what's missing, then mark the day reviewed. On a reviewed day, a count or yes/no tracker with nothing logged counts as zero; on other days it stays unknown, so a forgotten entry never looks like "none".</p>
   {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
 </section>

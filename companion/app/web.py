@@ -18,7 +18,7 @@ from . import auth, features, jobs, metric_settings, metrics_view, today, upstre
 from .analysis import run as analysis_run
 from .config import get_settings
 from .db import get_db
-from .models import FeatureDef, Insight, MetricSetting, Setting, User, WebSession
+from .models import DailyFeature, FeatureDef, Insight, MetricSetting, Setting, User, WebSession
 from .proxies import client_ip
 from .timeutil import current_day
 
@@ -118,8 +118,47 @@ def today_page(
     return templates.TemplateResponse(
         request,
         "today.html",
-        {"view": view, "csrf": session.csrf_token, "capture": today_capture(db, day), "error": error[:200]},
+        {
+            "view": view,
+            "csrf": session.csrf_token,
+            "capture": today_capture(db, day),
+            "overview": _overview(db, day),
+            "error": error[:200],
+        },
     )
+
+
+# Self-logged features: HealthLog measures every day, so coverage is about what you log yourself.
+LOGGED_PREFIXES = ("tracker.%", "mood.%")
+PRELIMINARY_DAYS = 30  # wireframe 1a: "most comparisons need about 30 logged days"
+
+
+def _overview(db: Session, day: dt.date) -> dict:
+    """Coverage strip and the top discoveries for the Overview (wireframe 1a)."""
+    end = day - dt.timedelta(days=1)
+    start = end - dt.timedelta(days=metrics_view.WINDOW_DAYS - 1)
+    logged_days = set(
+        db.execute(
+            sa.select(DailyFeature.day)
+            .where(
+                DailyFeature.day.between(start, end),
+                sa.or_(*(DailyFeature.feature.like(p) for p in LOGGED_PREFIXES)),
+            )
+            .distinct()
+        ).scalars()
+    )
+    cells = metrics_view.coverage(logged_days, end)
+    top = (
+        db.execute(sa.select(Insight).where(Insight.kind == "association").order_by(Insight.score.desc()).limit(2))
+        .scalars()
+        .all()
+    )
+    return {
+        "cells": cells,
+        "recorded": sum(1 for _, ok in cells if ok),
+        "top": top,
+        "preliminary_days": PRELIMINARY_DAYS,
+    }
 
 
 # --- metrics (M2) -----------------------------------------------------------
@@ -204,6 +243,7 @@ def metric_detail(
             "aggregations": metric_settings.AGGREGATIONS,
             "csrf": session.csrf_token,
             "error": error,
+            "provenance": metrics_view.PROVENANCE.get(definition.source, "Imported"),
         },
     )
 
@@ -319,6 +359,7 @@ def insights_page(
             "run": last_run.value if last_run else None,
             "csrf": session.csrf_token,
             "any": bool(rows),
+            "preliminary_days": PRELIMINARY_DAYS,
         },
     )
 

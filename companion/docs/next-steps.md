@@ -177,6 +177,21 @@ runs a refresh when it starts.
 - **Minutes after waking** for time-of-day trackers, once sleep history is
   complete (§2.3).
 
+### 4.3b Design (wireframes v1)
+
+The Modernist look is in place ([`../docs/design.md`](design.md)). Next
+from the wireframes:
+
+- **Evidence intervals** on discoveries (1b, 1c). Bootstrap or
+  Fisher-z intervals from the effective n, drawn as a likely-range bar with
+  a no-effect tick.
+- **Explore** (3a).
+- **Settings and data** (4b).
+- **Experiments** (4a, with M9).
+
+Regenerate the review page after UI changes with
+`companion/scripts/design_preview/run.sh <dir>`, then republish it.
+
 ### 4.4 M5 follow-ups and M6
 
 - **Distributed lag models** (exposure → outcome over lags 0–7, one test each
@@ -210,6 +225,15 @@ runs a refresh when it starts.
 - **Alembic's `fileConfig` disables existing loggers** unless
   `disable_existing_loggers=False`. The web process migrates and then logs,
   so this matters.
+- **PyPI downloads are DNS-blocked on this network** (seen 2026-10-18):
+  `files.pythonhosted.org` resolves to `::` (Pi-hole via Tailscale DNS),
+  while `pypi.org` resolves fine. The image no longer needs it for its own
+  install (a `companion` wrapper replaces `pip install -e .`), but a change
+  to `requirements.txt` needs that host. Allow it in Pi-hole, or build
+  elsewhere.
+- **Don't pipe `docker compose up --build` through `tail`.** The pipe hid a
+  failed build once, and the old image kept running. Check `docker compose
+  build` on its own, or `set -o pipefail`.
 - **Signing in over plain `http://`** fails because the cookie is `Secure`.
   For a quick local look only, set `COMPANION_COOKIE_SECURE=false` in `.env`
   and recreate `companion-web`. Turn it back on afterwards.

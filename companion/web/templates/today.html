@@ -1,12 +1,48 @@
 {% extends "base.html" %}
 {% from "_log_controls.html" import log_controls %}
-{% block title %}Today · Companion{% endblock %}
+{% block title %}Overview · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
-{% if error %}<p class="error card" role="alert">Not saved: {{ error }}</p>{% endif %}
+<section class="card">
+  <p class="kicker">{{ view.day.strftime("%A, %B %-d") }}</p>
+  <h1>Overview</h1>
+  {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
+</section>
+
+<section class="card" aria-labelledby="coverage-h">
+  <div class="coverage-head">
+    <h2 id="coverage-h">Data for analysis</h2>
+    <strong>{{ overview.recorded }} of {{ overview.cells|length }} days</strong>
+  </div>
+  <div class="coverage" role="img" aria-label="{{ overview.recorded }} of the last {{ overview.cells|length }} days have something you logged">
+    {% for d, ok in overview.cells %}<span{% if not ok %} class="missing"{% endif %} title="{{ d.strftime('%b %-d') }}: {{ 'logged' if ok else 'not recorded' }}"></span>{% endfor %}
+  </div>
+  <p class="muted small">Days with something you logged yourself (trackers, mood). Hatched days are not recorded, never zero. Most comparisons need about {{ overview.preliminary_days }} logged days; until then, findings are preliminary.</p>
+</section>
+
+{% if overview.top %}
+<section class="card">
+  <div class="row"><h2>Worth exploring</h2><a class="small" href="/insights">All discoveries</a></div>
+  {% for i in overview.top %}
+  <div class="discovery">
+    <div class="tags">{% if i.n < overview.preliminary_days %}<span class="tag tag-accent">Preliminary</span>{% endif %}<span class="tag tag-quiet">{{ i.strength }}</span></div>
+    <div class="claim">{{ i.sentence }}</div>
+    <div class="meta"><a href="/insights/{{ i.id }}">Inspect evidence ›</a></div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Compared with your baseline</h2>
+  <ul class="sentences">
+    {% for line in view.sentences %}<li>{{ line }}</li>{% endfor %}
+  </ul>
+</section>
+
 {% if capture.pinned %}
 <section class="card">
-  <h2>Quick add</h2>
+  <div class="row"><h2>Quick add</h2><a class="small" href="/review">Full log ›</a></div>
   {% for t in capture.pinned %}
   <div class="tracker-row">
     <span class="tracker-name">{{ t.name }}</span>
@@ -15,13 +51,7 @@
   {% endfor %}
 </section>
 {% endif %}
-<section class="card">
-  <h1>Today</h1>
-  <p class="muted">{{ view.day.strftime("%A, %B %-d") }}</p>
-  <ul class="sentences">
-    {% for line in view.sentences %}<li>{{ line }}</li>{% endfor %}
-  </ul>
-</section>
+
 {% if capture.entries %}
 <section class="card">
   <h2>Logged today</h2>
@@ -34,9 +64,9 @@
       </form></li>
     {% endfor %}
   </ul>
-  <p class="small"><a href="/review">Evening review</a></p>
 </section>
 {% endif %}
+
 {% if view.problems %}
 <section class="card warn" role="status">
   <h2>HealthLog data problems</h2>

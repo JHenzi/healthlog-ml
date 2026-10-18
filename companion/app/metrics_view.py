@@ -63,7 +63,10 @@ def fmt(value: float | None, unit: str | None = None) -> str:
     if value is None:
         return "–"
     magnitude = abs(value)
-    text = f"{value:,.0f}" if magnitude >= 100 else f"{value:,.1f}" if magnitude >= 10 else f"{value:,.2f}"
+    if magnitude >= 100 or float(value).is_integer():
+        text = f"{value:,.0f}"  # counts and scale steps read as whole numbers: "3 cups", not "3.00 cups"
+    else:
+        text = f"{value:,.1f}" if magnitude >= 10 else f"{value:,.2f}"
     return f"{text} {unit}" if unit else text
 
 
@@ -86,3 +89,21 @@ def sparkline(values: dict[dt.date, float], end: dt.date, days: int = 60, width:
         y = height - 1 - (window_vals[day] - lo) / span * (height - 2)
         segments[-1].append(f"{x:.1f},{y:.1f}")
     return "|".join(" ".join(seg) for seg in segments if seg)
+
+
+def coverage(days_with_data: set[dt.date], end: dt.date, days: int = WINDOW_DAYS) -> list[tuple[dt.date, bool]]:
+    """``(day, recorded)`` for the ``days`` days ending at ``end``, oldest first (the Overview coverage strip)."""
+    start = end - dt.timedelta(days=days - 1)
+    return [(start + dt.timedelta(days=i), start + dt.timedelta(days=i) in days_with_data) for i in range(days)]
+
+
+# How each feature source is labelled wherever a metric appears (wireframe 3b: provenance tags).
+PROVENANCE = {
+    "healthlog": "Imported",
+    "sleep": "Imported",
+    "workout": "Imported",
+    "mood": "Imported",
+    "stress": "Derived",
+    "energy": "Derived",
+    "tracker": "Logged",
+}
