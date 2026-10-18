@@ -31,7 +31,7 @@ data means is ours.**
 | A0 | Large-backfill split fix | **merged** (#104; maintainer follow-up #105) |
 | A1 | **State of Mind parsing** (`data.stateOfMind` → table, re-derive from `raw_ingest`) | **merged** (#111, 2026-10-18); maintainer follow-ups #112 (Grafana "Mood (State of Mind)" row, backfill counts). On `dev`, not yet in a release |
 | A2 | **Registry entries** for lifestyle metrics: caffeine, alcohol, water, mindful minutes … (units, bounds, aggregation; which are `core` is discussed in the PR) | requested on #107 |
-| A5 | **Symptoms and Medications**: in HAE these are their own data types (`data.symptoms`, `data.medications`), not Health Metrics, so they need their own parser and table like State of Mind, not registry entries (maintainer, #111) | shape to be agreed with the maintainer before code; draft in [`next-steps.md`](next-steps.md) §4.1 |
+| A5 | **Symptoms and Medications**: in HAE these are their own data types (`data.symptoms`, `data.medications`), not Health Metrics, so they need their own parser and table like State of Mind, not registry entries (maintainer, #111) | **low priority**: we track neither today. Symptoms first, medications second (after a real iOS 26 sample). Shape proposed on #111 (2026-10-18); draft in [`next-steps.md`](next-steps.md) §4.1 |
 | A3 | **Time zone fix**: `daily_metrics` view and Grafana dashboards hard-code `Europe/Vienna` regardless of `TZ`; add a `TZ`-mismatch warning to `healthlog audit` (risks.md L1b) | **merged** (#108; maintainer follow-ups #109, #110) |
 | A4 | Ingest/parser bugs found along the way | as found; next: **unaggregated sleep is dropped** (risks.md L3) |
 
@@ -59,7 +59,7 @@ Several streams can run in parallel once B1 exists:
 | B7 | **Diary** | quick entries, local embeddings (pgvector), user concepts + discovered themes as features, with evidence shown |
 | B8 | **Experiments** | n-of-1 interventions with baselines and confounder checks |
 | B9 | **Imports & interop** | CSV import from other tracking apps (to run alongside them and bring their history in); export of our data |
-| B11 | **Look and layout** | **Modernist look adopted** (2026-10-18): Archivo, ink on light ground, one red accent, 2px rules, bottom tabs on phones, coverage strip, provenance and Preliminary tags ([`design.md`](design.md)). Still from the wireframes: Explore, Experiments, Settings and data, evidence intervals |
+| B11 | **Look and layout** | **Modernist look adopted** (2026-10-18): Archivo, ink on light ground, one red accent, 2px rules, bottom tabs on phones, coverage strip, provenance and Preliminary tags ([`design.md`](design.md)). Still from the wireframes: Explore, Experiments, Settings and data, evidence intervals. **Direction open:** wireframes PDF shared with the maintainer on #107 (2026-10-18); Joe leans towards a warmer, organic skin (browns, greens, softer type), so the look may change before more screens are built |
 | B10 | **Polish** | reminders (web push), insight ranking, weekly summary, optional native iOS app (App Intents) later |
 
 Dependencies: B1 first. After that, B2, B3 and B4 are independent input
@@ -82,8 +82,9 @@ machine setup, the work queue, and lessons learned. In short:
    - Add the Workouts and State of Mind automations in HAE.
    - Create trackers. Until these land, the engine has too few overlapping
      days to report anything.
-2. **Upstream:** agree the A5 Symptoms/Medications shape; a small A4 PR so
-   dropped sleep segments are counted, not silent; A2 registry entries.
+2. **Upstream:** a small A4 PR so dropped sleep segments are counted, not
+   silent; A2 registry entries. A5 (symptoms, then medications) is low
+   priority; its shape is proposed on #111.
    Switch mood to `public.state_of_mind` once a release ships it.
 3. **B4 (M3) weather:** backfills the whole history, so it gives the engine
    data right away. It brings the first allowlisted outbound call (R5).

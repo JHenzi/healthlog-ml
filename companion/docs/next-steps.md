@@ -137,7 +137,8 @@ runs a refresh when it starts.
   fold segments into nights. Branch from `upstream/dev`.
 - **A2 registry entries** (caffeine, alcohol, water, mindful minutes), as
   asked on #107. Not symptoms: see A5.
-- **A5 Symptoms and Medications.** HAE exports these as their own data types,
+- **A5 Symptoms and Medications** (low priority: we track neither yet;
+  symptoms first, medications second; shape proposed on #111). HAE exports these as their own data types,
   not Health Metrics, so they get a parser and table each, like State of
   Mind. The maintainer asked to discuss the shape first. Facts from HAE's
   export-format docs (no samples in our `raw_ingest` yet):
