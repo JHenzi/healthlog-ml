@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Today · Companion{% endblock %}
+{% block nav %}
+<form method="post" action="/logout" class="inline">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button type="submit" class="link">Sign out</button>
+</form>
+{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Today</h1>
+  <p class="muted">{{ view.day.strftime("%A, %B %-d") }}</p>
+  <ul class="sentences">
+    {% for line in view.sentences %}<li>{{ line }}</li>{% endfor %}
+  </ul>
+</section>
+{% if view.problems %}
+<section class="card warn" role="status">
+  <h2>HealthLog data problems</h2>
+  <p>Some HealthLog data couldn't be read, so parts of this page may be missing. Run <code>companion check-upstream</code> for details.</p>
+  <ul>{% for p in view.problems %}<li>{{ p }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

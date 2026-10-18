@@ -1,0 +1,42 @@
+name: companion-nightly
+
+# Early warning before an upstream release breaks us (risks.md A2): HealthLog's
+# *dev* migrations on an empty database, then our full suite, including the
+# read-contract check against that schema.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upstream-compat:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: timescale/timescaledb:2.17.2-pg16
+        env:
+          POSTGRES_USER: healthlog
+          POSTGRES_PASSWORD: healthlog
+          POSTGRES_DB: healthlog
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U healthlog" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      COMPANION_TEST_ADMIN_URL: postgresql+psycopg://healthlog:healthlog@127.0.0.1:5432/companion_test
+      UPSTREAM_BACKEND_DIR: ${{ github.workspace }}/upstream/backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: anym001/healthlog
+          ref: dev
+          path: upstream
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - run: pip install -r companion/requirements-dev.txt
+      - run: python -m pytest -q
+        working-directory: companion

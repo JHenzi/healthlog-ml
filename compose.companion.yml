@@ -1,0 +1,41 @@
+# The Companion, layered on HealthLog's stack (upstream's docker-compose.yml stays untouched, R1):
+#
+#   docker compose -f docker-compose.yml -f compose.local.yml -f compose.companion.yml up -d --build
+#
+# One-time database setup first: see companion/README.md ("Install").
+services:
+  companion-web:
+    build: ./companion
+    image: healthlog-companion:dev
+    container_name: healthlog-companion
+    command: ["web"]
+    depends_on:
+      healthlog-db:
+        condition: service_healthy
+    ports:
+      - "${COMPANION_PORT:-8020}:8000"
+    environment: &companion-env
+      # The `companion` role: owns schema companion, SELECT-only on HealthLog's tables.
+      DATABASE_URL: postgresql+psycopg://companion:${COMPANION_DB_PASSWORD:?set COMPANION_DB_PASSWORD in .env}@healthlog-db:5432/healthlog
+      # Required, no fallback: an inherited default zone shifts every day (risks.md L1).
+      TZ: ${TZ:?set TZ in .env}
+      DAY_BOUNDARY: ${DAY_BOUNDARY:-04:00}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      COOKIE_SECURE: ${COMPANION_COOKIE_SECURE:-true}
+    restart: unless-stopped
+
+  companion-jobs:
+    image: healthlog-companion:dev
+    container_name: healthlog-companion-jobs
+    command: ["jobs"]
+    depends_on:
+      companion-web:
+        condition: service_healthy
+    environment: *companion-env
+    # No HTTP server in this process; the image's web health check doesn't apply.
+    healthcheck:
+      disable: true
+    # The nightly analysis must never starve HealthLog or its database (risks.md F1).
+    mem_limit: 1g
+    cpus: 1.0
+    restart: unless-stopped

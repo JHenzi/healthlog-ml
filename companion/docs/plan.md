@@ -48,18 +48,19 @@ data accumulates.**
 ## M0: Housekeeping (small, now)
 
 - [x] Move the Grafana service from `docker-compose.yml` to `compose.local.yml`; restore upstream's file.
-- [ ] Start logging Apple **State of Mind** on the Watch / iPhone (no code).
-- [ ] Push this branch to the public fork (see the note at the end).
-- [ ] Fix HealthLog's time zone (risks.md L1): `TZ=America/New_York` in `.env`, recreate the container, re-run `analyze`, `rederive-stress` and `rederive-body-battery`.
+- [x] Start logging Apple **State of Mind** on the Watch / iPhone (no code). (28 entries by 2026-10-14.)
+- [x] Push this branch to the public fork (see the note at the end).
+- [x] Fix HealthLog's time zone (risks.md L1): `TZ=America/New_York` in `.env`, recreate the container. (Done: the live container runs New York time.)
+- [ ] Re-run `analyze`, `rederive-stress` and `rederive-body-battery` after the TZ change (not verified).
 
 **Done when:** `git status` shows upstream files untouched; State of Mind entries appear in tonight's sync.
 
 ## A1: State of Mind PR to upstream (small, in parallel with M1)
 
-- [ ] Parser for `data.stateOfMind` → new table (`hae_id` UUID key, time, kind, valence, classification, labels[], associations[]).
-- [ ] Alembic migration; a `rederive-state-of-mind` command modelled on `rederive-workout-hr`.
-- [ ] Tests (parser, idempotency, re-derive); README + ARCHITECTURE updates in the same PR.
-- [ ] PR against `dev`.
+- [x] Parser for `data.stateOfMind` → new table (`hae_id` UUID key, time, kind, valence, classification, labels[], associations[]).
+- [x] Alembic migration; a `rederive-state-of-mind` command modelled on `rederive-workout-hr`.
+- [x] Tests (parser, idempotency, re-derive); README + ARCHITECTURE updates in the same PR.
+- [x] PR against `dev`: [#111](https://github.com/anym001/healthlog/pull/111) (2026-10-17). It also fixes ISO-8601 timestamps, which the parser rejected, and asks the maintainer how he'd like it shown in Grafana.
 
 **Done when:** the PR is open with green checks. (Until it merges, M2 reads State of Mind straight from `raw_ingest`.)
 
@@ -68,22 +69,23 @@ data accumulates.**
 The goal is to prove the isolation model and the auth end to end, with one
 useful page.
 
-- [ ] `companion/` package: `app/` (FastAPI), `migrations/`, `web/` (templates, static, service worker), `tests/`, `Dockerfile`, `pyproject.toml`, `requirements*.txt`.
-- [ ] `compose.companion.yml`: `companion-web` + `companion-jobs`, same DB host, own env vars.
-- [ ] **DB bootstrap script** (run once as the DB superuser): role `companion`, schema `companion`, `SELECT` on HealthLog's tables (and default privileges for future ones), `CREATE EXTENSION vector SCHEMA companion`.
-- [ ] Alembic with `version_table_schema="companion"`; first migration: `users` (single user), `api_tokens`, `settings`.
-- [ ] **Read contract** module (`app/upstream.py`): every HealthLog table/column we read, in one place. `companion check-upstream` CLI + check at startup.
-- [ ] Auth: hashed password (argon2) → session cookie (`HttpOnly`, `Secure`, `SameSite=Strict`) + CSRF token on forms; API tokens (hashed, scoped, revocable). `TRUSTED_PROXIES` handling like upstream.
-- [ ] **Today** page: yesterday's sleep, HRV, resting HR, steps, stress, energy reserve as sentences against personal baselines (*"You slept 6 h 40, 35 min below your 30-day average"*).
-- [ ] CI workflow `.github/workflows/companion.yml`: ruff (with `DTZ`) + the fast test suites (unit, integration, contract, security, privacy) + image build; a nightly workflow for the stats suite and the upstream-compat job (risks.md, "Test suite layout").
-- [ ] Guard tests from day one: no dependencies on `public` (A1), role can't write `public` (A5), path allowlist (A6), repo scan for personal data (E1), egress block (E2).
-- [ ] Docs: install/run section; one deployment recipe (Tailscale Serve).
+- [x] `companion/` package: `app/` (FastAPI), `migrations/`, `web/` (templates, static), `tests/`, `Dockerfile`, `pyproject.toml`, `requirements*.txt`. (The service worker moves to M4, with the PWA.)
+- [x] `compose.companion.yml`: `companion-web` + `companion-jobs`, same DB host, own env vars.
+- [x] **DB bootstrap script** (`bootstrap/bootstrap.sql`, run once as the DB superuser): role `companion`, schema `companion`, `SELECT` on HealthLog's tables (and default privileges for future ones), `CREATE EXTENSION vector SCHEMA companion`.
+- [x] Alembic with `version_table_schema="companion"`; first migration: `users` (single user), `sessions`, `api_tokens`, `settings`.
+- [x] **Read contract** module (`app/upstream.py`): every HealthLog table/column we read, in one place. `companion check-upstream` CLI + check at startup + nightly (04:10).
+- [x] Auth: hashed password (argon2) → session cookie (`HttpOnly`, `Secure`, `SameSite=Strict`) + CSRF token on forms + lockout; API tokens (hashed, scoped, revocable). `TRUSTED_PROXIES` handling like upstream.
+- [x] **Today** page: last night's sleep and yesterday's HRV, resting HR, steps, stress, energy reserve as sentences against personal baselines, each with its *n*. Also `GET /api/today`.
+- [x] CI workflow `.github/workflows/companion.yml`: path check + ruff (with `DTZ`) + the fast test suites (unit, integration, contract, security, privacy) + image build; `companion-nightly.yml` runs the suite against upstream's `dev` migrations (the stats suite joins in M5).
+- [x] Guard tests from day one: no dependencies on `public` (A1), role can't write `public` (A5), future tables readable (A4), contract reads only in `upstream.py` (A3), path allowlist (A6), repo scan for personal data (E1), egress block (E2).
+- [x] Docs: [`../README.md`](../README.md) (install/run, Tailscale Serve recipe), [`architecture.md`](architecture.md), [`privacy.md`](privacy.md).
+- [ ] Operator steps: set the password (`companion set-password`) and put HTTPS in front (Tailscale Serve), then sign in from the phone.
 
 **Done when:**
-- `docker compose -f docker-compose.yml -f compose.companion.yml up -d` starts it;
-- login works; the Today page shows real sentences;
-- a test proves the `companion` role **cannot** write to HealthLog's tables;
-- `check-upstream` passes against the live database.
+- [x] `docker compose -f docker-compose.yml -f compose.companion.yml up -d` starts it (live since 2026-10-17, with `compose.local.yml` too);
+- [ ] login works (covered by tests; waits on the operator password and HTTPS); [x] the Today page shows real sentences (checked live via `/api/today`);
+- [x] a test proves the `companion` role **cannot** write to HealthLog's tables;
+- [x] `check-upstream` passes against the live database (5 tables).
 
 ## M2: Health data coverage (small–medium)
 
