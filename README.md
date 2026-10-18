@@ -342,8 +342,9 @@ docker exec healthlog healthlog rederive-workout-hr
 Apple Health **State of Mind** entries (momentary emotions and daily moods,
 logged on the iPhone or Watch) are stored too: add one more REST API automation
 like the Workouts one with Data type **State of Mind**, and the entries land in the
-`state_of_mind` table (§4.11 of the architecture doc). For
-payloads archived before this feature, replay them once (idempotent):
+`state_of_mind` table (§4.11 of the architecture doc) and show up in the collapsed
+**Mood (State of Mind)** row of the Overview dashboard. For payloads archived before
+this feature, replay them once (idempotent):
 
 ```bash
 docker exec healthlog healthlog rederive-state-of-mind
