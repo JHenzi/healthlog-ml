@@ -20,6 +20,8 @@ HealthAutoExport-*.json
 *.json.gz
 *.dump
 *.sql
+# ...except the Companion's hand-written bootstrap script (not a dump).
+!companion/bootstrap/*.sql
 *.sql.gz
 /backup.sh
 

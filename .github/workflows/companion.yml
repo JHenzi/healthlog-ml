@@ -1,0 +1,58 @@
+name: companion
+
+on:
+  push:
+    paths: ["companion/**", "compose.companion.yml", ".github/workflows/companion*.yml"]
+  pull_request:
+    paths: ["companion/**", "compose.companion.yml", ".github/workflows/companion*.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  check-paths:
+    # R1 / risks.md A6: companion branches leave upstream-owned files alone.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Fetch upstream
+        run: git remote add upstream https://github.com/anym001/healthlog.git && git fetch --quiet upstream main
+      - run: sh companion/scripts/check_paths.sh upstream/main
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: timescale/timescaledb:2.17.2-pg16
+        env:
+          POSTGRES_USER: healthlog
+          POSTGRES_PASSWORD: healthlog
+          POSTGRES_DB: healthlog
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U healthlog" --health-interval 5s --health-timeout 5s --health-retries 20
+    defaults:
+      run:
+        working-directory: companion
+    env:
+      COMPANION_TEST_ADMIN_URL: postgresql+psycopg://healthlog:healthlog@127.0.0.1:5432/companion_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: companion/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      # Fast suites: unit, integration, contract, security, privacy (stats runs nightly from M5).
+      - run: python -m pytest -q
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build -t healthlog-companion:ci companion

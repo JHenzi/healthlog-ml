@@ -29,10 +29,10 @@ data means is ours.**
 | # | Item | Status |
 |---|---|---|
 | A0 | Large-backfill split fix | **merged** (#104; maintainer follow-up #105) |
-| A1 | **State of Mind parsing** (`data.stateOfMind` → table, re-derive from `raw_ingest`) | requested by the maintainer on #107 |
+| A1 | **State of Mind parsing** (`data.stateOfMind` → table, re-derive from `raw_ingest`) | **PR #111 open** (2026-10-17); asked the maintainer how he'd like it shown in Grafana |
 | A2 | **Registry entries** for lifestyle metrics: caffeine, alcohol, water, symptoms, mindful minutes … (units, bounds, aggregation; which are `core` is discussed in the PR) | requested on #107 |
 | A3 | **Time zone fix**: `daily_metrics` view and Grafana dashboards hard-code `Europe/Vienna` regardless of `TZ`; add a `TZ`-mismatch warning to `healthlog audit` (risks.md L1b) | **merged** (#108; maintainer follow-ups #109, #110) |
-| A4 | Ingest/parser bugs found along the way | as found |
+| A4 | Ingest/parser bugs found along the way | as found; next: **unaggregated sleep is dropped** (risks.md L3) |
 
 For reference, the maintainer's suggested order on
 [#107](https://github.com/anym001/healthlog/issues/107) (State of Mind →
@@ -48,8 +48,8 @@ Several streams can run in parallel once B1 exists:
 
 | # | Stream | What |
 |---|---|---|
-| B0 | **Housekeeping** | move the Grafana service out of upstream's `docker-compose.yml` into our compose override; commit `.gitignore` and the docs to the fork; pick a project name |
-| B1 | **Skeleton** | `companion/` app + compose override; own schema/role (read-only on HealthLog); own Alembic; read contract + startup check; `password` auth + scoped API tokens; a **Today** page that shows HealthLog data as sentences |
+| B0 | **Housekeeping** | **done** (2026-10-17): Grafana in `compose.local.yml`, docs and `.gitignore` on the fork's `main`. Still open: a project name |
+| B1 | **Skeleton** | **built** (M1, 2026-10-17): `companion/` app + compose override; own schema/role (read-only on HealthLog); own Alembic; read contract + startup check; `password` auth + scoped API tokens; a **Today** page that shows HealthLog data as sentences. Running locally; HTTPS front end still to set up |
 | B2 | **More Health metrics** | read *every* metric HealthLog stores, not just its 19 `core` ones; our own per-metric settings (aggregation, bounds, which to analyse) in our schema; State of Mind straight from `raw_ingest` until A1 lands |
 | B3 | **Custom tracking beyond Health** | typed trackers as data; observations + event log; per-tracker URLs and scoped tokens; the generic **Track** Shortcut (menus, automatic time, no free-text guessing); Apple Health "Log Health Sample" recipes for what Health can model; PWA quick-add + evening review |
 | B4 | **Outside data sources** | **weather** first (temperature, humidity, barometric pressure and its change, precipitation, cloud cover, UV, air quality), then calendar busyness, public holidays, sunrise/sunset and daylight. Opt-in, coarse location, fetch-only (design §2.5) |
@@ -67,13 +67,18 @@ months of data. B7–B10 can happen in any order.
 
 ## Next steps
 
-1. **Reply on #107**: thanks; we'll send A1 + A2; the analysis engine and UI
-   will be built in our fork, beyond HealthLog's scope, with ingest-level
-   fixes sent upstream as we find them.
-2. **Start logging State of Mind** on the Watch (costs nothing; data
-   accumulates for B5).
-3. **B0 → B1**, and **A1** in parallel.
-4. Then B2 / B3 / B4 side by side, B5 as data arrives.
+Done so far: B0, B1 (M1) and A1 (PR #111). Next:
+
+1. **A4: unaggregated sleep** (risks.md L3). About 3 months of sleep never
+   reached `sleep_sessions`. Short term: re-export the history with sleep
+   *summarized* and backfill it. Upstream: a PR so the parser folds
+   per-stage segments into nights instead of dropping them silently.
+2. **Keep logging State of Mind** on the Watch (data accumulates for B5).
+3. **B2 (M2)**: every HealthLog metric as a daily series, plus State of Mind
+   as daily valence and label counts (from `raw_ingest` until #111 merges).
+4. Then **B3 (M4)** custom trackers and capture, and **B4 (M3)** weather,
+   side by side. **B5 (M5)** correlations and week/month views start as soon as
+   M2 lands; HealthLog's 3 months of history is enough for first results.
 
 ## Keeping in sync
 

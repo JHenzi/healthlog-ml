@@ -1,0 +1,101 @@
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #1c1f24;
+  --muted: #5f6672;
+  --accent: #2f6fdf;
+  --warn-bg: #fff7e6;
+  --warn-border: #e8b04a;
+  --error: #b42318;
+  --border: #e3e6eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --card: #1d2025;
+    --text: #e8eaed;
+    --muted: #9aa1ac;
+    --accent: #7aa7ff;
+    --warn-bg: #2b2414;
+    --warn-border: #a37a26;
+    --error: #ff8a80;
+    --border: #2c3037;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.brand { font-weight: 600; }
+
+main { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.card.narrow { max-width: 380px; margin: 48px auto; }
+.card.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+
+h1 { font-size: 1.4rem; margin: 0 0 4px; }
+h2 { font-size: 1.1rem; margin: 0 0 8px; }
+
+.muted, .note { color: var(--muted); }
+.error { color: var(--error); }
+
+.sentences { list-style: none; padding: 0; margin: 16px 0 0; }
+.sentences li { padding: 10px 0; border-top: 1px solid var(--border); }
+
+label { display: block; margin: 12px 0 4px; }
+
+input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+button {
+  margin-top: 16px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+form.inline { margin: 0; }
+
+button.link {
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+}
+
+code { font-size: 0.9em; }

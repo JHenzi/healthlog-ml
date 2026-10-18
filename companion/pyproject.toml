@@ -1,0 +1,32 @@
+[project]
+name = "healthlog-companion"
+version = "0.1.0"
+description = "Multi-timeframe health and lifestyle analysis on top of HealthLog."
+requires-python = ">=3.12"
+license = { text = "AGPL-3.0-or-later" }
+
+[project.scripts]
+companion = "app.cli:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Upstream's set plus DTZ: naive datetimes are a bug here (R14).
+select = ["E", "F", "W", "I", "B", "UP", "DTZ"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection defaults are evaluated once by design.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "app.api.require_scope"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
