@@ -2,7 +2,8 @@ name: companion-nightly
 
 # Early warning before an upstream release breaks us (risks.md A2): HealthLog's
 # *dev* migrations on an empty database, then our full suite, including the
-# read-contract check against that schema.
+# read-contract check against that schema and the insight engine's
+# validation suite with 200 seeded datasets per check (R8).
 on:
   schedule:
     - cron: "17 6 * * *"
@@ -27,6 +28,8 @@ jobs:
     env:
       COMPANION_TEST_ADMIN_URL: postgresql+psycopg://healthlog:healthlog@127.0.0.1:5432/companion_test
       UPSTREAM_BACKEND_DIR: ${{ github.workspace }}/upstream/backend
+      # The engine's validation suite at full strength (the per-push run uses 20 seeds).
+      STATS_SEEDS: "200"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

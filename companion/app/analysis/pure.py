@@ -1,0 +1,197 @@
+"""Statistics for the insight engine. DB-free and deterministic; tested against seeded synthetic data.
+
+Three ideas carry the honesty of the engine:
+
+- **Residuals, not raw values.** Each series loses its weekday profile and a
+  slow (28-day centred) trend before it's related to anything, so "both are
+  higher on weekends" or "both drifted up this month" never look like a link
+  (risks.md C3).
+- **Effective sample size.** Daily health data is autocorrelated; treating 90
+  days as 90 independent points overstates significance. Correlation and
+  rank tests use Bartlett's effective n from both series' autocorrelations
+  over the first ten lags; window comparisons use the AR(1) variance
+  inflation of a mean (C4).
+- **One multiple-testing family.** Every p-value of a run goes through one
+  Benjamini-Hochberg pass (C1).
+"""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
+from scipy import stats
+
+from .constants import NEFF_MAX_LAG, STRENGTH_BANDS, TREND_MIN_PERIODS, TREND_WINDOW_DAYS
+
+
+def as_daily(values: dict) -> pd.Series:
+    """``{date: value}`` → a float Series on a DatetimeIndex (gaps stay gaps)."""
+    if not values:
+        return pd.Series(dtype="float64")
+    s = pd.Series(values, dtype="float64")
+    s.index = pd.to_datetime(s.index)
+    return s.sort_index()
+
+
+def residualize(s: pd.Series) -> pd.Series:
+    """Remove the weekday profile, then a centred rolling-mean trend. Same index as the input's observed days."""
+    s = s.dropna()
+    if len(s) < TREND_MIN_PERIODS:
+        return pd.Series(dtype="float64")
+    weekday_mean = s.groupby(s.index.dayofweek).transform("mean")
+    deweek = s - weekday_mean + s.mean()
+    full = deweek.reindex(pd.date_range(deweek.index.min(), deweek.index.max(), freq="D"))
+    trend = full.rolling(TREND_WINDOW_DAYS, center=True, min_periods=TREND_MIN_PERIODS).mean()
+    return (deweek - trend.reindex(deweek.index)).dropna()
+
+
+def autocorr(s: pd.Series, lag: int) -> float:
+    """Correlation of days ``lag`` apart (pairs only where both days exist); 0 with too few pairs."""
+    if s.empty:
+        return 0.0
+    nxt = s.shift(-lag, freq="D")
+    pairs = pd.concat([s, nxt], axis=1, join="inner").dropna()
+    if len(pairs) < 10 or pairs.iloc[:, 0].std() == 0 or pairs.iloc[:, 1].std() == 0:
+        return 0.0
+    return float(np.corrcoef(pairs.iloc[:, 0], pairs.iloc[:, 1])[0, 1])
+
+
+def lag1_autocorr(s: pd.Series) -> float:
+    return autocorr(s, 1)
+
+
+def acf(s: pd.Series, max_lag: int = NEFF_MAX_LAG) -> np.ndarray:
+    """Autocorrelations at lags 1..max_lag."""
+    return np.array([autocorr(s, k) for k in range(1, max_lag + 1)])
+
+
+def effective_n(n: int, acf_a: np.ndarray, acf_b: np.ndarray) -> float:
+    """Bartlett: n / (1 + 2 Σ_k ρa(k) ρb(k)), clipped to [3, n]."""
+    inflation = 1 + 2 * float(np.dot(acf_a, acf_b))
+    return float(min(max(n / max(inflation, 1e-6), 3.0), n))
+
+
+def mean_shift_test(recent: np.ndarray, base: np.ndarray, r1: float) -> float:
+    """Two-sided p for a difference in means between two windows of an AR(1)-like series.
+
+    Each window's n is shrunk by the variance inflation of the mean of m
+    autocorrelated days, then a Welch-style t test runs on the effective sizes.
+    """
+    r = min(max(r1, 0.0), 0.95)
+
+    def n_eff(m: int) -> float:
+        if r == 0 or m < 2:
+            return float(m)
+        inflation = (1 + r) / (1 - r) - 2 * r * (1 - r**m) / (m * (1 - r) ** 2)
+        return m / max(inflation, 1.0)
+
+    ne_r, ne_b = n_eff(len(recent)), n_eff(len(base))
+    var_r, var_b = float(np.var(recent, ddof=1)), float(np.var(base, ddof=1))
+    se = math.sqrt(var_r / ne_r + var_b / ne_b)
+    if se == 0:
+        return 1.0 if float(np.mean(recent)) == float(np.mean(base)) else 0.0
+    t = (float(np.mean(recent)) - float(np.mean(base))) / se
+    return float(2 * stats.t.sf(abs(t), df=max(ne_r + ne_b - 2, 2)))
+
+
+def shift_days(s: pd.Series, days: int) -> pd.Series:
+    """Re-index so the value of day t sits on day t + days (exposure today, outcome ``days`` later)."""
+    return s.shift(days, freq="D") if days else s
+
+
+@dataclass(frozen=True)
+class CorrResult:
+    rho: float
+    p: float
+    n: int
+    n_eff: float
+
+
+def spearman_eff(x: pd.Series, y: pd.Series, acf_x: np.ndarray, acf_y: np.ndarray) -> CorrResult | None:
+    """Spearman correlation of aligned days with an autocorrelation-corrected p-value."""
+    both = pd.concat([x, y], axis=1, join="inner").dropna()
+    n = len(both)
+    if n < 4 or both.iloc[:, 0].nunique() < 3 or both.iloc[:, 1].nunique() < 3:
+        return None
+    rho = float(stats.spearmanr(both.iloc[:, 0], both.iloc[:, 1]).statistic)
+    if math.isnan(rho):
+        return None
+    n_eff = effective_n(n, acf_x, acf_y)
+    if abs(rho) >= 1.0:
+        return CorrResult(rho, 0.0, n, n_eff)
+    t = rho * math.sqrt((n_eff - 2) / (1 - rho * rho))
+    p = float(2 * stats.t.sf(abs(t), df=max(n_eff - 2, 1)))
+    return CorrResult(rho, p, n, n_eff)
+
+
+def cliffs_delta(a: np.ndarray, b: np.ndarray) -> float:
+    """P(a > b) − P(a < b): the rank-based effect size for two groups, in [-1, 1]."""
+    if len(a) == 0 or len(b) == 0:
+        return 0.0
+    diff = np.subtract.outer(a, b)
+    return float((np.sign(diff)).mean())
+
+
+@dataclass(frozen=True)
+class GroupResult:
+    delta: float  # Cliff's delta, "with" minus "without"
+    p: float
+    n_with: int
+    n_without: int
+
+
+def mann_whitney_eff(
+    with_: np.ndarray, without: np.ndarray, acf_resid: np.ndarray, acf_flag: np.ndarray
+) -> GroupResult | None:
+    """Mann-Whitney U (normal approximation, tie-corrected) with the z scaled by sqrt(n_eff / n)."""
+    n1, n2 = len(with_), len(without)
+    if n1 < 2 or n2 < 2:
+        return None
+    result = stats.mannwhitneyu(with_, without, alternative="two-sided", method="asymptotic")
+    p_raw = float(result.pvalue)
+    n = n1 + n2
+    scale = math.sqrt(effective_n(n, acf_resid, acf_flag) / n)
+    z = stats.norm.isf(p_raw / 2) if p_raw > 0 else 40.0
+    p = float(2 * stats.norm.sf(abs(z) * scale))
+    return GroupResult(cliffs_delta(with_, without), p, n1, n2)
+
+
+def benjamini_hochberg(pvalues: list[float]) -> list[float]:
+    """Adjusted p-values (step-up), same order as the input."""
+    m = len(pvalues)
+    if m == 0:
+        return []
+    order = np.argsort(pvalues)
+    ranked = np.array(pvalues, dtype="float64")[order] * m / np.arange(1, m + 1)
+    adjusted = np.minimum.accumulate(ranked[::-1])[::-1]
+    out = np.empty(m)
+    out[order] = np.minimum(adjusted, 1.0)
+    return out.tolist()
+
+
+def strength(effect: float) -> str:
+    size = abs(effect)
+    return next(label for floor, label in STRENGTH_BANDS if size >= floor)
+
+
+def kruskal_weekday(s: pd.Series, min_per_day: int) -> tuple[float, float, dict[int, float], int] | None:
+    """Kruskal-Wallis across weekdays on the de-trended series → ``(eta², p, weekday means, n)``."""
+    s = s.dropna()
+    if len(s) < 7 * min_per_day:
+        return None
+    full = s.reindex(pd.date_range(s.index.min(), s.index.max(), freq="D"))
+    trend = full.rolling(TREND_WINDOW_DAYS, center=True, min_periods=TREND_MIN_PERIODS).mean().reindex(s.index)
+    detrended = (s - trend + s.mean()).dropna()
+    groups = [g.to_numpy() for _, g in detrended.groupby(detrended.index.dayofweek)]
+    if len(groups) < 7 or min(len(g) for g in groups) < min_per_day:
+        return None
+    if all(np.ptp(g) == 0 for g in groups) and len({float(g[0]) for g in groups}) == 1:
+        return None
+    h, p = stats.kruskal(*groups)
+    n = sum(len(g) for g in groups)
+    eta2 = max((h - 7 + 1) / (n - 7), 0.0)
+    means = {int(k): float(v) for k, v in s.groupby(s.index.dayofweek).mean().items()}
+    return float(eta2), float(p), means, n

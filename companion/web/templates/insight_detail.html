@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Insight · Companion{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="muted small"><a href="/insights">Insights</a> / {{ i.kind }}</p>
+  <h1>{{ i.sentence }}</h1>
+</section>
+<section class="card">
+  <h2>How this was found</h2>
+  <dl class="facts">
+    <dt>Method</dt><dd>{{ method }}</dd>
+    <dt>Effect</dt><dd>{{ "%.3f"|format(i.effect) }} ({{ i.strength }})</dd>
+    <dt>Days</dt><dd>{{ i.n }}{% if i.n_a is not none %} ({{ i.n_a }} vs {{ i.n_b }}){% endif %}{% if i.details.n_eff %}; effective {{ i.details.n_eff }} after allowing for day-to-day carry-over{% endif %}</dd>
+    <dt>p (raw / adjusted)</dt><dd>{{ "%.2g"|format(i.p) }} / {{ "%.2g"|format(i.p_adj) }}</dd>
+    {% if i.lag is not none %}<dt>Timing</dt><dd>{% if i.lag == 0 %}same day{% else %}first measure on one day, second on the next{% endif %}</dd>{% endif %}
+    <dt>Series</dt>
+    <dd>
+      {% for f in [i.feature_a, i.feature_b] if f %}
+        {% if f in defs %}<a href="/metrics/{{ f }}">{{ defs[f].label }}</a>{% else %}{{ f }}{% endif %}{% if not loop.last %}, {% endif %}
+      {% endfor %}
+    </dd>
+  </dl>
+  <p class="muted small">The adjusted p-value accounts for every pattern tested in this run (Benjamini-Hochberg, 10% target). Weekday profiles and slow trends are removed before series are related, so "both higher on weekends" doesn't count. This is a pattern in your data, not proof that one thing affects the other; an experiment is the way to test that.</p>
+</section>
+{% endblock %}

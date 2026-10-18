@@ -107,7 +107,8 @@ def _refresh(_args: argparse.Namespace) -> int:
     print(
         f"metric settings: +{result.seeded.added} new, {result.seeded.refreshed} refreshed; "
         f"mood: {result.mood.entries} entries from {result.mood.payloads} payloads; "
-        f"features: {f.features} ({f.rows} day values, {f.first_day} to {f.last_day})"
+        f"features: {f.features} ({f.rows} day values, {f.first_day} to {f.last_day}); "
+        f"insights: {result.insights.insights}"
     )
     return 0
 

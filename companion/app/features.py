@@ -37,6 +37,19 @@ class Def:
     source: str
     kind: str = "continuous"
     analyse: bool = True
+    family: str = "other"
+
+
+# HealthLog registry categories that don't fit how the metrics relate.
+FAMILY_OVERRIDES = {
+    "time_in_daylight": "environment",
+    "heart_rate_variability_rmssd": "vital",
+    "caffeine": "nutrition",
+}
+
+
+def metric_family(metric: str, category: str | None) -> str:
+    return FAMILY_OVERRIDES.get(metric) or (category if category and category != "unknown" else f"metric:{metric}")
 
 
 @dataclass
@@ -61,6 +74,7 @@ class MetricRule:
     display_name: str | None = None
     unit: str | None = None
     analyse: bool = True
+    category: str | None = None
 
 
 def pick_metric_value(rows: list[MetricDayRow], rule: MetricRule) -> float | None:
@@ -97,7 +111,17 @@ def metric_features(rows: Iterable[MetricDayRow], rules: dict[str, MetricRule]) 
     out = FeatureSet()
     for metric, values in by_metric.items():
         rule = rules.get(metric, MetricRule())
-        out.add(Def(f"hl.{metric}", rule.display_name or metric, rule.unit, "healthlog", analyse=rule.analyse), values)
+        out.add(
+            Def(
+                f"hl.{metric}",
+                rule.display_name or metric,
+                rule.unit,
+                "healthlog",
+                analyse=rule.analyse,
+                family=metric_family(metric, rule.category),
+            ),
+            values,
+        )
     return out
 
 
@@ -119,7 +143,7 @@ def sleep_features(rows: Iterable[SleepDayRow]) -> FeatureSet:
     out = FeatureSet()
     for attr, label in SLEEP_PARTS:
         values = {day: float(getattr(r, attr)) for day, r in best.items() if getattr(r, attr) is not None}
-        out.add(Def(f"sleep.{attr}", label, "h", "sleep"), values)
+        out.add(Def(f"sleep.{attr}", label, "h", "sleep", family="sleep"), values)
     return out
 
 
@@ -138,16 +162,26 @@ def assemble(
     for part in (sleep_features(sleep_rows),):
         out.defs |= part.defs
         out.values |= part.values
-    out.add(Def("stress.mean", "Stress (mean of measured minutes)", None, "stress"), pick_source(stress_rows))
-    out.add(Def("energy.low", "Energy reserve (low)", None, "energy"), {d: float(v[0]) for d, v in energy.items()})
-    out.add(Def("energy.high", "Energy reserve (high)", None, "energy"), {d: float(v[1]) for d, v in energy.items()})
-    out.add(Def("workout.minutes", "Workout minutes", "min", "workout"), pick_source(workout_rows))
+    # Stress and energy reserve are computed from heart rate and HRV: same family as the vitals.
+    out.add(
+        Def("stress.mean", "Stress (mean of measured minutes)", None, "stress", family="vital"),
+        pick_source(stress_rows),
+    )
+    out.add(
+        Def("energy.low", "Energy reserve (low)", None, "energy", family="vital"),
+        {d: float(v[0]) for d, v in energy.items()},
+    )
+    out.add(
+        Def("energy.high", "Energy reserve (high)", None, "energy", family="vital"),
+        {d: float(v[1]) for d, v in energy.items()},
+    )
+    out.add(Def("workout.minutes", "Workout minutes", "min", "workout", family="activity"), pick_source(workout_rows))
     mood_values, mood_names = mood.daily_features(mood_entries, zone, boundary)
     for feature, values in mood_values.items():
         kind = (
             "count" if feature == "mood.entries" or feature.startswith(("mood.label.", "mood.assoc.")) else "continuous"
         )
-        out.add(Def(feature, mood_names[feature], None, "mood", kind), values)
+        out.add(Def(feature, mood_names[feature], None, "mood", kind, family="mood"), values)
     return out
 
 
@@ -164,6 +198,7 @@ def load_rules(db: Session) -> dict[str, MetricRule]:
             display_name=s.display_name,
             unit=s.unit,
             analyse=s.analyse,
+            category=s.category,
         )
         for s in db.execute(sa.select(MetricSetting)).scalars()
     }
@@ -210,6 +245,7 @@ def rebuild(db: Session, zone: ZoneInfo, boundary: dt.time) -> RebuildResult:
                     "source": d.source,
                     "kind": d.kind,
                     "analyse": d.analyse,
+                    "family": d.family,
                 }
                 for d in fs.defs.values()
             ],
