@@ -1,7 +1,8 @@
 # Development plan
 
 The concrete build plan for the Companion: milestones, tasks, and a
-"done when" test for each. Strategy lives in [`roadmap.md`](roadmap.md),
+"done when" test for each. **Picking this up again?** Start with
+[`next-steps.md`](next-steps.md) (state, setup, work queue). Strategy lives in [`roadmap.md`](roadmap.md),
 design in [`companion-app-design.md`](companion-app-design.md); this file is
 what we actually work through.
 
