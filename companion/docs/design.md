@@ -32,6 +32,18 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | 4a Experiments | — | not built (M9) |
 | 4b Settings and data | — | not built: source health, export, delete |
 
+## Direction: open
+
+The Modernist look was the design tool's suggestion and was adopted to have
+something concrete to react to. The wireframes are in
+[`design/wireframes-v1.pdf`](design/wireframes-v1.pdf) and were shared with
+the upstream maintainer on #107 (2026-10-18). The owner prefers warmth: an
+organic palette (browns, greens) and softer, curvier type. Everything visual
+lives in `style.css` tokens and the self-hosted font, so a re-skin doesn't
+touch templates or structure. The structural decisions above (missing days
+hatched, provenance and Preliminary tags, discoveries above baselines,
+five sections) hold whichever skin is chosen.
+
 ## Review preview
 
 `scripts/design_preview/run.sh <dir>` renders the real templates with
@@ -39,4 +51,5 @@ synthetic data (90 days, three planted relationships, the engine's real
 output) into one self-contained review page. It never touches real data.
 The current version is published privately at
 https://claude.ai/artifact/3neuyiGRsjX3L7iZ9iXWgM. It's shared only when the
-owner shares it.
+owner shares it. Sharing the Claude Design project link itself fails with a
+size error, which is why the wireframes are exported as a PDF.
