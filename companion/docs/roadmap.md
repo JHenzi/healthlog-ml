@@ -53,7 +53,7 @@ Several streams can run in parallel once B1 exists:
 | B2 | **More Health metrics** | **built** (M2, 2026-10-17): read *every* metric HealthLog stores, not just its 19 `core` ones; our own per-metric settings (aggregation, bounds, source priority, which to analyse), editable on the Metrics page; State of Mind straight from `raw_ingest` until A1 lands; the daily feature table B5 builds on |
 | B3 | **Custom tracking beyond Health** | typed trackers as data; observations + event log; per-tracker URLs and scoped tokens; the generic **Track** Shortcut (menus, automatic time, no free-text guessing); Apple Health "Log Health Sample" recipes for what Health can model; PWA quick-add + evening review |
 | B4 | **Outside data sources** | **weather** first (temperature, humidity, barometric pressure and its change, precipitation, cloud cover, UV, air quality), then calendar busyness, public holidays, sunrise/sunset and daylight. Opt-in, coarse location, fetch-only (design §2.5) |
-| B5 | **Analysis engine (multi-timeframe)** | one feature table over all sources; horizons **day** (lags 0–3), **week/month** (rolling comparisons, change detection), **season** (long trends), **within-day** (event-locked responses, e.g. coffee → steps over the next hours); sentences with *n*, strength and direction |
+| B5 | **Analysis engine (multi-timeframe)** | **v1 live** (M5, 2026-10-17): one feature table over all sources; horizons **day** (lags 0–1, both directions), **week/month** (change detection), weekday rhythm; one FDR family, validated on synthetic data. Still to come: lags 2–7 via distributed lag models, **season** (long trends), **within-day** (event-locked responses, e.g. coffee → steps over the next hours) |
 | B6 | **ML models** | next-day prediction (mood, productivity, sleep, HRV) with feature importance as "what drives X"; day-type clustering; change-point detection; multivariate anomalies (design §4.7) |
 | B7 | **Diary** | quick entries, local embeddings (pgvector), user concepts + discovered themes as features, with evidence shown |
 | B8 | **Experiments** | n-of-1 interventions with baselines and confounder checks |
@@ -77,9 +77,12 @@ Done so far: B0, B1 (M1) and A1 (PR #111). Next:
 3. ~~B2 (M2)~~ done: 76 daily series, including State of Mind.
 4. **HAE automations for Workouts and State of Mind** (no code): neither
    reaches HealthLog today.
-5. **B5 (M5)** correlations and week/month views on the feature table, then
-   **B3 (M4)** custom trackers and **B4 (M3)** weather, which add columns to
-   the same table.
+5. ~~B5 v1 (M5)~~ live: relationships, week/month changes and weekday
+   rhythms, validated. It needs more overlapping days to report anything,
+   which items 1 and 4 provide.
+6. **B3 (M4)** custom trackers (the web app for custom metrics) and **B4 (M3)**
+   weather, which add columns to the same table; **M6** within-day effects
+   once trackers have timestamps.
 
 ## Keeping in sync
 

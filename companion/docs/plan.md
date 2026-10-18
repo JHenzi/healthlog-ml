@@ -125,13 +125,15 @@ data immediately.
 ## M5: Analysis engine v1 (large)
 
 - [ ] **Feature table builder**: one row per day, columns from HealthLog, State of Mind, trackers, weather; the reviewed-day rule (missing ≠ zero). *(The table and the HealthLog + mood columns exist since M2; trackers and weather add columns.)*
-- [ ] Day-level relationships with lags (Spearman on residuals; Mann-Whitney/Cliff's delta; Fisher), FDR, effect floors, minimum support.
-- [ ] **Distributed lag models** for daily exposures (weather, sleep, caffeine) → outcome curves over lags 0–7 ("rain Monday → mood Wednesday").
-- [ ] Week/month views: rolling comparisons and simple change detection.
-- [ ] Descriptive insights: weekday profiles, streaks, bests, 30-day vs prior.
-- [ ] Sentence templates per method and type; **Insights** feed with an "explain" view (numbers, method, *n*, evidence).
-- [ ] Nightly job at 04:15 (after HealthLog's 03:30 run).
-- [ ] Synthetic validation suite: planted same-day, lagged, curved and confounded effects; the engine must find the real ones and reject the confounded ones.
+- [x] Day-level relationships with lags (Spearman on residuals; Mann-Whitney/Cliff's delta; Fisher), FDR, effect floors, minimum support. Lags 0 and +1 in both directions; families keep definitional pairs out.
+- [ ] **Distributed lag models** for daily exposures (weather, sleep, caffeine) → outcome curves over lags 0–7 ("rain Monday → mood Wednesday"). *(Needs months of data; next.)*
+- [x] Week/month views: last 7 vs 28 days and last 28 vs 56 days, as autocorrelation-aware mean shifts.
+- [x] Descriptive insights: weekday rhythms (Kruskal-Wallis); 30-day vs prior on the Metrics page. *(Streaks and bests: later.)*
+- [x] Sentence templates per method and type; **Insights** feed with an "explain" view (numbers, method, *n*, evidence); `GET /api/insights`.
+- [x] Nightly job at 04:15 (after HealthLog's 03:30 run), at the end of the refresh.
+- [x] Synthetic validation suite: planted same-day, lagged and yes/no effects found; weekday and trend confounders rejected; null calibration on autocorrelated noise. *(Curved effects come with the distributed lag models.)* It caught two miscalibrated tests before release ([`analysis-engine.md`](analysis-engine.md)).
+
+**Status (2026-10-17):** v1 done and live. The first real run tested 701 patterns over 26 of 76 series and reported none, correctly so: too few overlapping days (see analysis-engine.md).
 
 **Done when:** the validation suite passes, and the Insights feed shows ranked, explained insights on real data, each with *n* and strength.
 

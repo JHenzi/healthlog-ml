@@ -133,3 +133,8 @@ a { color: var(--accent); }
 }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 label.check { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
+
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
+h1 + p.muted { margin-top: 4px; }

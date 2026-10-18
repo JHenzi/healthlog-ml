@@ -2,7 +2,8 @@
 
 How the Companion sits next to HealthLog without breaking it. The full design
 is in [`companion-app-design.md`](companion-app-design.md) §8. This file
-describes what is built (M1–M2).
+describes what is built (M1, M2 and M5 v1). The insight engine has its own
+page: [`analysis-engine.md`](analysis-engine.md).
 
 ## Processes
 
@@ -17,8 +18,8 @@ browser / Shortcut ─► companion-web (FastAPI, :8000) ─┬─► schema com
 One image, two services, like HealthLog's web/scheduler split.
 `companion-web` applies migrations, then serves pages and the API.
 `companion-jobs` runs scheduled work: the 04:10 contract check and the 04:15
-refresh (after HealthLog's 03:30 run, before its 04:30 backup). The analysis
-(M5) will run at the end of the refresh. The
+refresh (after HealthLog's 03:30 run, before its 04:30 backup), which ends
+with the insight engine. A full refresh takes about 7 s on the live data. The
 jobs service has a memory and CPU cap so it can't starve the database.
 
 ## Database isolation

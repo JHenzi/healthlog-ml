@@ -6,7 +6,7 @@ the data pipeline (Apple Health → TimescaleDB). The Companion reads its tables
 plain-language sentences. Design: [`docs/companion-app-design.md`](docs/companion-app-design.md).
 Rules: [`CLAUDE.md`](CLAUDE.md). Build plan: [`docs/plan.md`](docs/plan.md).
 
-What works today (milestones M1–M2):
+What works today (milestones M1, M2 and M5 v1):
 
 - a **Today** page: last night's sleep and yesterday's HRV, resting heart
   rate, steps, stress, energy reserve and mood, each against your 30-day
@@ -17,6 +17,13 @@ What works today (milestones M1–M2):
   before, a weekday profile and a 60-day sparkline. For HealthLog metrics you
   can change how a day's value is formed (sum, average, lowest, highest),
   which sources to prefer, plausibility bounds, and whether it's analysed;
+- an **Insights** page: relationships between series (same day and next day,
+  in both directions), changes over the last week and month, and weekday
+  rhythms. Each finding is a sentence with its number of days and strength,
+  plus an *explain* view with the method and statistics. False discoveries
+  are held to 10%, and the engine is validated on synthetic data before it
+  ships ([`docs/analysis-engine.md`](docs/analysis-engine.md));
+- `GET /api/insights` (a `read` token);
 - password sign-in, plus scoped API tokens for Shortcuts and scripts;
 - `GET /api/today` (a `read` token), the same sentences as JSON;
 - a startup and nightly check that HealthLog's tables still match what we
@@ -122,7 +129,7 @@ curl -H "Authorization: Bearer hlc_…" https://<host>:8443/api/today
 | `companion migrate` | apply the Companion's migrations (schema `companion`) |
 | `companion set-password [--stdin]` | set the operator password (signs out all sessions) |
 | `companion token create NAME --scope …` / `list` / `revoke ID` | manage API tokens |
-| `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, rebuild the daily feature table (also nightly at 04:15, and *Rebuild now* on the Metrics page) |
+| `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, rebuild the daily feature table, run the insight engine (also nightly at 04:15, and *Rebuild now* on the Metrics and Insights pages) |
 | `companion web` | migrate, then serve on port 8000 (the `companion-web` service) |
 | `companion jobs` | run the scheduler (the `companion-jobs` service) |
 
@@ -151,5 +158,6 @@ The suite needs a TimescaleDB superuser URL whose database name ends in
 HealthLog's own migrations (from `../backend`, or `UPSTREAM_BACKEND_DIR`), then
 our bootstrap and migrations, so the contract and permission tests run
 against the real upstream schema. Suites: `unit`, `integration`, `contract`,
-`security` and `privacy` run on every push. The nightly CI job repeats them
-against upstream's `dev` branch as an early warning.
+`security`, `privacy` and `stats` (the engine's validation suite, 20 seeds)
+run on every push. The nightly CI job repeats them against upstream's `dev`
+branch as an early warning, with `STATS_SEEDS=200`.

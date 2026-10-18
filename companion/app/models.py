@@ -116,6 +116,8 @@ class FeatureDef(Base):
     source: Mapped[str] = mapped_column(Text)  # healthlog | sleep | stress | energy | workout | mood
     kind: Mapped[str] = mapped_column(Text)  # continuous | count
     analyse: Mapped[bool] = mapped_column(Boolean, server_default="true")
+    # Features linked by definition share a family; the engine only relates features across families.
+    family: Mapped[str] = mapped_column(Text, server_default="other")
 
 
 class DailyFeature(Base):
@@ -126,3 +128,28 @@ class DailyFeature(Base):
     day: Mapped[dt.date] = mapped_column(Date, primary_key=True)
     feature: Mapped[str] = mapped_column(Text, primary_key=True)
     value: Mapped[float] = mapped_column(Float)
+
+
+class Insight(Base):
+    """One finding of the latest analysis run, with its numbers and evidence (R13). Replaced every run."""
+
+    __tablename__ = "insights"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    computed_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    kind: Mapped[str] = mapped_column(Text)  # association | change | weekday
+    horizon: Mapped[str] = mapped_column(Text)  # day | week | month
+    feature_a: Mapped[str] = mapped_column(Text)
+    feature_b: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lag: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    method: Mapped[str] = mapped_column(Text)
+    effect: Mapped[float] = mapped_column(Float)
+    p: Mapped[float] = mapped_column(Float)
+    p_adj: Mapped[float] = mapped_column(Float)
+    n: Mapped[int] = mapped_column(Integer)
+    n_a: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    n_b: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    strength: Mapped[str] = mapped_column(Text)
+    score: Mapped[float] = mapped_column(Float)
+    sentence: Mapped[str] = mapped_column(Text)
+    details: Mapped[dict] = mapped_column(JSONB, server_default="{}")

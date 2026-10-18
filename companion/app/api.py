@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from . import auth, today
 from .config import get_settings
 from .db import get_db
-from .models import ApiToken
+from .models import ApiToken, Insight
 from .timeutil import current_day
 
 router = APIRouter(prefix="/api")
@@ -45,3 +45,28 @@ def get_today(db: Session = Depends(get_db), _token: ApiToken = Depends(require_
     day = current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
     view = today.load_today(db, settings.zone, settings.day_boundary, day)
     return {"day": view.day.isoformat(), "sentences": view.sentences, "problems": view.problems}
+
+
+@router.get("/insights")
+def get_insights(db: Session = Depends(get_db), _token: ApiToken = Depends(require_scope("read"))) -> dict:
+    rows = db.execute(sa.select(Insight).order_by(Insight.score.desc())).scalars().all()
+    return {
+        "insights": [
+            {
+                "id": i.id,
+                "kind": i.kind,
+                "horizon": i.horizon,
+                "sentence": i.sentence,
+                "feature_a": i.feature_a,
+                "feature_b": i.feature_b,
+                "lag": i.lag,
+                "method": i.method,
+                "effect": i.effect,
+                "p_adj": i.p_adj,
+                "n": i.n,
+                "strength": i.strength,
+                "computed_at": i.computed_at.isoformat(),
+            }
+            for i in rows
+        ]
+    }

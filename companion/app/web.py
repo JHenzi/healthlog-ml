@@ -15,9 +15,10 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from . import auth, features, jobs, metric_settings, metrics_view, today, upstream
+from .analysis import run as analysis_run
 from .config import get_settings
 from .db import get_db
-from .models import FeatureDef, MetricSetting, User, WebSession
+from .models import FeatureDef, Insight, MetricSetting, Setting, User, WebSession
 from .proxies import client_ip
 from .timeutil import current_day
 
@@ -271,3 +272,72 @@ def refresh_now(
     jobs.refresh(db)
     db.commit()
     return RedirectResponse("/metrics", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# --- insights (M5) ----------------------------------------------------------
+
+INSIGHT_SECTIONS = (
+    ("Relationships", lambda i: i.kind == "association"),
+    ("This week", lambda i: i.kind == "change" and i.horizon == "week"),
+    ("This month", lambda i: i.kind == "change" and i.horizon == "month"),
+    ("Weekly rhythm", lambda i: i.kind == "weekday"),
+)
+
+METHOD_NAMES = {
+    "spearman": "Spearman rank correlation on residuals (weekday profile and 28-day trend removed)",
+    "mann_whitney": "Mann-Whitney U test with Cliff's delta",
+    "mean_shift": "difference in means with autocorrelation-adjusted sample sizes (effect: Cliff's delta)",
+    "fisher": "Fisher's exact test (effect: phi coefficient)",
+    "kruskal": "Kruskal-Wallis test across weekdays (effect: eta squared)",
+}
+
+
+@router.get("/insights", response_class=HTMLResponse)
+def insights_page(
+    request: Request, session: WebSession | None = Depends(current_session), db: Session = Depends(get_db)
+) -> Response:
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    rows = db.execute(sa.select(Insight).order_by(Insight.score.desc())).scalars().all()
+    sections = [(title, [i for i in rows if keep(i)]) for title, keep in INSIGHT_SECTIONS]
+    last_run = db.get(Setting, analysis_run.STATS_KEY)
+    return templates.TemplateResponse(
+        request,
+        "insights.html",
+        {
+            "sections": sections,
+            "run": last_run.value if last_run else None,
+            "csrf": session.csrf_token,
+            "any": bool(rows),
+        },
+    )
+
+
+@router.get("/insights/{insight_id}", response_class=HTMLResponse)
+def insight_detail(
+    insight_id: int,
+    request: Request,
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    insight = db.get(Insight, insight_id)
+    if insight is None:
+        return Response("No such insight", status_code=status.HTTP_404_NOT_FOUND)
+    defs = {
+        d.feature: d
+        for d in db.execute(
+            sa.select(FeatureDef).where(FeatureDef.feature.in_([insight.feature_a, insight.feature_b or ""]))
+        ).scalars()
+    }
+    return templates.TemplateResponse(
+        request,
+        "insight_detail.html",
+        {
+            "i": insight,
+            "defs": defs,
+            "method": METHOD_NAMES.get(insight.method, insight.method),
+            "csrf": session.csrf_token,
+        },
+    )

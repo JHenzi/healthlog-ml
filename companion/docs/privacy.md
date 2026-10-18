@@ -13,6 +13,7 @@ milestone.
 | Today sentences | computed on request, not stored | only to your browser or token holder |
 | State of Mind entries (valence, labels, associations) | copied into `companion.mood_entries` | no |
 | Daily features (one number per day per series) | `companion.daily_features`, rebuilt nightly | no |
+| Insights (sentences and their statistics) | `companion.insights`, replaced each run | only to your browser or token holder |
 
 - **No outbound network calls.** The Companion contains no HTTP client.
   `tests/privacy` checks that the app code imports none, and that the pages,
