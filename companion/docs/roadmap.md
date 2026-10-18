@@ -67,26 +67,28 @@ months of data. B7–B10 can happen in any order.
 
 ## Next steps
 
-Done so far: B0, B1 (M1) and A1 (PR #111). Next:
+**Done** (as of 2026-10-18):
+- B0, B1 (M1), B2 (M2), B3 part 1 (M4), B5 v1 (M5).
+- A0 and A3 merged upstream; A1 open as #111.
 
-1. **A4: unaggregated sleep** (risks.md L3). About 3 months of sleep never
-   reached `sleep_sessions`. Short term: re-export the history with sleep
-   *summarized* and backfill it. Upstream: a PR so the parser folds
-   per-stage segments into nights instead of dropping them silently.
-2. **Keep logging State of Mind** on the Watch (data accumulates for B5).
-3. ~~B2 (M2)~~ done: 76 daily series, including State of Mind.
-4. **HAE automations for Workouts and State of Mind** (no code): neither
-   reaches HealthLog today.
-5. ~~B5 v1 (M5)~~ live: relationships, week/month changes and weekday
-   rhythms, validated. It needs more overlapping days to report anything,
-   which items 1 and 4 provide.
-6. ~~B3 part 1 (M4)~~ live: trackers in the web app. Next: **set a password
-   and HTTPS** so you can use it on the phone, then create trackers and start
-   the self-tracking clock.
-7. **B4 (M3)** weather (backfills the whole history, so it gives the engine
-   data right away), **M4 part 2** (Shortcut, offline PWA, spans), then
-   **M6** within-day effects (coffee → steps over the next hours), now that
-   tracker entries carry timestamps.
+The detailed handoff is [`next-steps.md`](next-steps.md): operator to-dos,
+machine setup, the work queue, and lessons learned. In short:
+
+1. **Unblock the data (no code).**
+   - Set the Companion password and put HTTPS in front.
+   - Re-import the sleep history summarized (risks.md L3).
+   - Add the Workouts and State of Mind automations in HAE.
+   - Create trackers. Until these land, the engine has too few overlapping
+     days to report anything.
+2. **Upstream:** follow up on #111; a small A4 PR so dropped sleep segments
+   are counted, not silent; A2 registry entries.
+3. **B4 (M3) weather:** backfills the whole history, so it gives the engine
+   data right away. It brings the first allowlisted outbound call (R5).
+4. **B3 part 2 (M4):** the Track Shortcut, offline PWA, spans, starter packs.
+5. **B5 follow-ups:**
+   - distributed lag models
+   - adjusted re-checks
+   - **M6** within-day effects (coffee → steps over the next hours)
 
 ## Keeping in sync
 

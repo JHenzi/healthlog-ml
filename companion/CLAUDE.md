@@ -88,8 +88,18 @@ English everywhere; ruff (line length 120, plus `DTZ` for the companion);
 pytest against a real TimescaleDB; Alembic-only schema; feature branches
 merged into the fork's `main`; docs updated in the same change.
 
-## Commands (run in `companion/`; available from milestone M1)
+## Commands
 
-- Lint: `ruff check . && ruff format --check .`
-- Tests: `python -m pytest -q` (fast suites); `python -m pytest -q tests/stats` (nightly)
-- Upstream contract: `companion check-upstream`
+Handoff, setup and the work queue: [`docs/next-steps.md`](docs/next-steps.md).
+
+- Everything, with only Docker on the host (from the repo root):
+  `companion/scripts/test.sh [pytest args]`. It starts the throwaway
+  `healthlog-testdb` on 127.0.0.1:55432; `STATS_SEEDS=200` runs the engine's
+  validation suite at full strength.
+- In a venv (in `companion/`): `ruff check . && ruff format --check .`, then
+  `COMPANION_TEST_ADMIN_URL=postgresql+psycopg://healthlog:healthlog@127.0.0.1:55432/companion_test python -m pytest -q`.
+  The database name must end in `_test`: the suite resets schemas. Never
+  point it at the live database.
+- Path allowlist (R1): `sh companion/scripts/check_paths.sh upstream/main`
+- Upstream contract (live): `docker exec healthlog-companion companion check-upstream`
+- Rebuild features and insights (live): `docker exec healthlog-companion companion refresh`

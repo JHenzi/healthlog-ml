@@ -178,7 +178,15 @@ HAE automation feeding HealthLog (see HealthLog's README):
 
 ## Development
 
-Run in `companion/`:
+Next steps, machine setup and the work queue: [`docs/next-steps.md`](docs/next-steps.md).
+
+With only Docker on the host, from the repository root:
+
+```bash
+companion/scripts/test.sh            # ruff + every suite against a throwaway TimescaleDB
+```
+
+Or in `companion/` with a virtualenv:
 
 ```bash
 pip install -r requirements-dev.txt
