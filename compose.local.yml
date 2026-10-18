@@ -1,0 +1,23 @@
+# Local-only services for this fork. Upstream's docker-compose.yml stays untouched (companion R1).
+# Run with: docker compose -f docker-compose.yml -f compose.local.yml up -d
+services:
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: healthlog-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GRAFANA_RO_PASSWORD: ${GRAFANA_RO_PASSWORD:?set GRAFANA_RO_PASSWORD in .env}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards/healthlog:ro
+    depends_on:
+      healthlog-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  grafana-data:

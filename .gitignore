@@ -11,6 +11,20 @@ venv/
 /config/
 /data/
 .env
+.env.*
+!.env.example
+
+# Health data: HAE exports and database dumps must never be committed
+HealthAutoExport-*.json
+*.json.zst
+*.json.gz
+*.dump
+*.sql
+*.sql.gz
+/backup.sh
+
+# Editor backup files (may hold copies of secrets, e.g. .env~)
+*~
 
 # Editor / OS
 .DS_Store
