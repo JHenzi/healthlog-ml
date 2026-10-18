@@ -168,3 +168,10 @@ def test_open_redirects_are_refused(signed_in, coffee):
     csrf = _csrf(signed_in.get("/").text)
     response = signed_in.post("/log/coffee", data={"csrf": csrf, "back": "//evil.example"}, follow_redirects=False)
     assert response.headers["location"] == "/"
+
+
+def test_overview_coverage_strip_and_current_section(signed_in, db, coffee):
+    html = signed_in.get("/").text
+    assert "Data for analysis" in html and "0 of 30 days" in html
+    assert html.count('class="missing"') == 30  # nothing logged yet: every day hatched, none drawn as zero
+    assert '<a href="/" aria-current="page">Overview</a>' in html

@@ -58,6 +58,7 @@ Several streams can run in parallel once B1 exists:
 | B7 | **Diary** | quick entries, local embeddings (pgvector), user concepts + discovered themes as features, with evidence shown |
 | B8 | **Experiments** | n-of-1 interventions with baselines and confounder checks |
 | B9 | **Imports & interop** | CSV import from other tracking apps (to run alongside them and bring their history in); export of our data |
+| B11 | **Look and layout** | **Modernist look adopted** (2026-10-18): Archivo, ink on light ground, one red accent, 2px rules, bottom tabs on phones, coverage strip, provenance and Preliminary tags ([`design.md`](design.md)). Still from the wireframes: Explore, Experiments, Settings and data, evidence intervals |
 | B10 | **Polish** | reminders (web push), insight ranking, weekly summary, optional native iOS app (App Intents) later |
 
 Dependencies: B1 first. After that, B2, B3 and B4 are independent input
@@ -85,7 +86,10 @@ machine setup, the work queue, and lessons learned. In short:
 3. **B4 (M3) weather:** backfills the whole history, so it gives the engine
    data right away. It brings the first allowlisted outbound call (R5).
 4. **B3 part 2 (M4):** the Track Shortcut, offline PWA, spans, starter packs.
-5. **B5 follow-ups:**
+5. **Design (B11):** collect feedback on the review page
+   ([`design.md`](design.md)); next from the wireframes are evidence
+   intervals (they need CIs from the engine), then Explore (3a).
+6. **B5 follow-ups:**
    - distributed lag models
    - adjusted re-checks
    - **M6** within-day effects (coffee → steps over the next hours)

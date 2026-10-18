@@ -4,7 +4,8 @@
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
 <section class="card">
-  <p class="muted small"><a href="/trackers">Trackers</a> / {{ t.key }}</p>
+  <p class="kicker"><a href="/trackers">‹ Trackers</a></p>
+  <p><span class="tag tag-accent">Logged</span> <span class="tag tag-quiet">{{ t.key }}</span></p>
   <h1>{{ t.name }}</h1>
   <p class="muted">{{ type_labels[t.type] }}{% if t.unit %} · {{ t.unit }}{% endif %}{% if t.type == "scale" %} · {{ "%g"|format(t.scale_min) }}–{{ "%g"|format(t.scale_max) }}{% endif %}{% if t.type == "choice" %} · {{ t.options|join(", ") }}{% endif %}</p>
   {% if t.archived %}<p class="note">Archived{% if successor %}: continued as <a href="/trackers/{{ successor.key }}">{{ successor.name }}</a>{% endif %}. Its history stays in the analysis.</p>{% endif %}

@@ -3,6 +3,7 @@
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
 <section class="card">
+  <p class="kicker">Logged metrics</p>
   <h1>Trackers</h1>
   <p class="muted">Anything you want to track beyond what Apple Health measures. Every tracker becomes daily series the insight engine relates to everything else.</p>
   {% if trackers %}
@@ -24,7 +25,7 @@
 </section>
 
 <section class="card">
-  <h2>New tracker</h2>
+  <h2>New metric</h2>
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
   <form method="post" action="/trackers" class="settings">
     <input type="hidden" name="csrf" value="{{ csrf }}">

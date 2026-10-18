@@ -15,11 +15,13 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY pyproject.toml alembic.ini ./
+COPY alembic.ini ./
 COPY app/ app/
 COPY migrations/ migrations/
 COPY web/ web/
-RUN pip install --no-deps -e .
+# The `companion` command, without building the project as a package (no setuptools download at build time).
+RUN printf '#!/bin/sh\nexec python -m app "$@"\n' > /usr/local/bin/companion && chmod +x /usr/local/bin/companion
+ENV PYTHONPATH=/app
 
 USER companion
 EXPOSE 8000
