@@ -6,7 +6,7 @@ the data pipeline (Apple Health → TimescaleDB). The Companion reads its tables
 plain-language sentences. Design: [`docs/companion-app-design.md`](docs/companion-app-design.md).
 Rules: [`CLAUDE.md`](CLAUDE.md). Build plan: [`docs/plan.md`](docs/plan.md).
 
-What works today (milestones M1, M2 and M5 v1):
+What works today (milestones M1, M2, M4 part 1 and M5 v1):
 
 - a **Today** page: last night's sleep and yesterday's HRV, resting heart
   rate, steps, stress, energy reserve and mood, each against your 30-day
@@ -24,6 +24,12 @@ What works today (milestones M1, M2 and M5 v1):
   are held to 10%, and the engine is validated on synthetic data before it
   ships ([`docs/analysis-engine.md`](docs/analysis-engine.md));
 - `GET /api/insights` (a `read` token);
+- **your own trackers**: create anything you want to track (a count like
+  coffee, a 1–5 productivity scale, yes/no, an amount with a unit, a
+  duration, a time of day, a choice such as lunch at home / takeout /
+  skipped, or a moment like anger with an intensity). Log with one tap on
+  Today, back-date from the tracker's page, and fill gaps in the **evening
+  review**. Every tracker becomes daily series in the same analysis;
 - password sign-in, plus scoped API tokens for Shortcuts and scripts;
 - `GET /api/today` (a `read` token), the same sentences as JSON;
 - a startup and nightly check that HealthLog's tables still match what we
@@ -106,6 +112,33 @@ tailscale serve --bg --https=8443 http://127.0.0.1:8020
 Then open `https://<host>.<tailnet>.ts.net:8443` from any device on your
 tailnet. Nothing is exposed to the internet. nginx or Caddy work the same way:
 proxy to `127.0.0.1:8020` and set `X-Forwarded-For`.
+
+## Logging from Shortcuts, NFC tags and scripts
+
+Every tracker has its own endpoint, `POST /api/log/<key>`. Its **Set up**
+panel creates a token that can log only that tracker, so a leaked coffee
+token can log coffee and nothing else.
+
+```bash
+curl -X POST -H "Authorization: Bearer hlc_…" -H "Content-Type: application/json" \
+  -d '{"value": 2}' https://<host>:8443/api/log/coffee
+# {"tracker": "coffee", "value": 2.0, "day": "2026-10-17", "created": true, "message": "Logged Coffee at 07:10", …}
+```
+
+- `value` is per type and optional for counts (1), yes/no (yes), moments and
+  time-of-day trackers.
+- `time` (ISO 8601 with an offset) back-dates an entry. More than 5 minutes
+  in the future is refused.
+- `client_id` (a UUID) makes a retry safe: the same id twice logs once.
+- A Shortcut can speak the reply's `message`, so a misheard entry is caught
+  right away.
+- `GET /api/trackers` (a `read` token) lists trackers.
+- `DELETE /api/entries/<client_id>` (scope `all`) removes an entry.
+
+**Missing is not zero.** An unlogged count or yes/no tracker counts as 0
+only on a day you marked reviewed, or every day for a tracker you mark "I log
+this every time". On other days it stays unknown, so a forgotten entry never
+looks like "none" to the analysis.
 
 ## API tokens
 

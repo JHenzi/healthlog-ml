@@ -2,7 +2,7 @@
 
 How the Companion sits next to HealthLog without breaking it. The full design
 is in [`companion-app-design.md`](companion-app-design.md) §8. This file
-describes what is built (M1, M2 and M5 v1). The insight engine has its own
+describes what is built (M1, M2, M4 part 1 and M5 v1). The insight engine has its own
 page: [`analysis-engine.md`](analysis-engine.md).
 
 ## Processes
@@ -77,6 +77,39 @@ rebuilds them from scratch, so a changed rule applies to all history:
 
 A day without data for a feature has no row. It is never stored as 0 (R7).
 The full rebuild takes a few seconds on ~6M HealthLog samples.
+
+## Capture: trackers and the event log
+
+Trackers are rows (`trackers`). The set of *types* is code
+(`app/trackers.py`): count, scale, check, quantity, duration, time, choice and
+moment. The type decides validation and daily features, so a new tracker
+needs no migration. A tracker's type, unit, scale range and options lock once
+it has data. Changing one creates a successor version, and the old tracker is
+archived with its history (R12).
+
+Every change is appended to **`events`** first (`log`, `edit`, `delete`,
+`review`, `unreview`). This is the source of truth. `observations` and
+`day_reviews` are derived from it (`capture.apply`), and `capture.rebuild`
+replays the whole log. A randomized test checks that replaying gives exactly
+the incremental state. Deletes are tombstones. Logging is idempotent on the
+client id: the API takes it from the device, and every web form carries a
+fresh one, so retries and double taps never double an entry.
+
+Tracker features go into the daily feature table as `tracker.<key>.*`, one
+family per tracker:
+
+| Type | Features |
+|---|---|
+| count, quantity, duration | `.total`; counts also `.first_time` and `.last_time` (minutes after midnight, rolled past the day boundary) |
+| check | `.any` |
+| scale | `.mean`, `.max` |
+| choice | one count per option |
+| moment | `.count`, `.max_intensity`, `.first_time` |
+| time | `.first_time` |
+
+Count, yes/no, choice and moment features are 0 only on reviewed days, or on
+every day since the first entry for an "always logged" tracker. They never
+zero-fill today. Scale and time features are never zero-filled.
 
 ## Days
 

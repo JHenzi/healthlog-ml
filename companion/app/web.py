@@ -103,14 +103,23 @@ def logout(
 
 @router.get("/", response_class=HTMLResponse)
 def today_page(
-    request: Request, session: WebSession | None = Depends(current_session), db: Session = Depends(get_db)
+    request: Request,
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+    error: str = "",
 ) -> Response:
     if session is None:
         return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
     settings = get_settings()
     day = current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
     view = today.load_today(db, settings.zone, settings.day_boundary, day)
-    return templates.TemplateResponse(request, "today.html", {"view": view, "csrf": session.csrf_token})
+    from .web_trackers import today_capture  # late import: web_trackers builds on this module
+
+    return templates.TemplateResponse(
+        request,
+        "today.html",
+        {"view": view, "csrf": session.csrf_token, "capture": today_capture(db, day), "error": error[:200]},
+    )
 
 
 # --- metrics (M2) -----------------------------------------------------------
@@ -125,8 +134,9 @@ def _today() -> dt.date:
     return current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
 
 
-SOURCE_ORDER = ("sleep", "healthlog", "stress", "energy", "workout", "mood")
+SOURCE_ORDER = ("tracker", "sleep", "healthlog", "stress", "energy", "workout", "mood")
 SOURCE_TITLES = {
+    "tracker": "Your trackers",
     "sleep": "Sleep",
     "healthlog": "HealthLog metrics",
     "stress": "Stress",

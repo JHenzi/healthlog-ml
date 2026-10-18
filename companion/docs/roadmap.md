@@ -51,7 +51,7 @@ Several streams can run in parallel once B1 exists:
 | B0 | **Housekeeping** | **done** (2026-10-17): Grafana in `compose.local.yml`, docs and `.gitignore` on the fork's `main`. Still open: a project name |
 | B1 | **Skeleton** | **built** (M1, 2026-10-17): `companion/` app + compose override; own schema/role (read-only on HealthLog); own Alembic; read contract + startup check; `password` auth + scoped API tokens; a **Today** page that shows HealthLog data as sentences. Running locally; HTTPS front end still to set up |
 | B2 | **More Health metrics** | **built** (M2, 2026-10-17): read *every* metric HealthLog stores, not just its 19 `core` ones; our own per-metric settings (aggregation, bounds, source priority, which to analyse), editable on the Metrics page; State of Mind straight from `raw_ingest` until A1 lands; the daily feature table B5 builds on |
-| B3 | **Custom tracking beyond Health** | typed trackers as data; observations + event log; per-tracker URLs and scoped tokens; the generic **Track** Shortcut (menus, automatic time, no free-text guessing); Apple Health "Log Health Sample" recipes for what Health can model; PWA quick-add + evening review |
+| B3 | **Custom tracking beyond Health** | **part 1 live** (M4, 2026-10-17): typed trackers as data, created in the web app; observations + event log; per-tracker URLs and scoped tokens; quick-add + evening review, feeding the analysis. Part 2: the generic **Track** Shortcut (menus, automatic time, no free-text guessing), Apple Health "Log Health Sample" recipes, PWA offline queue, spans, starter packs |
 | B4 | **Outside data sources** | **weather** first (temperature, humidity, barometric pressure and its change, precipitation, cloud cover, UV, air quality), then calendar busyness, public holidays, sunrise/sunset and daylight. Opt-in, coarse location, fetch-only (design §2.5) |
 | B5 | **Analysis engine (multi-timeframe)** | **v1 live** (M5, 2026-10-17): one feature table over all sources; horizons **day** (lags 0–1, both directions), **week/month** (change detection), weekday rhythm; one FDR family, validated on synthetic data. Still to come: lags 2–7 via distributed lag models, **season** (long trends), **within-day** (event-locked responses, e.g. coffee → steps over the next hours) |
 | B6 | **ML models** | next-day prediction (mood, productivity, sleep, HRV) with feature importance as "what drives X"; day-type clustering; change-point detection; multivariate anomalies (design §4.7) |
@@ -80,9 +80,13 @@ Done so far: B0, B1 (M1) and A1 (PR #111). Next:
 5. ~~B5 v1 (M5)~~ live: relationships, week/month changes and weekday
    rhythms, validated. It needs more overlapping days to report anything,
    which items 1 and 4 provide.
-6. **B3 (M4)** custom trackers (the web app for custom metrics) and **B4 (M3)**
-   weather, which add columns to the same table; **M6** within-day effects
-   once trackers have timestamps.
+6. ~~B3 part 1 (M4)~~ live: trackers in the web app. Next: **set a password
+   and HTTPS** so you can use it on the phone, then create trackers and start
+   the self-tracking clock.
+7. **B4 (M3)** weather (backfills the whole history, so it gives the engine
+   data right away), **M4 part 2** (Shortcut, offline PWA, spans), then
+   **M6** within-day effects (coffee → steps over the next hours), now that
+   tracker entries carry timestamps.
 
 ## Keeping in sync
 

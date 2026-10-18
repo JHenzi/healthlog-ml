@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Trackers · Companion{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Trackers</h1>
+  <p class="muted">Anything you want to track beyond what Apple Health measures. Every tracker becomes daily series the insight engine relates to everything else.</p>
+  {% if trackers %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Tracker</th><th>Type</th><th class="num">Entries</th></tr></thead>
+    <tbody>
+    {% for t in trackers %}
+      <tr{% if t.archived %} class="dim"{% endif %}>
+        <td><a href="/trackers/{{ t.key }}">{{ t.name }}</a>{% if t.pinned %} <span class="muted small">pinned</span>{% endif %}{% if t.archived %} <span class="muted small">archived</span>{% endif %}</td>
+        <td>{{ t.type }}{% if t.unit %} · {{ t.unit }}{% endif %}</td>
+        <td class="num">{{ counts.get(t.id, 0) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}<p>No trackers yet.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>New tracker</h2>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/trackers" class="settings">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="name">Name</label>
+    <input id="name" name="name" required maxlength="80" value="{{ form.get('name', '') }}" placeholder="Coffee, Productivity, First social media…">
+    <label for="type">Type</label>
+    <select id="type" name="type">
+      {% for ty in types %}<option value="{{ ty }}"{% if form.get('type') == ty %} selected{% endif %}>{{ type_labels[ty] }}</option>{% endfor %}
+    </select>
+    <div class="pair">
+      <div><label for="unit">Unit (optional)</label><input id="unit" name="unit" value="{{ form.get('unit', '') }}" placeholder="cups, mg, $"></div>
+      <div><label for="key">Key (optional)</label><input id="key" name="key" value="{{ form.get('key', '') }}" placeholder="from the name" pattern="[a-z][a-z0-9_]{0,63}"></div>
+    </div>
+    <p class="muted small">For a scale:</p>
+    <div class="pair">
+      <div><label for="scale_min">Lowest</label><input id="scale_min" name="scale_min" inputmode="decimal" value="{{ form.get('scale_min', '1') }}"></div>
+      <div><label for="scale_max">Highest</label><input id="scale_max" name="scale_max" inputmode="decimal" value="{{ form.get('scale_max', '5') }}"></div>
+    </div>
+    <label for="scale_labels">Scale labels (optional)</label>
+    <input id="scale_labels" name="scale_labels" value="{{ form.get('scale_labels', '') }}" placeholder="1=nothing done, 3=normal, 5=best day">
+    <label for="options">Options, for a choice (comma-separated)</label>
+    <input id="options" name="options" value="{{ form.get('options', '') }}" placeholder="home, takeout, skipped">
+    <div class="pair">
+      <div><label for="polarity">Higher is</label>
+        <select id="polarity" name="polarity">{% for p in polarities %}<option value="{{ p }}"{% if form.get('polarity') == p %} selected{% endif %}>{{ {"neutral": "neither", "good": "better", "bad": "worse"}[p] }}</option>{% endfor %}</select></div>
+      <div><label for="category">Category (optional)</label><input id="category" name="category" value="{{ form.get('category', '') }}" placeholder="food & drink"></div>
+    </div>
+    <label class="check"><input type="checkbox" name="pinned" checked> Show on Today for one-tap logging</label>
+    <label class="check"><input type="checkbox" name="in_review" checked> Ask in the evening review</label>
+    <label class="check"><input type="checkbox" name="always_logged"> I log this every time (an unlogged day counts as zero)</label>
+    <button type="submit">Create tracker</button>
+  </form>
+</section>
+{% endblock %}

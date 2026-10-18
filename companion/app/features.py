@@ -1,10 +1,10 @@
 """The daily feature table: one value per (Companion day, feature) over every source (design §4.1).
 
 Sources so far: every HealthLog metric (``hl.<metric>``), sleep, stress, energy
-reserve, workouts and State of Mind. Trackers (M4) and weather (M3) join the
-same table. Assembly is pure (``assemble``); ``rebuild`` reads through the
-read contract and replaces the cache in one transaction, so new feature
-definitions apply to all history.
+reserve, workouts, State of Mind and the user's own trackers
+(``tracker.<key>.*``). Weather (M3) will join the same table. Assembly is
+pure (``assemble``); ``rebuild`` reads through the read contract and replaces
+the cache in one transaction, so new feature definitions apply to all history.
 
 Missing is not zero (R7): a day without data for a feature has no row, never 0.
 Overlapping sources are never summed (R16): one source per metric and day.
@@ -21,8 +21,11 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from . import mood, upstream
-from .models import DailyFeature, FeatureDef, MetricSetting, StateOfMindEntry
+from . import mood, trackers, upstream
+from .auth import now_utc
+from .capture import spec_of
+from .models import DailyFeature, DayReview, FeatureDef, MetricSetting, Observation, StateOfMindEntry, Tracker
+from .timeutil import current_day
 from .today import pick_source
 from .upstream import MetricDayRow, SleepDayRow, SourceDay
 
@@ -219,8 +222,37 @@ class RebuildResult:
     last_day: dt.date | None
 
 
+def tracker_features(
+    specs: Iterable[tuple[trackers.TrackerSpec, list[trackers.Obs]]],
+    reviewed: set[dt.date],
+    last_day: dt.date,
+    zone: ZoneInfo,
+    boundary: dt.time,
+) -> FeatureSet:
+    """Each tracker is its own family: its total and its first time are linked by definition."""
+    out = FeatureSet()
+    for spec, obs in specs:
+        tf = trackers.daily_features(spec, obs, reviewed, last_day, zone, boundary)
+        for feature, values in tf.values.items():
+            label, unit, kind = tf.labels[feature]
+            out.add(Def(feature, label, unit, "tracker", kind, family=f"tracker:{spec.key}"), values)
+    return out
+
+
+def load_tracker_inputs(db: Session) -> tuple[list[tuple[trackers.TrackerSpec, list[trackers.Obs]]], set[dt.date]]:
+    by_tracker: dict[int, list[trackers.Obs]] = {}
+    for o in db.execute(sa.select(Observation).where(Observation.deleted.is_(False))).scalars():
+        by_tracker.setdefault(o.tracker_id, []).append(trackers.Obs(o.observed_at, o.day, o.value_num, o.value_text))
+    specs = [(spec_of(t), by_tracker.get(t.id, [])) for t in db.execute(sa.select(Tracker)).scalars()]
+    reviewed = set(db.execute(sa.select(DayReview.day)).scalars())
+    return specs, reviewed
+
+
 def rebuild(db: Session, zone: ZoneInfo, boundary: dt.time) -> RebuildResult:
     """Recompute every feature from scratch and replace the cache (caller commits)."""
+    specs, reviewed = load_tracker_inputs(db)
+    last_day = current_day(now_utc(), zone, boundary) - dt.timedelta(days=1)  # zero-fill never reaches today
+    tracked = tracker_features(specs, reviewed, last_day, zone, boundary)
     fs = assemble(
         upstream.metric_day_rows(db, zone, boundary),
         load_rules(db),
@@ -232,6 +264,8 @@ def rebuild(db: Session, zone: ZoneInfo, boundary: dt.time) -> RebuildResult:
         zone,
         boundary,
     )
+    fs.defs |= tracked.defs
+    fs.values |= tracked.values
     db.execute(sa.delete(DailyFeature))
     db.execute(sa.delete(FeatureDef))
     if fs.defs:
