@@ -50,7 +50,7 @@ Several streams can run in parallel once B1 exists:
 |---|---|---|
 | B0 | **Housekeeping** | **done** (2026-10-17): Grafana in `compose.local.yml`, docs and `.gitignore` on the fork's `main`. Still open: a project name |
 | B1 | **Skeleton** | **built** (M1, 2026-10-17): `companion/` app + compose override; own schema/role (read-only on HealthLog); own Alembic; read contract + startup check; `password` auth + scoped API tokens; a **Today** page that shows HealthLog data as sentences. Running locally; HTTPS front end still to set up |
-| B2 | **More Health metrics** | read *every* metric HealthLog stores, not just its 19 `core` ones; our own per-metric settings (aggregation, bounds, which to analyse) in our schema; State of Mind straight from `raw_ingest` until A1 lands |
+| B2 | **More Health metrics** | **built** (M2, 2026-10-17): read *every* metric HealthLog stores, not just its 19 `core` ones; our own per-metric settings (aggregation, bounds, source priority, which to analyse), editable on the Metrics page; State of Mind straight from `raw_ingest` until A1 lands; the daily feature table B5 builds on |
 | B3 | **Custom tracking beyond Health** | typed trackers as data; observations + event log; per-tracker URLs and scoped tokens; the generic **Track** Shortcut (menus, automatic time, no free-text guessing); Apple Health "Log Health Sample" recipes for what Health can model; PWA quick-add + evening review |
 | B4 | **Outside data sources** | **weather** first (temperature, humidity, barometric pressure and its change, precipitation, cloud cover, UV, air quality), then calendar busyness, public holidays, sunrise/sunset and daylight. Opt-in, coarse location, fetch-only (design §2.5) |
 | B5 | **Analysis engine (multi-timeframe)** | one feature table over all sources; horizons **day** (lags 0–3), **week/month** (rolling comparisons, change detection), **season** (long trends), **within-day** (event-locked responses, e.g. coffee → steps over the next hours); sentences with *n*, strength and direction |
@@ -74,11 +74,12 @@ Done so far: B0, B1 (M1) and A1 (PR #111). Next:
    *summarized* and backfill it. Upstream: a PR so the parser folds
    per-stage segments into nights instead of dropping them silently.
 2. **Keep logging State of Mind** on the Watch (data accumulates for B5).
-3. **B2 (M2)**: every HealthLog metric as a daily series, plus State of Mind
-   as daily valence and label counts (from `raw_ingest` until #111 merges).
-4. Then **B3 (M4)** custom trackers and capture, and **B4 (M3)** weather,
-   side by side. **B5 (M5)** correlations and week/month views start as soon as
-   M2 lands; HealthLog's 3 months of history is enough for first results.
+3. ~~B2 (M2)~~ done: 76 daily series, including State of Mind.
+4. **HAE automations for Workouts and State of Mind** (no code): neither
+   reaches HealthLog today.
+5. **B5 (M5)** correlations and week/month views on the feature table, then
+   **B3 (M4)** custom trackers and **B4 (M3)** weather, which add columns to
+   the same table.
 
 ## Keeping in sync
 

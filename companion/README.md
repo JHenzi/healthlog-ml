@@ -6,11 +6,17 @@ the data pipeline (Apple Health → TimescaleDB). The Companion reads its tables
 plain-language sentences. Design: [`docs/companion-app-design.md`](docs/companion-app-design.md).
 Rules: [`CLAUDE.md`](CLAUDE.md). Build plan: [`docs/plan.md`](docs/plan.md).
 
-What works today (milestone M1):
+What works today (milestones M1–M2):
 
 - a **Today** page: last night's sleep and yesterday's HRV, resting heart
-  rate, steps, stress and energy reserve, each against your 30-day average,
-  with the number of days behind that average;
+  rate, steps, stress, energy reserve and mood, each against your 30-day
+  average, with the number of days behind that average;
+- a **Metrics** page: every daily series the Companion builds (all of
+  HealthLog's metrics, sleep stages, stress, energy reserve, workouts and
+  Apple Health State of Mind), each with its last 30 days against the 30
+  before, a weekday profile and a 60-day sparkline. For HealthLog metrics you
+  can change how a day's value is formed (sum, average, lowest, highest),
+  which sources to prefer, plausibility bounds, and whether it's analysed;
 - password sign-in, plus scoped API tokens for Shortcuts and scripts;
 - `GET /api/today` (a `read` token), the same sentences as JSON;
 - a startup and nightly check that HealthLog's tables still match what we
@@ -116,8 +122,19 @@ curl -H "Authorization: Bearer hlc_…" https://<host>:8443/api/today
 | `companion migrate` | apply the Companion's migrations (schema `companion`) |
 | `companion set-password [--stdin]` | set the operator password (signs out all sessions) |
 | `companion token create NAME --scope …` / `list` / `revoke ID` | manage API tokens |
+| `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, rebuild the daily feature table (also nightly at 04:15, and *Rebuild now* on the Metrics page) |
 | `companion web` | migrate, then serve on port 8000 (the `companion-web` service) |
 | `companion jobs` | run the scheduler (the `companion-jobs` service) |
+
+## Data the Companion needs from Health Auto Export
+
+The Companion reads what HealthLog stores, so each kind of data needs its own
+HAE automation feeding HealthLog (see HealthLog's README):
+
+- **Health Metrics** (sleep *summarized*): the basis of almost everything.
+- **Workouts**: for the workout-minutes series.
+- **State of Mind**: for the mood series. Until HealthLog parses it itself
+  (upstream PR #111), the Companion reads it from HealthLog's raw archive.
 
 ## Development
 

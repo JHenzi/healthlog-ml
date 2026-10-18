@@ -89,12 +89,13 @@ useful page.
 
 ## M2: Health data coverage (small–medium)
 
-- [ ] `metric_settings` in our schema: per-metric aggregation, bounds, "analyse" flag. Seeded from upstream's registry, then *ours* to edit, so all ~40 metrics can be analysed, not just the 19 `core` ones.
-- [ ] Daily loader from **base tables** (`metric_samples`, `sleep_sessions`, `stress_daily`, `body_battery_daily`, …), with our day boundary and time zone. Never upstream's views.
-- [ ] State of Mind reader from `raw_ingest` with a cursor (deduplicated by entry id), until A1 lands.
-- [ ] A **Metrics** page: each metric's recent level vs baseline and weekday profile.
+- [x] `metric_settings` in our schema: per-metric aggregation, bounds, source priority, "analyse" flag. Seeded from upstream's registry, then *ours* to edit (on the Metrics page), so all 41 metrics can be analysed, not just the 19 `core` ones.
+- [x] Daily loader from **base tables** (`metric_samples`, `sleep_sessions`, `stress_intraday`, `body_battery_intraday`, `workouts`), with our day boundary and time zone. Never upstream's views. Results go to the **daily feature table** (`daily_features` + `feature_defs`, pulled forward from M5), rebuilt by `companion refresh` and nightly at 04:15.
+- [x] State of Mind reader from `raw_ingest` with a cursor (deduplicated by entry id), until A1 lands → `mood_entries`.
+- [x] A **Metrics** page: each series' last 30 days vs the 30 before, weekday profile, 60-day sparkline, per-metric settings. Today gains a mood line.
 
 **Done when:** every metric HealthLog stores appears as a daily series with correct aggregation; State of Mind appears as daily valence plus emotion/association counts.
+**Status (2026-10-17):** done. Live: 76 features, 1,834 day values (31 HealthLog metrics, 5 sleep, stress, energy, 37 mood), 30 State of Mind entries. Data gaps found: no Workouts automation (0 workouts in HealthLog), no State of Mind automation (the last entry arrived with a manual export on Oct 16), and sleep history is missing (risks.md L3).
 
 ## M3: Outside data, part 1: weather (small–medium; the first quick win)
 
@@ -123,7 +124,7 @@ data immediately.
 
 ## M5: Analysis engine v1 (large)
 
-- [ ] **Feature table builder**: one row per day, columns from HealthLog, State of Mind, trackers, weather; the reviewed-day rule (missing ≠ zero).
+- [ ] **Feature table builder**: one row per day, columns from HealthLog, State of Mind, trackers, weather; the reviewed-day rule (missing ≠ zero). *(The table and the HealthLog + mood columns exist since M2; trackers and weather add columns.)*
 - [ ] Day-level relationships with lags (Spearman on residuals; Mann-Whitney/Cliff's delta; Fisher), FDR, effect floors, minimum support.
 - [ ] **Distributed lag models** for daily exposures (weather, sleep, caffeine) → outcome curves over lags 0–7 ("rain Monday → mood Wednesday").
 - [ ] Week/month views: rolling comparisons and simple change detection.

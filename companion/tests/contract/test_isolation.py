@@ -81,15 +81,23 @@ def test_contract_reports_missing_table_and_column(db, monkeypatch):
 
 
 def test_upstream_reads_only_in_contract_module():
-    """A3: no module other than app/upstream.py names a HealthLog table or schema public."""
-    names = [*upstream.CONTRACT, "public."]
-    pattern = re.compile("|".join(re.escape(n) for n in names))
+    """A3: no module other than app/upstream.py queries a HealthLog table or references schema public."""
+    tables = "|".join(re.escape(t) for t in upstream.CONTRACT)
+    pattern = re.compile(rf"\b(from|join|into|update)\s+(public\.)?({tables})\b|\bpublic\.\w", re.IGNORECASE)
     offenders = [
         str(path.relative_to(COMPANION_DIR))
         for path in (COMPANION_DIR / "app").rglob("*.py")
         if path.name != "upstream.py" and pattern.search(path.read_text())
     ]
     assert offenders == []
+
+
+def test_contract_guard_catches_a_stray_query():
+    tables = "|".join(re.escape(t) for t in upstream.CONTRACT)
+    pattern = re.compile(rf"\b(from|join|into|update)\s+(public\.)?({tables})\b|\bpublic\.\w", re.IGNORECASE)
+    assert pattern.search('db.execute(text("SELECT * FROM metric_samples"))')
+    assert pattern.search("select x from public.anything")
+    assert not pattern.search("# workouts and sleep become daily features")
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git not available")

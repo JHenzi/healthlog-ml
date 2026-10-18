@@ -8,15 +8,16 @@ import secrets
 from pathlib import Path
 
 import jinja2
+import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from . import auth, today
+from . import auth, features, jobs, metric_settings, metrics_view, today, upstream
 from .config import get_settings
 from .db import get_db
-from .models import User, WebSession
+from .models import FeatureDef, MetricSetting, User, WebSession
 from .proxies import client_ip
 from .timeutil import current_day
 
@@ -109,3 +110,164 @@ def today_page(
     day = current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
     view = today.load_today(db, settings.zone, settings.day_boundary, day)
     return templates.TemplateResponse(request, "today.html", {"view": view, "csrf": session.csrf_token})
+
+
+# --- metrics (M2) -----------------------------------------------------------
+
+
+def _signed_in(session: WebSession | None) -> Response | None:
+    return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER) if session is None else None
+
+
+def _today() -> dt.date:
+    settings = get_settings()
+    return current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
+
+
+SOURCE_ORDER = ("sleep", "healthlog", "stress", "energy", "workout", "mood")
+SOURCE_TITLES = {
+    "sleep": "Sleep",
+    "healthlog": "HealthLog metrics",
+    "stress": "Stress",
+    "energy": "Energy reserve",
+    "workout": "Workouts",
+    "mood": "Mood (State of Mind)",
+}
+
+
+@router.get("/metrics", response_class=HTMLResponse)
+def metrics_page(
+    request: Request, session: WebSession | None = Depends(current_session), db: Session = Depends(get_db)
+) -> Response:
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    day = _today()
+    defs = {d.feature: d for d in db.execute(sa.select(FeatureDef)).scalars()}
+    all_values = features.all_series(db)
+    groups = []
+    for source in SOURCE_ORDER:
+        items = [
+            (d, metrics_view.summarize(all_values.get(d.feature, {}), day))
+            for d in sorted((d for d in defs.values() if d.source == source), key=lambda d: d.label.lower())
+        ]
+        if items:
+            groups.append((SOURCE_TITLES[source], items))
+    return templates.TemplateResponse(
+        request,
+        "metrics.html",
+        {"groups": groups, "csrf": session.csrf_token, "fmt": metrics_view.fmt, "empty": not defs},
+    )
+
+
+@router.get("/metrics/{feature}", response_class=HTMLResponse)
+def metric_detail(
+    feature: str,
+    request: Request,
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+    error: str = "",
+) -> Response:
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    definition = db.get(FeatureDef, feature)
+    if definition is None:
+        return Response("No such metric", status_code=status.HTTP_404_NOT_FOUND)
+    day = _today()
+    values = features.series(db, feature)
+    end = day - dt.timedelta(days=1)
+    recent = [(end - dt.timedelta(days=i), values.get(end - dt.timedelta(days=i))) for i in range(30)]
+    metric = feature.removeprefix("hl.") if feature.startswith("hl.") else None
+    setting = db.get(MetricSetting, metric) if metric else None
+    return templates.TemplateResponse(
+        request,
+        "metric_detail.html",
+        {
+            "d": definition,
+            "s": metrics_view.summarize(values, day),
+            "spark": metrics_view.sparkline(values, end).split("|"),
+            "recent": recent,
+            "weekdays": metrics_view.WEEKDAYS,
+            "fmt": metrics_view.fmt,
+            "setting": setting,
+            "sources": upstream.metric_sources(db, metric) if setting else [],
+            "aggregations": metric_settings.AGGREGATIONS,
+            "csrf": session.csrf_token,
+            "error": error,
+        },
+    )
+
+
+def _optional_float(raw: str) -> float | None:
+    raw = raw.strip()
+    return float(raw) if raw else None
+
+
+@router.post("/metrics/{feature}/settings")
+def save_metric_settings(
+    feature: str,
+    request: Request,
+    csrf: str = Form(""),
+    aggregation: str = Form("avg"),
+    analyse: str = Form(""),
+    min_value: str = Form(""),
+    max_value: str = Form(""),
+    source_priority: str = Form(""),
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    if not auth.constant_time_equals(csrf, session.csrf_token):
+        return Response("CSRF check failed", status_code=status.HTTP_403_FORBIDDEN)
+    if not feature.startswith("hl."):
+        return Response("Only HealthLog metrics have settings", status_code=status.HTTP_404_NOT_FOUND)
+    try:
+        metric_settings.update(
+            db,
+            feature.removeprefix("hl."),
+            aggregation=aggregation,
+            analyse=analyse == "on",
+            min_value=_optional_float(min_value),
+            max_value=_optional_float(max_value),
+            source_priority=source_priority.split(","),
+        )
+    except KeyError:
+        return Response("No such metric", status_code=status.HTTP_404_NOT_FOUND)
+    except ValueError as exc:  # raised before anything changed
+        return metric_detail(feature, request, session, db, error=str(exc))
+    settings = get_settings()
+    features.rebuild(db, settings.zone, settings.day_boundary)
+    db.commit()
+    return RedirectResponse(f"/metrics/{feature}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/metrics/{feature}/reset")
+def reset_metric_settings(
+    feature: str,
+    csrf: str = Form(""),
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    if not auth.constant_time_equals(csrf, session.csrf_token):
+        return Response("CSRF check failed", status_code=status.HTTP_403_FORBIDDEN)
+    metric_settings.reset(db, feature.removeprefix("hl."))
+    jobs.refresh(db)
+    db.commit()
+    return RedirectResponse(f"/metrics/{feature}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/refresh")
+def refresh_now(
+    csrf: str = Form(""),
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    if not auth.constant_time_equals(csrf, session.csrf_token):
+        return Response("CSRF check failed", status_code=status.HTTP_403_FORBIDDEN)
+    jobs.refresh(db)
+    db.commit()
+    return RedirectResponse("/metrics", status_code=status.HTTP_303_SEE_OTHER)

@@ -13,9 +13,12 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
+import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from . import upstream
+from .models import StateOfMindEntry
+from .timeutil import day_bounds
 from .upstream import SourceDay
 
 BASELINE_DAYS = 30
@@ -144,6 +147,26 @@ def energy_sentence(today: tuple[int, int] | None) -> str:
     return f"Your energy reserve ranged from {low} to {high} yesterday."
 
 
+def mood_sentence(entries: list[tuple[float | None, tuple[str, ...]]]) -> str:
+    """Yesterday's State of Mind entries: ``(valence, labels)`` each. Valence is Apple's -1 to +1 scale."""
+    if not entries:
+        return "No mood logged yesterday."
+    count = len(entries)
+    noun = "entry" if count == 1 else "entries"
+    valences = [v for v, _ in entries if v is not None]
+    parts = [f"You logged {count} mood {noun} yesterday"]
+    if valences:
+        parts.append(f"average valence {statistics.fmean(valences):+.2f} on a -1 to +1 scale")
+    labels: dict[str, int] = {}
+    for _, labs in entries:
+        for lab in labs:
+            labels[lab] = labels.get(lab, 0) + 1
+    if labels:
+        top = sorted(labels.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+        parts.append("most often " + ", ".join(f"{k.replace('_', ' ')} ({n})" for k, n in top))
+    return ", ".join(parts) + "."
+
+
 # --- assembly --------------------------------------------------------------
 
 
@@ -215,4 +238,12 @@ def load_today(db: Session, zone: ZoneInfo, boundary: dt.time, today: dt.date) -
         lambda: upstream.energy_reserve_daily(db, zone, boundary, yesterday, yesterday),
         {},
     )
-    return TodayView(today, build_sentences(series, energy, today), problems)
+    lines = build_sentences(series, energy, today)
+    start, end = day_bounds(yesterday, zone, boundary)
+    moods = db.execute(
+        sa.select(StateOfMindEntry.valence, StateOfMindEntry.labels).where(
+            StateOfMindEntry.start_time >= start, StateOfMindEntry.start_time < end
+        )
+    ).all()
+    lines.append(mood_sentence([(v, tuple(labels or ())) for v, labels in moods]))
+    return TodayView(today, lines, problems)

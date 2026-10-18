@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Metrics · Companion{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="row">
+    <h1>Metrics</h1>
+    <form method="post" action="/refresh" class="inline">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="secondary">Rebuild now</button>
+    </form>
+  </div>
+  <p class="muted">Every daily series the Companion builds, last 30 days against the 30 days before. Rebuilt nightly at 04:15.</p>
+  {% if empty %}<p>No daily features yet. Press <em>Rebuild now</em>.</p>{% endif %}
+</section>
+{% for title, items in groups %}
+<section class="card">
+  <h2>{{ title }}</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Metric</th><th class="num">Latest</th><th class="num">30-day avg</th><th class="num">vs prior 30</th></tr></thead>
+    <tbody>
+    {% for d, s in items %}
+      <tr{% if not d.analyse %} class="dim"{% endif %}>
+        <td><a href="/metrics/{{ d.feature }}">{{ d.label }}</a>{% if not d.analyse %} <span class="muted">(not analysed)</span>{% endif %}</td>
+        <td class="num">{{ fmt(s.latest, d.unit) }}{% if s.latest_day %}<br><span class="muted small">{{ s.latest_day.strftime("%b %-d") }}</span>{% endif %}</td>
+        <td class="num">{% if s.recent %}{{ fmt(s.recent.mean, d.unit) }}<br><span class="muted small">{{ s.recent.n }} days</span>{% else %}<span class="muted">too few days</span>{% endif %}</td>
+        <td class="num">{% if s.change_pct is not none %}{{ "%+.0f"|format(s.change_pct) }}%{% else %}–{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

@@ -3,7 +3,7 @@
 What stays local, what leaves, and what is sent to models. Updated with each
 milestone.
 
-## As of M1
+## As of M2
 
 | Data | Where it lives | Leaves the server? |
 |---|---|---|
@@ -11,6 +11,8 @@ milestone.
 | Your password | argon2 hash in `companion.users` | no |
 | Session cookies, API tokens | SHA-256 hashes only (`companion.sessions`, `companion.api_tokens`) | no |
 | Today sentences | computed on request, not stored | only to your browser or token holder |
+| State of Mind entries (valence, labels, associations) | copied into `companion.mood_entries` | no |
+| Daily features (one number per day per series) | `companion.daily_features`, rebuilt nightly | no |
 
 - **No outbound network calls.** The Companion contains no HTTP client.
   `tests/privacy` checks that the app code imports none, and that the pages,
