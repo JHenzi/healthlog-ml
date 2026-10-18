@@ -153,3 +153,66 @@ class Insight(Base):
     score: Mapped[float] = mapped_column(Float)
     sentence: Mapped[str] = mapped_column(Text)
     details: Mapped[dict] = mapped_column(JSONB, server_default="{}")
+
+
+class Tracker(Base):
+    """A user-defined measure (design §2). Type, unit and scale are locked once it has data (R12)."""
+
+    __tablename__ = "trackers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(Text, unique=True)
+    name: Mapped[str] = mapped_column(Text)
+    type: Mapped[str] = mapped_column(Text)
+    unit: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scale_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    scale_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    scale_labels: Mapped[dict] = mapped_column(JSONB, server_default="{}")
+    options: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    polarity: Mapped[str] = mapped_column(Text, server_default="neutral")
+    category: Mapped[str | None] = mapped_column(Text, nullable=True)
+    in_review: Mapped[bool] = mapped_column(Boolean, server_default="true")
+    always_logged: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    pinned: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    archived: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    successor_id: Mapped[int | None] = mapped_column(ForeignKey(f"{SCHEMA}.trackers.id"), nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Event(Base):
+    """The append-only capture log: the source of truth for observations and reviews."""
+
+    __tablename__ = "events"
+
+    seq: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    received_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    client_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    op: Mapped[str] = mapped_column(Text)  # log | edit | delete | review | unreview
+    payload: Mapped[dict] = mapped_column(JSONB)
+    source: Mapped[str] = mapped_column(Text)
+
+
+class Observation(Base):
+    """One tracker value, derived from the event log (rebuildable)."""
+
+    __tablename__ = "observations"
+
+    client_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    tracker_id: Mapped[int] = mapped_column(ForeignKey(f"{SCHEMA}.trackers.id"))
+    observed_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    day: Mapped[dt.date] = mapped_column(Date)
+    value_num: Mapped[float | None] = mapped_column(Float, nullable=True)
+    value_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(Text)
+    deleted: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    updated_seq: Mapped[int] = mapped_column(BigInteger)
+
+
+class DayReview(Base):
+    """A day the user reviewed: on it, an unlogged count/check tracker means 0, not unknown (R7)."""
+
+    __tablename__ = "day_reviews"
+
+    day: Mapped[dt.date] = mapped_column(Date, primary_key=True)
+    completed_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))

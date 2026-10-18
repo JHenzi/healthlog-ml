@@ -138,3 +138,15 @@ label.check { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; }
 h1 + p.muted { margin-top: 4px; }
+
+.tracker-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 8px 0; }
+.tracker-name { font-weight: 600; }
+.controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.controls button { margin: 0; padding: 8px 12px; min-width: 44px; min-height: 44px; }
+.controls input.num { width: 7em; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.controls input.time { padding: 7px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.controls form.inline { display: flex; gap: 6px; align-items: center; }
+.entries { list-style: none; padding: 0; margin: 8px 0 0; }
+.entries li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--border); }
+code.token { word-break: break-all; }
+p.error.card { color: var(--error); }

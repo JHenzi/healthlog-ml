@@ -3,7 +3,7 @@
 What stays local, what leaves, and what is sent to models. Updated with each
 milestone.
 
-## As of M2
+## As of M4 (part 1)
 
 | Data | Where it lives | Leaves the server? |
 |---|---|---|
@@ -14,6 +14,7 @@ milestone.
 | State of Mind entries (valence, labels, associations) | copied into `companion.mood_entries` | no |
 | Daily features (one number per day per series) | `companion.daily_features`, rebuilt nightly | no |
 | Insights (sentences and their statistics) | `companion.insights`, replaced each run | only to your browser or token holder |
+| Your trackers and every entry (values, times, device source) | `companion.trackers`, `events` (append-only), `observations` | no |
 
 - **No outbound network calls.** The Companion contains no HTTP client.
   `tests/privacy` checks that the app code imports none, and that the pages,
@@ -22,6 +23,9 @@ milestone.
   will send a rounded location (~10 km) and a date range, nothing else.
 - **No telemetry**, no model downloads at runtime (`HF_HUB_OFFLINE=1` in the image).
 - **Never logged:** the password (correct or not), session cookies, API tokens.
+- **A deleted entry stays in the event log** as a log event followed by a
+  delete (a tombstone), so derived tables can be rebuilt. True erasure
+  (`purge`) comes with the diary (M8), where it matters most.
   A test captures the logs during login and API calls and checks for them.
 - **No language model** sees anything yet. When narration arrives, diary text
   will be excluded unless you opt in (R11).

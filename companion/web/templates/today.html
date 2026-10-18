@@ -1,7 +1,20 @@
 {% extends "base.html" %}
+{% from "_log_controls.html" import log_controls %}
 {% block title %}Today · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
+{% if error %}<p class="error card" role="alert">Not saved: {{ error }}</p>{% endif %}
+{% if capture.pinned %}
+<section class="card">
+  <h2>Quick add</h2>
+  {% for t in capture.pinned %}
+  <div class="tracker-row">
+    <span class="tracker-name">{{ t.name }}</span>
+    {{ log_controls(t, csrf, "/", capture.new_id) }}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
 <section class="card">
   <h1>Today</h1>
   <p class="muted">{{ view.day.strftime("%A, %B %-d") }}</p>
@@ -9,6 +22,21 @@
     {% for line in view.sentences %}<li>{{ line }}</li>{% endfor %}
   </ul>
 </section>
+{% if capture.entries %}
+<section class="card">
+  <h2>Logged today</h2>
+  <ul class="entries">
+    {% for o, t, shown, local in capture.entries %}
+    <li><span>{{ local.strftime("%H:%M") }} · {{ t.name }}{% if shown %} · {{ shown }}{% endif %}</span>
+      <form method="post" action="/entries/{{ o.client_id }}/delete" class="inline">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/">
+        <button type="submit" class="link small">delete</button>
+      </form></li>
+    {% endfor %}
+  </ul>
+  <p class="small"><a href="/review">Evening review</a></p>
+</section>
+{% endif %}
 {% if view.problems %}
 <section class="card warn" role="status">
   <h2>HealthLog data problems</h2>

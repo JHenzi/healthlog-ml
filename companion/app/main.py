@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
-from . import api, upstream, web
+from . import api, upstream, web, web_trackers
 from .db import session_scope
 
 log = logging.getLogger("companion")
@@ -66,6 +66,7 @@ def create_app(*, check_on_startup: bool = True) -> FastAPI:
     app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
     app.include_router(api.router)
     app.include_router(web.router)
+    app.include_router(web_trackers.router)
     return app
 
 

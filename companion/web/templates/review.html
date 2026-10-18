@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_log_controls.html" import log_controls %}
+{% block title %}Review · Companion{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="row">
+    <a href="/review?day={{ prev.isoformat() }}" class="small">← {{ prev.strftime("%a") }}</a>
+    <h1>{{ day.strftime("%A, %B %-d") }}</h1>
+    {% if next %}<a href="/review?day={{ next.isoformat() }}" class="small">{{ next.strftime("%a") }} →</a>{% else %}<span></span>{% endif %}
+  </div>
+  <p class="muted">Fill in what's missing, then mark the day reviewed. On a reviewed day, a count or yes/no tracker with nothing logged counts as zero; on other days it stays unknown, so a forgotten entry never looks like "none".</p>
+  {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
+</section>
+{% for t in trackers %}
+<section class="card">
+  <div class="tracker-row">
+    <span class="tracker-name"><a href="/trackers/{{ t.key }}">{{ t.name }}</a></span>
+    {{ log_controls(t, csrf, "/review?day=" ~ day.isoformat(), new_id, day=day, with_time=True) }}
+  </div>
+  {% set logged = by_tracker.get(t.id, []) %}
+  {% if logged %}
+  <ul class="entries">
+    {% for o, shown, local in logged %}
+    <li><span>{{ local.strftime("%H:%M") }}{% if shown %} · {{ shown }}{% endif %}</span>
+      <form method="post" action="/entries/{{ o.client_id }}/delete" class="inline">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/review?day={{ day.isoformat() }}">
+        <button type="submit" class="link small">delete</button></form></li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted small">Nothing logged{% if reviewed and t.type in ("count", "check", "moment", "choice", "quantity", "duration") %}: counts as zero{% endif %}.</p>{% endif %}
+</section>
+{% else %}
+<section class="card"><p>No trackers are in the review yet. <a href="/trackers">Create one</a>.</p></section>
+{% endfor %}
+<section class="card">
+  <form method="post" action="/review" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="day" value="{{ day.isoformat() }}">
+    <input type="hidden" name="reviewed" value="{{ '' if reviewed else 'on' }}">
+    <button type="submit"{% if reviewed %} class="secondary"{% endif %}>{% if reviewed %}Reviewed ✓ (undo){% else %}Mark {{ day.strftime("%A") }} reviewed{% endif %}</button>
+  </form>
+</section>
+{% endblock %}
