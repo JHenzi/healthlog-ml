@@ -12,7 +12,6 @@ breaking anything.
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Iterable
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
@@ -24,11 +23,14 @@ from .timeutil import boundary_interval, day_bounds, sql_day_expr
 UPSTREAM_SCHEMA = "public"
 
 CONTRACT: dict[str, tuple[str, ...]] = {
-    "metric_samples": ("time", "metric", "source", "qty", "vavg"),
-    "metric_registry": ("metric", "display_name", "unit_canonical", "agg_default", "tier"),
-    "sleep_sessions": ("sleep_start", "sleep_end", "source", "total_sleep_h"),
+    "metric_samples": ("time", "metric", "source", "qty", "vmin", "vavg", "vmax"),
+    "metric_registry": ("metric", "display_name", "unit_canonical", "agg_default", "category", "tier"),
+    "sleep_sessions": ("sleep_start", "sleep_end", "source", "total_sleep_h", "deep_h", "core_h", "rem_h", "awake_h"),
     "stress_intraday": ("ts", "stress", "state"),
     "body_battery_intraday": ("ts", "level"),
+    "workouts": ("start_time", "duration_s", "active_energy_kcal", "source"),
+    # State of Mind straight from the raw archive until HealthLog parses it (upstream PR #111).
+    "raw_ingest": ("id", "payload"),
 }
 
 # HealthLog's stress states that carry a score (upstream analysis/constants.py).
@@ -167,5 +169,133 @@ def energy_reserve_daily(
     return {r.day: (int(r.low), int(r.high)) for r in rows}
 
 
-def contract_tables() -> Iterable[str]:
-    return CONTRACT.keys()
+# --- bulk reads for the daily feature table (M2) ----------------------------
+
+
+@dataclass(frozen=True)
+class MetricDayRow:
+    """Every aggregate of one metric for one Companion day from one source; the caller picks one."""
+
+    day: dt.date
+    metric: str
+    source: str
+    sum: float | None
+    avg: float | None
+    min: float | None
+    max: float | None
+    n: int
+
+
+def registry(db: Session) -> list[dict]:
+    rows = db.execute(
+        sa.text("SELECT metric, display_name, unit_canonical, agg_default, category, tier FROM public.metric_registry")
+    ).mappings()
+    return [dict(r) for r in rows]
+
+
+def metric_day_rows(db: Session, zone: ZoneInfo, boundary: dt.time, since: dt.date | None = None) -> list[MetricDayRow]:
+    """All metrics, per Companion day and source, over the whole history (or from ``since``)."""
+    day = sql_day_expr("time")
+    params: dict = {"tz": zone.key, "boundary": boundary_interval(boundary)}
+    where = ""
+    if since is not None:
+        params["start"] = day_bounds(since, zone, boundary)[0]
+        where = "WHERE time >= :start"
+    rows = db.execute(
+        sa.text(
+            f"SELECT {day} AS day, metric, source, sum(qty) AS s, avg(coalesce(vavg, qty)) AS a, "
+            "min(coalesce(vmin, vavg, qty)) AS lo, max(coalesce(vmax, vavg, qty)) AS hi, count(*) AS n "
+            f"FROM public.metric_samples {where} GROUP BY 1, 2, 3"
+        ),
+        params,
+    ).all()
+    return [MetricDayRow(r.day, r.metric, r.source or "", r.s, r.a, r.lo, r.hi, int(r.n)) for r in rows]
+
+
+@dataclass(frozen=True)
+class SleepDayRow:
+    day: dt.date  # wake date
+    source: str
+    total_h: float
+    deep_h: float | None
+    core_h: float | None
+    rem_h: float | None
+    awake_h: float | None
+    sessions: int
+
+
+def sleep_day_rows(db: Session, zone: ZoneInfo) -> list[SleepDayRow]:
+    rows = db.execute(
+        sa.text(
+            "SELECT (sleep_end AT TIME ZONE :tz)::date AS day, source, sum(total_sleep_h) AS total, "
+            "sum(deep_h) AS deep, sum(core_h) AS core, sum(rem_h) AS rem, sum(awake_h) AS awake, count(*) AS n "
+            "FROM public.sleep_sessions WHERE sleep_end IS NOT NULL AND total_sleep_h IS NOT NULL GROUP BY 1, 2"
+        ),
+        {"tz": zone.key},
+    ).all()
+    return [SleepDayRow(r.day, r.source or "", r.total, r.deep, r.core, r.rem, r.awake, int(r.n)) for r in rows]
+
+
+def workout_day_rows(db: Session, zone: ZoneInfo, boundary: dt.time) -> list[SourceDay]:
+    """Workout minutes per Companion day and source (``n`` = number of workouts)."""
+    day = sql_day_expr("start_time")
+    rows = db.execute(
+        sa.text(
+            f"SELECT {day} AS day, coalesce(source, '') AS source, sum(duration_s) / 60.0 AS value, count(*) AS n "
+            "FROM public.workouts WHERE start_time IS NOT NULL AND duration_s IS NOT NULL GROUP BY 1, 2"
+        ),
+        {"tz": zone.key, "boundary": boundary_interval(boundary)},
+    ).all()
+    return [SourceDay(r.day, r.source, float(r.value), int(r.n)) for r in rows]
+
+
+def stress_day_rows(db: Session, zone: ZoneInfo, boundary: dt.time) -> list[SourceDay]:
+    day = sql_day_expr("ts")
+    rows = db.execute(
+        sa.text(
+            f"SELECT {day} AS day, avg(stress) AS value, count(*) AS n FROM public.stress_intraday "
+            "WHERE state = ANY(:states) AND stress IS NOT NULL GROUP BY 1"
+        ),
+        {"tz": zone.key, "boundary": boundary_interval(boundary), "states": list(MEASURED_STRESS_STATES)},
+    ).all()
+    return [SourceDay(r.day, "", float(r.value), int(r.n)) for r in rows]
+
+
+def energy_day_rows(db: Session, zone: ZoneInfo, boundary: dt.time) -> dict[dt.date, tuple[int, int]]:
+    day = sql_day_expr("ts")
+    rows = db.execute(
+        sa.text(
+            f"SELECT {day} AS day, min(level) AS low, max(level) AS high FROM public.body_battery_intraday GROUP BY 1"
+        ),
+        {"tz": zone.key, "boundary": boundary_interval(boundary)},
+    ).all()
+    return {r.day: (int(r.low), int(r.high)) for r in rows}
+
+
+def raw_state_of_mind_since(db: Session, cursor: int, limit: int = 200) -> list[tuple[int, list]]:
+    """``(raw_ingest id, stateOfMind entries)`` for archived payloads after ``cursor``, oldest first."""
+    rows = db.execute(
+        sa.text(
+            "SELECT id, payload->'data'->'stateOfMind' AS entries FROM public.raw_ingest "
+            "WHERE id > :cursor AND jsonb_typeof(payload->'data'->'stateOfMind') = 'array' "
+            "ORDER BY id LIMIT :limit"
+        ),
+        {"cursor": cursor, "limit": limit},
+    ).all()
+    return [(int(r.id), r.entries) for r in rows]
+
+
+def max_raw_ingest_id(db: Session) -> int:
+    return int(db.execute(sa.text("SELECT coalesce(max(id), 0) FROM public.raw_ingest")).scalar_one())
+
+
+def metric_sources(db: Session, metric: str) -> list[tuple[str, int]]:
+    """``(source, samples)`` for one metric, most samples first (for the source-priority setting)."""
+    rows = db.execute(
+        sa.text(
+            "SELECT source, count(*) AS n FROM public.metric_samples WHERE metric = :metric "
+            "GROUP BY source ORDER BY n DESC"
+        ),
+        {"metric": metric},
+    ).all()
+    return [(r.source or "", int(r.n)) for r in rows]

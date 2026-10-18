@@ -99,3 +99,37 @@ button.link {
 }
 
 code { font-size: 0.9em; }
+
+.nav { display: flex; gap: 16px; align-items: center; }
+.nav a { color: var(--accent); text-decoration: none; }
+
+.row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+button.secondary { margin: 0; background: transparent; color: var(--accent); border: 1px solid var(--border); }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px 6px; border-top: 1px solid var(--border); text-align: left; vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 0.85rem; border-top: 0; }
+.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+tr.dim td { opacity: 0.6; }
+.small { font-size: 0.8rem; }
+a { color: var(--accent); }
+
+.spark { width: 100%; height: 56px; margin: 8px 0; }
+.spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 12px 0 0; }
+.stats dt { color: var(--muted); font-size: 0.85rem; }
+.stats dd { margin: 0; font-size: 1.1rem; }
+
+.settings select, .settings input:not([type="checkbox"]) {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+label.check { display: flex; gap: 8px; align-items: center; margin-top: 16px; }

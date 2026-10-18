@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ d.label }} · Companion{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="muted small"><a href="/metrics">Metrics</a> / {{ d.source }}</p>
+  <h1>{{ d.label }}</h1>
+  <p class="muted">{{ s.days }} days of data{% if d.unit %} · {{ d.unit }}{% endif %}</p>
+  {% if spark and spark[0] %}
+  <svg class="spark" viewBox="0 0 240 40" preserveAspectRatio="none" role="img" aria-label="Last 60 days">
+    {% for seg in spark %}<polyline points="{{ seg }}"></polyline>{% endfor %}
+  </svg>
+  {% endif %}
+  <dl class="stats">
+    <div><dt>Latest</dt><dd>{{ fmt(s.latest, d.unit) }}{% if s.latest_day %} <span class="muted small">{{ s.latest_day.strftime("%b %-d") }}</span>{% endif %}</dd></div>
+    <div><dt>Last 30 days</dt><dd>{% if s.recent %}{{ fmt(s.recent.mean, d.unit) }} <span class="muted small">{{ s.recent.n }} days</span>{% else %}too few days{% endif %}</dd></div>
+    <div><dt>30 days before</dt><dd>{% if s.prior %}{{ fmt(s.prior.mean, d.unit) }} <span class="muted small">{{ s.prior.n }} days</span>{% else %}too few days{% endif %}</dd></div>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>By weekday</h2>
+  <div class="table-wrap">
+  <table class="weekday">
+    <thead><tr>{% for w in weekdays %}<th class="num">{{ w }}</th>{% endfor %}</tr></thead>
+    <tbody><tr>{% for w in s.weekday %}<td class="num">{% if w %}{{ fmt(w.mean) }}<br><span class="muted small">n={{ w.n }}</span>{% else %}–{% endif %}</td>{% endfor %}</tr></tbody>
+  </table>
+  </div>
+</section>
+
+{% if setting %}
+<section class="card">
+  <h2>Settings</h2>
+  <p class="muted">How this HealthLog metric becomes one value per day. Saving rebuilds every daily series.{% if setting.user_edited %} <strong>Edited by you.</strong>{% endif %}</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/metrics/{{ d.feature }}/settings" class="settings">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="aggregation">Daily value</label>
+    <select id="aggregation" name="aggregation">
+      {% for a in aggregations %}<option value="{{ a }}"{% if a == setting.aggregation %} selected{% endif %}>{{ {"sum": "Sum of the day", "avg": "Average", "min": "Lowest", "max": "Highest"}[a] }}</option>{% endfor %}
+    </select>
+    <div class="pair">
+      <div><label for="min_value">Ignore days below</label><input id="min_value" name="min_value" inputmode="decimal" value="{{ setting.min_value if setting.min_value is not none else '' }}"></div>
+      <div><label for="max_value">Ignore days above</label><input id="max_value" name="max_value" inputmode="decimal" value="{{ setting.max_value if setting.max_value is not none else '' }}"></div>
+    </div>
+    <label for="source_priority">Preferred sources, in order (comma-separated)</label>
+    <input id="source_priority" name="source_priority" value="{{ setting.source_priority|join(', ') }}" placeholder="empty: HealthLog's merged stream, else the busiest source">
+    {% if sources %}<p class="muted small">Sources seen: {% for src, n in sources %}{{ src or "(merged)" }} ({{ "{:,}".format(n) }}){% if not loop.last %}, {% endif %}{% endfor %}. Sources are never added together.</p>{% endif %}
+    <label class="check"><input type="checkbox" name="analyse"{% if setting.analyse %} checked{% endif %}> Include in analysis</label>
+    <button type="submit">Save</button>
+  </form>
+  {% if setting.user_edited %}
+  <form method="post" action="/metrics/{{ d.feature }}/reset" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit" class="link">Reset to HealthLog's defaults</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Last 30 days</h2>
+  <div class="table-wrap">
+  <table>
+    <tbody>
+    {% for day, value in recent %}<tr><td>{{ day.strftime("%a %b %-d") }}</td><td class="num">{{ fmt(value, d.unit) if value is not none else "no data" }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

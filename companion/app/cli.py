@@ -6,6 +6,7 @@ companion set-password                   # set the operator password (prompted, 
 companion token create NAME --scope all|read|log:<tracker_key>
 companion token list
 companion token revoke ID
+companion refresh                        # seed metric settings, sync mood, rebuild daily features
 companion web                            # migrate, then serve on :8000
 companion jobs                           # run the nightly job scheduler
 """
@@ -97,6 +98,20 @@ def _token_revoke(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def _refresh(_args: argparse.Namespace) -> int:
+    from . import jobs
+
+    with session_scope() as db:
+        result = jobs.refresh(db)
+    f = result.features
+    print(
+        f"metric settings: +{result.seeded.added} new, {result.seeded.refreshed} refreshed; "
+        f"mood: {result.mood.entries} entries from {result.mood.payloads} payloads; "
+        f"features: {f.features} ({f.rows} day values, {f.first_day} to {f.last_day})"
+    )
+    return 0
+
+
 def _web(args: argparse.Namespace) -> int:
     import uvicorn
 
@@ -132,6 +147,10 @@ def build_parser() -> argparse.ArgumentParser:
     revoke = tok_sub.add_parser("revoke", help="revoke a token")
     revoke.add_argument("id", type=int)
     revoke.set_defaults(func=_token_revoke)
+
+    sub.add_parser("refresh", help="seed metric settings, sync mood, rebuild daily features").set_defaults(
+        func=_refresh
+    )
 
     web = sub.add_parser("web", help="migrate, then serve the web app")
     web.add_argument("--port", type=int, default=8000)
