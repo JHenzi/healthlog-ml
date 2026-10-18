@@ -29,8 +29,9 @@ data means is ours.**
 | # | Item | Status |
 |---|---|---|
 | A0 | Large-backfill split fix | **merged** (#104; maintainer follow-up #105) |
-| A1 | **State of Mind parsing** (`data.stateOfMind` → table, re-derive from `raw_ingest`) | **PR #111 open** (2026-10-17); asked the maintainer how he'd like it shown in Grafana |
-| A2 | **Registry entries** for lifestyle metrics: caffeine, alcohol, water, symptoms, mindful minutes … (units, bounds, aggregation; which are `core` is discussed in the PR) | requested on #107 |
+| A1 | **State of Mind parsing** (`data.stateOfMind` → table, re-derive from `raw_ingest`) | **merged** (#111, 2026-10-18); maintainer follow-ups #112 (Grafana "Mood (State of Mind)" row, backfill counts). On `dev`, not yet in a release |
+| A2 | **Registry entries** for lifestyle metrics: caffeine, alcohol, water, mindful minutes … (units, bounds, aggregation; which are `core` is discussed in the PR) | requested on #107 |
+| A5 | **Symptoms and Medications**: in HAE these are their own data types (`data.symptoms`, `data.medications`), not Health Metrics, so they need their own parser and table like State of Mind, not registry entries (maintainer, #111) | shape to be agreed with the maintainer before code; draft in [`next-steps.md`](next-steps.md) §4.1 |
 | A3 | **Time zone fix**: `daily_metrics` view and Grafana dashboards hard-code `Europe/Vienna` regardless of `TZ`; add a `TZ`-mismatch warning to `healthlog audit` (risks.md L1b) | **merged** (#108; maintainer follow-ups #109, #110) |
 | A4 | Ingest/parser bugs found along the way | as found; next: **unaggregated sleep is dropped** (risks.md L3) |
 
@@ -70,7 +71,7 @@ months of data. B7–B10 can happen in any order.
 
 **Done** (as of 2026-10-18):
 - B0, B1 (M1), B2 (M2), B3 part 1 (M4), B5 v1 (M5).
-- A0 and A3 merged upstream; A1 open as #111.
+- A0, A1 (#111) and A3 merged upstream.
 
 The detailed handoff is [`next-steps.md`](next-steps.md): operator to-dos,
 machine setup, the work queue, and lessons learned. In short:
@@ -81,8 +82,9 @@ machine setup, the work queue, and lessons learned. In short:
    - Add the Workouts and State of Mind automations in HAE.
    - Create trackers. Until these land, the engine has too few overlapping
      days to report anything.
-2. **Upstream:** follow up on #111; a small A4 PR so dropped sleep segments
-   are counted, not silent; A2 registry entries.
+2. **Upstream:** agree the A5 Symptoms/Medications shape; a small A4 PR so
+   dropped sleep segments are counted, not silent; A2 registry entries.
+   Switch mood to `public.state_of_mind` once a release ships it.
 3. **B4 (M3) weather:** backfills the whole history, so it gives the engine
    data right away. It brings the first allowlisted outbound call (R5).
 4. **B3 part 2 (M4):** the Track Shortcut, offline PWA, spans, starter packs.

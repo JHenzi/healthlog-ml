@@ -12,7 +12,7 @@ risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 | Piece | State |
 |---|---|
 | Fork `main` (`JHenzi/healthlog-ml`) | upstream `main` as of its #106 release (includes #104/#105) + Companion M1, M2, M4 part 1, M5 v1 (fork PRs #1–#4, all CI green). Upstream's #108–#110 are on their `dev` and arrive with their next release. |
-| Upstream PRs | #104, #105 (backfill split) and #108 (time zone) **merged** into `anym001/healthlog:dev`; **#111 State of Mind open**, with our question on how to show it in Grafana |
+| Upstream PRs | #104, #105 (backfill split) and #108 (time zone) **merged** into `anym001/healthlog:dev`; #111 (State of Mind) **merged** on 2026-10-18, with the maintainer's follow-ups in #112. The live HealthLog runs the released `:latest` image, which is still at migration 0021, so `public.state_of_mind` doesn't exist there yet |
 | Live services | `healthlog-companion` (web, port 8020) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis), built from the fork's `main` |
 | Companion DB | schema `companion`, migrations up to `0004_trackers`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
 | Data | 76 daily series (1,834 day values since 2026-07-15), 30 State of Mind entries, 0 trackers yet |
@@ -124,8 +124,9 @@ runs a refresh when it starts.
 
 ### 4.1 Upstream (track A)
 
-- **#111 State of Mind:** answer the maintainer's review. When it merges,
-  read `public.state_of_mind` through the contract instead of `raw_ingest`.
+- **State of Mind (#111, merged to `dev`):** once a HealthLog release ships
+  migration 0023 and the live image is updated, read `public.state_of_mind`
+  through the contract instead of `raw_ingest`.
   To switch: add the table to `CONTRACT`, point `mood.sync_from_raw` at it
   (or replace it), and keep the `mood_entries` copy so history and the
   analysis don't change.
@@ -134,8 +135,24 @@ runs a refresh when it starts.
   parser needs `sleepStart` and silently skips the per-stage shape (`value`:
   Core/Deep/REM/Awake, `startDate`/`endDate`, `qty` in hours). Better still,
   fold segments into nights. Branch from `upstream/dev`.
-- **A2 registry entries** (caffeine, alcohol, water, symptoms, mindful
-  minutes), as asked on #107.
+- **A2 registry entries** (caffeine, alcohol, water, mindful minutes), as
+  asked on #107. Not symptoms: see A5.
+- **A5 Symptoms and Medications.** HAE exports these as their own data types,
+  not Health Metrics, so they get a parser and table each, like State of
+  Mind. The maintainer asked to discuss the shape first. Facts from HAE's
+  export-format docs (no samples in our `raw_ingest` yet):
+  - `data.symptoms[]`: `start`, `end` (equal for a point in time), `name`
+    (e.g. "Headache"), `severity` (e.g. Mild/Moderate/Severe, not a closed
+    set), `userEntered`, `source`. **No entry id**, unlike State of Mind.
+  - `data.medications[]` (iOS 26+): `displayText`, `nickname`, `form`,
+    `start`/`end` (the course), `scheduledDate`, `status` (Taken, Skipped,
+    Snoozed, Not Logged, …), `isArchived`, `dosage` (unitless), `codings[]`
+    (RxNorm/NDC). No entry id either.
+  - Draft shape: `symptoms` keyed by (`start_time`, `name`, `source`), with
+    `severity` kept as raw text; `medication_doses` keyed by (medication
+    identity, `scheduled_time`). Open questions: whether `name` arrives
+    localised (as workout names do), and how unscheduled as-needed doses are
+    keyed. Symptoms first; medications after a real sample.
 
 ### 4.2 M3: weather (next build; it backfills, so findings come quickly)
 
