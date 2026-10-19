@@ -242,7 +242,9 @@ def tracker_features(
 def load_tracker_inputs(db: Session) -> tuple[list[tuple[trackers.TrackerSpec, list[trackers.Obs]]], set[dt.date]]:
     by_tracker: dict[int, list[trackers.Obs]] = {}
     for o in db.execute(sa.select(Observation).where(Observation.deleted.is_(False))).scalars():
-        by_tracker.setdefault(o.tracker_id, []).append(trackers.Obs(o.observed_at, o.day, o.value_num, o.value_text))
+        by_tracker.setdefault(o.tracker_id, []).append(
+            trackers.Obs(o.observed_at, o.day, o.value_num, o.value_text, o.tag)
+        )
     specs = [(spec_of(t), by_tracker.get(t.id, [])) for t in db.execute(sa.select(Tracker)).scalars()]
     reviewed = set(db.execute(sa.select(DayReview.day)).scalars())
     return specs, reviewed

@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 from app import capture, features
 from app.models import DayReview, Event, Observation
+from app.timeutil import local_day
 from app.trackers import TrackerInputError
 
 NY = ZoneInfo("America/New_York")
@@ -25,7 +26,15 @@ def coffee(db):
 
 @pytest.fixture
 def mood_scale(db):
-    return capture.create_tracker(db, key="energy_level", name="Energy level", type="scale", scale_min=1, scale_max=5)
+    return capture.create_tracker(
+        db,
+        key="energy_level",
+        name="Energy level",
+        type="scale",
+        scale_min=1,
+        scale_max=5,
+        tags=["Slept badly", "travel"],
+    )
 
 
 def _log(db, tracker, value=None, *, when=None, cid=None):
@@ -44,6 +53,7 @@ def _state(db) -> tuple:
             o.day,
             o.value_num,
             o.value_text,
+            o.tag,
             o.deleted,
         )
         for o in db.execute(select(Observation)).scalars()
@@ -111,6 +121,11 @@ def test_rebuild_equals_incremental_state(db, coffee, mood_scale):
             row = db.get(Observation, cid)
             value = rng.randint(1, 3) if row.tracker_id == coffee.id else rng.randint(1, 5)
             capture.edit(db, cid, value, observed_at=when, source="test", zone=NY, boundary=FOUR)
+        elif action < 0.78:
+            tag = rng.choice(["Slept badly", "travel"])
+            capture.toggle_tag(
+                db, mood_scale, tag, local_day(when, NY, FOUR), observed_at=when, source="test", zone=NY, boundary=FOUR
+            )
         elif action < 0.85:
             cid = live.pop(rng.randrange(len(live)))
             capture.delete(db, cid, source="test")
@@ -133,3 +148,25 @@ def test_tracker_features_reach_the_feature_table(db, coffee):
     capture.set_reviewed(db, day + dt.timedelta(days=1), True, source="test")
     features.rebuild(db, NY, FOUR)
     assert features.series(db, "tracker.coffee.total") == {day: 2.0, day + dt.timedelta(days=1): 0.0}
+
+
+def _toggle(db, tracker, tag, day):
+    when = dt.datetime.combine(day, dt.time(18), tzinfo=NY)
+    return capture.toggle_tag(db, tracker, tag, day, observed_at=when, source="test", zone=NY, boundary=FOUR)
+
+
+def test_tag_toggles_on_and_off_and_reaches_features(db, mood_scale):
+    day = dt.date(2026, 10, 10)
+    assert _toggle(db, mood_scale, "slept badly", day) is True
+    assert capture.tags_for_day(db, day) == {mood_scale.id: {"slept_badly"}}
+    assert _toggle(db, mood_scale, "Slept badly", day) is False  # tapping again unpicks it
+    assert capture.tags_for_day(db, day) == {}
+    assert _toggle(db, mood_scale, "travel", day) is True
+    with pytest.raises(TrackerInputError):
+        _toggle(db, mood_scale, "not a tag", day)
+    tag_row = db.execute(select(Observation).where(Observation.tag == "travel")).scalar_one()
+    with pytest.raises(TrackerInputError):
+        capture.edit(db, tag_row.client_id, 3, observed_at=None, source="test", zone=NY, boundary=FOUR)
+    features.rebuild(db, NY, FOUR)
+    assert features.series(db, "tracker.energy_level.tag.travel") == {day: 1.0}
+    assert features.series(db, "tracker.energy_level.tag.slept_badly") == {day: 0.0}

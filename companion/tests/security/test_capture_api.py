@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import re
 import uuid
 
@@ -9,7 +10,7 @@ import pytest
 from sqlalchemy import select
 
 from app import auth, capture
-from app.models import ApiToken, Observation
+from app.models import ApiToken, Observation, Tracker
 
 PASSWORD = "tracker pages password"
 
@@ -101,7 +102,8 @@ def test_pages_need_sign_in(client, coffee, path):
 
 
 @pytest.mark.parametrize(
-    "path", ["/trackers", "/trackers/coffee/edit", "/trackers/coffee/token", "/log/coffee", "/review"]
+    "path",
+    ["/trackers", "/trackers/coffee/edit", "/trackers/coffee/token", "/log/coffee", "/log/coffee/tag", "/review"],
 )
 def test_writes_need_csrf(signed_in, coffee, path):
     assert signed_in.post(path, data={"csrf": "forged", "name": "x", "day": "2026-10-10"}).status_code == 403
@@ -115,11 +117,7 @@ def test_create_tracker_page_flow_and_escaping(signed_in, db):
             "csrf": csrf,
             "name": "<script>alert(1)</script> Mood",
             "type": "scale",
-            "scale_min": "1",
-            "scale_max": "5",
             "polarity": "good",
-            "pinned": "on",
-            "in_review": "on",
         },
         follow_redirects=False,
     )
@@ -128,6 +126,56 @@ def test_create_tracker_page_flow_and_escaping(signed_in, db):
     assert key == "script_alert_1_script_mood"
     html = signed_in.get(f"/trackers/{key}").text
     assert "<script>alert(1)</script>" not in html and "&lt;script&gt;" in html
+    tracker = db.execute(select(Tracker).where(Tracker.key == key)).scalar_one()
+    # Assumed, not asked: every rating is 1–10, and a new metric is in Quick add and the daily log.
+    assert (tracker.scale_min, tracker.scale_max, tracker.pinned, tracker.in_review) == (1, 10, True, True)
+    assert 'class="lvl-0"' in html and 'class="lvl-10"' in html and "pol-good" in html
+
+
+def test_new_metric_form_asks_only_what_it_needs(signed_in, db):
+    html = signed_in.get("/trackers").text
+    for gone in ('name="key"', 'name="scale_min"', 'name="scale_labels"', 'name="category"'):
+        assert gone not in html
+    assert 'name="tags"' in html and "What are you tracking?" in html and "Work day" in html
+    csrf = _csrf(html)
+    preset = signed_in.post(
+        "/trackers",
+        data={"csrf": csrf, "name": "Work day", "type": "scale", "tags": "meeting heavy, in-fighting"},
+        follow_redirects=False,
+    )
+    assert preset.headers["location"] == "/trackers/work_day"
+    assert "Work day" not in signed_in.get("/trackers").text.split("New metric", 1)[1].split("Or make", 1)[0]
+
+
+def test_tags_toggle_from_the_daily_log(signed_in, db):
+    capture.create_tracker(
+        db,
+        key="work_day",
+        name="Work day",
+        type="scale",
+        scale_min=1,
+        scale_max=10,
+        tags=["Meeting heavy"],
+        pinned=True,
+    )
+    html = signed_in.get("/").text
+    assert 'aria-pressed="false">Meeting heavy' in html
+    csrf = _csrf(html)
+    signed_in.post("/log/work_day/tag", data={"csrf": csrf, "tag": "Meeting heavy", "back": "/"})
+    assert 'aria-pressed="true">Meeting heavy' in signed_in.get("/").text
+    signed_in.post("/log/work_day/tag", data={"csrf": csrf, "tag": "Meeting heavy", "back": "/"})
+    assert 'aria-pressed="false">Meeting heavy' in signed_in.get("/").text
+    bad = signed_in.post("/log/work_day/tag", data={"csrf": csrf, "tag": "nope", "back": "/"}, follow_redirects=False)
+    assert "error=" in bad.headers["location"]
+
+
+def test_logging_an_earlier_day_lands_on_that_day(signed_in, db, coffee):
+    review = signed_in.get("/review").text
+    today = dt.date.fromisoformat(re.search(r'name="day" value="([0-9-]+)"', review).group(1))
+    earlier = today - dt.timedelta(days=3)
+    csrf = _csrf(review)
+    signed_in.post("/log/coffee", data={"csrf": csrf, "day": earlier.isoformat(), "back": "/review"})
+    assert db.execute(select(Observation)).scalar_one().day == earlier
 
 
 def test_bad_definition_shows_an_error(signed_in):

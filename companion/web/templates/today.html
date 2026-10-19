@@ -46,7 +46,7 @@
   {% for t in capture.pinned %}
   <div class="tracker-row">
     <span class="tracker-name">{{ t.name }}</span>
-    {{ log_controls(t, csrf, "/", capture.new_id) }}
+    {{ log_controls(t, csrf, "/", capture.new_id, tagged=capture.tagged.get(t.id, ())) }}
   </div>
   {% endfor %}
 </section>

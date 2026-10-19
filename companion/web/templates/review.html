@@ -10,14 +10,14 @@
     {% if next %}<a href="/review?day={{ next.isoformat() }}">{{ next.strftime("%a") }} ›</a>{% else %}<span></span>{% endif %}
   </div>
   <h1>Log · {{ day.strftime("%a, %b %-d") }}</h1>
-  <p class="muted">Fill in what's missing, then mark the day reviewed. On a reviewed day, a count or yes/no tracker with nothing logged counts as zero; on other days it stays unknown, so a forgotten entry never looks like "none".</p>
+  <p class="muted">Tap what applies, then mark the day reviewed. Once it's reviewed, anything you left empty counts as "none"; until then it stays unknown, so a forgotten entry never looks like zero.</p>
   {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
 </section>
 {% for t in trackers %}
 <section class="card">
   <div class="tracker-row">
     <span class="tracker-name"><a href="/trackers/{{ t.key }}">{{ t.name }}</a></span>
-    {{ log_controls(t, csrf, "/review?day=" ~ day.isoformat(), new_id, day=day, with_time=True) }}
+    {{ log_controls(t, csrf, "/review?day=" ~ day.isoformat(), new_id, day=day, with_time=t.type != "tags", tagged=tagged.get(t.id, ())) }}
   </div>
   {% set logged = by_tracker.get(t.id, []) %}
   {% if logged %}
@@ -29,7 +29,7 @@
         <button type="submit" class="link small">delete</button></form></li>
     {% endfor %}
   </ul>
-  {% else %}<p class="muted small">Nothing logged{% if reviewed and t.type in ("count", "check", "moment", "choice", "quantity", "duration") %}: counts as zero{% endif %}.</p>{% endif %}
+  {% else %}<p class="muted small">Nothing logged{% if reviewed and (t.tags or t.type in ("count", "check", "moment", "choice", "quantity", "duration")) %}: counts as zero{% endif %}.</p>{% endif %}
 </section>
 {% else %}
 <section class="card"><p>No trackers are in the review yet. <a href="/trackers">Create one</a>.</p></section>

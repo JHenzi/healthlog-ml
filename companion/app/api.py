@@ -104,6 +104,7 @@ def _entry_json(o: Observation, t: Tracker) -> dict:
         "value": o.value_text if o.value_text is not None else o.value_num,
         "time": o.observed_at.isoformat(),
         "day": o.day.isoformat(),
+        "tag": o.tag,
     }
 
 

@@ -25,8 +25,8 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | 1a Overview | `/` | built: coverage strip, "worth exploring", baseline sentences, quick add |
 | 1b Discoveries | `/insights` | built, without the likely-range bar (needs intervals) |
 | 1c Evidence | `/insights/{id}` | built: finding, method, effect, days, effective days, p. Raw-observation plot and "things that could explain this" to come |
-| 2a Daily log | `/review` | built: per-type controls, reviewed state. Tags and "not recorded" toggling to come |
-| 2b Metric builder | `/trackers` | built as the tracker form. Reminders come with web push (M11) |
+| 2a Daily log | `/review` | built: per-type controls, coloured ratings, tag chips, reviewed state. "Not recorded" toggling to come |
+| 2b Metric builder | `/trackers` | built, simplified past the wireframe: presets, then name + kind + only the needed detail. Reminders come with web push (M11) |
 | 3a Explore | — | not built: aligned timelines, scatter, calendar, lag option |
 | 3b Metric detail | `/metrics/{feature}`, `/trackers/{key}` | built: provenance, 30-day comparison, weekday profile, recent days |
 | 4a Experiments | — | not built (M9) |
@@ -43,6 +43,20 @@ lives in `style.css` tokens and the self-hosted font, so a re-skin doesn't
 touch templates or structure. The structural decisions above (missing days
 hatched, provenance and Preliminary tags, discoveries above baselines,
 five sections) hold whichever skin is chosen.
+
+## Owner feedback (2026-10-18)
+
+- The metric builder was "a nightmare": too many choices. Make assumptions
+  for the user; "flexible" isn't helpful. Done: presets; ratings are always
+  1–10 with no labels, coloured from low to high (red → green when higher is
+  better, a neutral ramp otherwise); the key, scale labels, category and
+  polarity are gone from creation (polarity and the rest live on the
+  metric's page); rarer kinds sit under "More kinds".
+- **Tags** in setup and daily capture, e.g. "Work day" rated 1–10 with
+  "in-fighting" and "meeting heavy" to tap, so a tag can be related to, say,
+  fewer steps.
+- Tone: friendly beats stark. WaterLlama (a friendly, non-threatening bear
+  mascot) is a reference people like.
 
 ## Review preview
 

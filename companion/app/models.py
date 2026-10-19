@@ -169,6 +169,7 @@ class Tracker(Base):
     scale_max: Mapped[float | None] = mapped_column(Float, nullable=True)
     scale_labels: Mapped[dict] = mapped_column(JSONB, server_default="{}")
     options: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    tags: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")  # editable any time
     polarity: Mapped[str] = mapped_column(Text, server_default="neutral")
     category: Mapped[str | None] = mapped_column(Text, nullable=True)
     in_review: Mapped[bool] = mapped_column(Boolean, server_default="true")
@@ -204,6 +205,7 @@ class Observation(Base):
     day: Mapped[dt.date] = mapped_column(Date)
     value_num: Mapped[float | None] = mapped_column(Float, nullable=True)
     value_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tag: Mapped[str | None] = mapped_column(Text, nullable=True)  # a tag entry (slug) carries no value
     source: Mapped[str] = mapped_column(Text)
     deleted: Mapped[bool] = mapped_column(Boolean, server_default="false")
     updated_seq: Mapped[int] = mapped_column(BigInteger)

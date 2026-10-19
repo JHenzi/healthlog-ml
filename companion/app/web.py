@@ -21,11 +21,13 @@ from .db import get_db
 from .models import DailyFeature, FeatureDef, Insight, MetricSetting, Setting, User, WebSession
 from .proxies import client_ip
 from .timeutil import current_day
+from .trackers import tag_slug
 
 log = logging.getLogger("companion.web")
 
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "web" / "templates"
 templates = Jinja2Templates(env=jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR), autoescape=True))
+templates.env.filters["tag_slug"] = tag_slug
 
 router = APIRouter()
 

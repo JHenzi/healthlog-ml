@@ -14,8 +14,11 @@ from app.trackers import (
     check_time,
     daily_features,
     minutes_of_day,
+    parse_tag,
+    parse_tags,
     parse_value,
     slugify,
+    tag_slug,
     validate_definition,
 )
 
@@ -139,3 +142,47 @@ def test_choice_and_moment_features():
 def test_time_tracker_gives_first_time():
     f = daily_features(SOCIAL, [_obs(D1, 7), _obs(D1, 21)], set(), D3, NY, FOUR)
     assert f.values == {"tracker.social_media.first_time": {D1: 420.0}}
+
+
+WORK = TrackerSpec("work_day", "Work day", "scale", scale_min=1, scale_max=10, tags=("Meeting heavy", "in-fighting"))
+DAY_TAGS = TrackerSpec("day_tags", "Day tags", "tags", tags=("travel", "sick"))
+
+
+def _tag(day: dt.date, tag: str) -> Obs:
+    return Obs(dt.datetime.combine(day, dt.time(18), tzinfo=NY), day, None, None, tag)
+
+
+def test_tags_parse_and_slug():
+    assert parse_tags("in-fighting, Meeting  heavy,, meeting heavy ,") == ["in-fighting", "Meeting heavy"]
+    assert tag_slug("Meeting heavy") == "meeting_heavy" and tag_slug("in-fighting") == "in_fighting"
+    assert parse_tag(WORK, "meeting HEAVY") == "meeting_heavy"
+    with pytest.raises(TrackerInputError):
+        parse_tag(WORK, "travel")  # only the tracker's own tags
+
+
+def test_tag_definitions_are_validated():
+    validate_definition(DAY_TAGS)
+    for bad in (
+        TrackerSpec("t", "T", "tags"),  # a tags-only tracker needs tags
+        TrackerSpec("t", "T", "check", tags=("Late", "late")),  # same slug twice
+        TrackerSpec("t", "T", "check", tags=("!!",)),
+        TrackerSpec("t", "T", "check", tags=("x" * 41,)),
+    ):
+        with pytest.raises(TrackerInputError):
+            validate_definition(bad)
+    with pytest.raises(TrackerInputError):
+        parse_value(DAY_TAGS, "1")  # nothing to log but tags
+
+
+def test_tag_is_one_when_picked_zero_when_used_or_reviewed_unknown_otherwise():
+    obs = [_obs(D1, 9, 7), _tag(D1, "meeting_heavy"), _obs(D2, 9, 4)]
+    f = daily_features(WORK, obs, {D3}, D3, NY, FOUR)
+    assert f.values["tracker.work_day.tag.meeting_heavy"] == {D1: 1.0, D2: 0.0, D3: 0.0}
+    assert f.values["tracker.work_day.tag.in_fighting"] == {D1: 0.0, D2: 0.0, D3: 0.0}
+    assert f.values["tracker.work_day.mean"] == {D1: 7.0, D2: 4.0}  # tag entries never enter the value
+    assert f.labels["tracker.work_day.tag.meeting_heavy"] == ("Work day: Meeting heavy", None, "count")
+
+
+def test_tags_only_tracker_has_only_tag_features():
+    f = daily_features(DAY_TAGS, [_tag(D1, "travel")], set(), D3, NY, FOUR)
+    assert f.values == {"tracker.day_tags.tag.travel": {D1: 1.0}, "tracker.day_tags.tag.sick": {D1: 0.0}}

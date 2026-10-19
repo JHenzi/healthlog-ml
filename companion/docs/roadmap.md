@@ -52,14 +52,14 @@ Several streams can run in parallel once B1 exists:
 | B0 | **Housekeeping** | **done** (2026-10-17): Grafana in `compose.local.yml`, docs and `.gitignore` on the fork's `main`. Still open: a project name |
 | B1 | **Skeleton** | **built** (M1, 2026-10-17): `companion/` app + compose override; own schema/role (read-only on HealthLog); own Alembic; read contract + startup check; `password` auth + scoped API tokens; a **Today** page that shows HealthLog data as sentences. Running locally; HTTPS front end still to set up |
 | B2 | **More Health metrics** | **built** (M2, 2026-10-17): read *every* metric HealthLog stores, not just its 19 `core` ones; our own per-metric settings (aggregation, bounds, source priority, which to analyse), editable on the Metrics page; State of Mind straight from `raw_ingest` until A1 lands; the daily feature table B5 builds on |
-| B3 | **Custom tracking beyond Health** | **part 1 live** (M4, 2026-10-17): typed trackers as data, created in the web app; observations + event log; per-tracker URLs and scoped tokens; quick-add + evening review, feeding the analysis. Part 2: the generic **Track** Shortcut (menus, automatic time, no free-text guessing), Apple Health "Log Health Sample" recipes, PWA offline queue, spans, starter packs |
+| B3 | **Custom tracking beyond Health** | **part 1 live** (M4, 2026-10-17): typed trackers as data, created in the web app; observations + event log; per-tracker URLs and scoped tokens; quick-add + evening review, feeding the analysis. Simpler setup (2026-10-18): one-tap presets, name + kind only, ratings fixed at 1–10 and coloured low → high, **tags** on any tracker (each a daily 0/1 series). Part 2: the generic **Track** Shortcut (menus, automatic time, no free-text guessing), Apple Health "Log Health Sample" recipes, PWA offline queue, spans |
 | B4 | **Outside data sources** | **weather** first (temperature, humidity, barometric pressure and its change, precipitation, cloud cover, UV, air quality), then calendar busyness, public holidays, sunrise/sunset and daylight. Opt-in, coarse location, fetch-only (design §2.5) |
 | B5 | **Analysis engine (multi-timeframe)** | **v1 live** (M5, 2026-10-17): one feature table over all sources; horizons **day** (lags 0–1, both directions), **week/month** (change detection), weekday rhythm; one FDR family, validated on synthetic data. Still to come: lags 2–7 via distributed lag models, **season** (long trends), **within-day** (event-locked responses, e.g. coffee → steps over the next hours) |
 | B6 | **ML models** | next-day prediction (mood, productivity, sleep, HRV) with feature importance as "what drives X"; day-type clustering; change-point detection; multivariate anomalies (design §4.7) |
 | B7 | **Diary** | quick entries, local embeddings (pgvector), user concepts + discovered themes as features, with evidence shown |
 | B8 | **Experiments** | n-of-1 interventions with baselines and confounder checks |
 | B9 | **Imports & interop** | CSV import from other tracking apps (to run alongside them and bring their history in); export of our data |
-| B11 | **Look and layout** | **Modernist look adopted** (2026-10-18): Archivo, ink on light ground, one red accent, 2px rules, bottom tabs on phones, coverage strip, provenance and Preliminary tags ([`design.md`](design.md)). Still from the wireframes: Explore, Experiments, Settings and data, evidence intervals. **Direction open:** wireframes PDF shared with the maintainer on #107 (2026-10-18); Joe leans towards a warmer, organic skin (browns, greens, softer type), so the look may change before more screens are built |
+| B11 | **Look and layout** | **Modernist look adopted** (2026-10-18): Archivo, ink on light ground, one red accent, 2px rules, bottom tabs on phones, coverage strip, provenance and Preliminary tags ([`design.md`](design.md)). Still from the wireframes: Explore, Experiments, Settings and data, evidence intervals. **Direction open:** wireframes PDF shared with the maintainer on #107 (2026-10-18); Joe leans towards a warmer, organic skin (browns, greens, softer type), so the look may change before more screens are built. Reference for tone: WaterLlama (friendly, a non-threatening mascot) |
 | B10 | **Polish** | reminders (web push), insight ranking, weekly summary, optional native iOS app (App Intents) later |
 
 Dependencies: B1 first. After that, B2, B3 and B4 are independent input
@@ -88,7 +88,7 @@ machine setup, the work queue, and lessons learned. In short:
    Switch mood to `public.state_of_mind` once a release ships it.
 3. **B4 (M3) weather:** backfills the whole history, so it gives the engine
    data right away. It brings the first allowlisted outbound call (R5).
-4. **B3 part 2 (M4):** the Track Shortcut, offline PWA, spans, starter packs.
+4. **B3 part 2 (M4):** the Track Shortcut (with tags), offline PWA, spans.
 5. **Design (B11):** collect feedback on the review page
    ([`design.md`](design.md)); next from the wireframes are evidence
    intervals (they need CIs from the engine), then Explore (3a).

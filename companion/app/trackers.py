@@ -16,17 +16,35 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from zoneinfo import ZoneInfo
 
-TYPES = ("count", "scale", "check", "quantity", "duration", "time", "choice", "moment")
+TYPES = ("count", "scale", "check", "quantity", "duration", "time", "choice", "moment", "tags")
 TYPE_LABELS = {
-    "count": "Count (cups, glasses, …)",
-    "scale": "Scale (e.g. 1–5)",
+    "count": "Count",
+    "scale": "Rating 1–10",
     "check": "Yes / no",
-    "quantity": "Amount with a unit (mg, $, km)",
-    "duration": "Duration (minutes)",
+    "quantity": "Amount",
+    "duration": "Minutes",
     "time": "Time of day",
-    "choice": "Choice (pick one)",
-    "moment": "Moment (an event, optional intensity 1–3)",
+    "choice": "Pick one",
+    "moment": "Moment",
+    "tags": "Tags only",
 }
+# One line each for the "What are you tracking?" choice on the New metric form, in display order;
+# the first COMMON_TYPES are shown, the rest sit under "More kinds".
+TYPE_HINTS = {
+    "scale": "How good, bad or intense something was",
+    "count": "How many: cups, drinks, cigarettes",
+    "check": "Did it happen today",
+    "moment": "Log each time it happens: a headache, an argument",
+    "tags": "Pick what applied today: meeting heavy, travel",
+    "quantity": "A number with a unit: mg, km, $",
+    "duration": "How long, in minutes",
+    "choice": "One of a few options: home, takeout, skipped",
+    "time": "When it first happened: first coffee, bedtime",
+}
+COMMON_TYPES = 5
+DEFAULT_SCALE = (1.0, 10.0)  # one scale for every rating: nothing to set up, and ratings compare
+MAX_TAGS = 24
+MAX_TAG_LENGTH = 40
 KEY_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 MAX_FUTURE = dt.timedelta(minutes=5)  # risks.md B8: device clocks may be slightly ahead, not more
 MOMENT_MAX_INTENSITY = 3
@@ -48,6 +66,7 @@ class TrackerSpec:
     scale_max: float | None = None
     options: tuple[str, ...] = ()
     always_logged: bool = False
+    tags: tuple[str, ...] = ()  # display text; entries and features use tag_slug()
 
 
 def slugify(name: str) -> str:
@@ -56,6 +75,23 @@ def slugify(name: str) -> str:
     if not key or not key[0].isalpha():
         key = f"t_{key}" if key else "tracker"
     return key[:64]
+
+
+def tag_slug(tag: str) -> str:
+    """'Meeting heavy' → 'meeting_heavy' (the stored value and the feature suffix)."""
+    return re.sub(r"[^a-z0-9]+", "_", tag.lower()).strip("_")[:MAX_TAG_LENGTH]
+
+
+def parse_tags(raw: str) -> list[str]:
+    """'in-fighting, Meeting heavy,' → ['in-fighting', 'Meeting heavy'] (display text, deduplicated by slug)."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for part in raw.split(","):
+        tag = " ".join(part.split())
+        if tag and tag_slug(tag) not in seen:
+            seen.add(tag_slug(tag))
+            out.append(tag)
+    return out
 
 
 def validate_definition(spec: TrackerSpec) -> None:
@@ -73,6 +109,15 @@ def validate_definition(spec: TrackerSpec) -> None:
             raise TrackerInputError("a choice needs at least two options")
         if any(not KEY_RE.match(o) for o in spec.options) or len(set(spec.options)) != len(spec.options):
             raise TrackerInputError("options must be distinct, lowercase words (a-z, 0-9, _)")
+    if spec.type == "tags" and not spec.tags:
+        raise TrackerInputError("add at least one tag, separated by commas")
+    if len(spec.tags) > MAX_TAGS:
+        raise TrackerInputError(f"at most {MAX_TAGS} tags")
+    slugs = [tag_slug(t) for t in spec.tags]
+    if any(not s or len(t) > MAX_TAG_LENGTH for s, t in zip(slugs, spec.tags, strict=True)):
+        raise TrackerInputError(f"a tag needs a letter or digit and at most {MAX_TAG_LENGTH} characters")
+    if len(set(slugs)) != len(slugs):
+        raise TrackerInputError("two tags are the same")
 
 
 def _number(raw: object) -> float:
@@ -135,7 +180,17 @@ def parse_value(spec: TrackerSpec, raw: object) -> tuple[float | None, str | Non
         if v != int(v) or not 1 <= v <= MOMENT_MAX_INTENSITY:
             raise TrackerInputError(f"intensity is 1 to {MOMENT_MAX_INTENSITY}")
         return v, None
+    if t == "tags":
+        raise TrackerInputError("pick a tag")
     raise TrackerInputError(f"unknown type {t!r}")
+
+
+def parse_tag(spec: TrackerSpec, raw: str) -> str:
+    """A tag picked for an entry → its slug; only the tracker's own tags are accepted."""
+    slug = tag_slug(raw or "")
+    if slug not in {tag_slug(t) for t in spec.tags}:
+        raise TrackerInputError(f"{spec.name} has no tag {raw!r}")
+    return slug
 
 
 def check_time(observed_at: dt.datetime, now: dt.datetime) -> None:
@@ -161,6 +216,7 @@ class Obs:
     day: dt.date
     value_num: float | None
     value_text: str | None
+    tag: str | None = None  # a tag entry carries no value
 
 
 @dataclass
@@ -191,8 +247,12 @@ def daily_features(
     """Features of one tracker. ``last_day`` is the last complete day (zero-fill never reaches today)."""
     out = TrackerFeatures()
     by_day: dict[dt.date, list[Obs]] = {}
+    tags_by_day: dict[dt.date, set[str]] = {}
     for o in obs:
-        by_day.setdefault(o.day, []).append(o)
+        if o.tag is None:
+            by_day.setdefault(o.day, []).append(o)
+        else:
+            tags_by_day.setdefault(o.day, set()).add(o.tag)
     base = f"tracker.{spec.key}"
     name, unit = spec.name, spec.unit
     zero_days = {d for d in observed_days(spec, set(by_day), reviewed, last_day) if d <= last_day}
@@ -236,6 +296,18 @@ def daily_features(
             vals = [o.value_num for o in items if o.value_num is not None]
             if vals:
                 out.put(f_int, d, max(vals))
+
+    if spec.tags:
+        # A tag is 1 on a day it was picked and 0 on a day the tracker was otherwise used or the
+        # day was reviewed (you saw the tag and didn't pick it); unknown everywhere else (R7).
+        used = set(by_day) | set(tags_by_day)
+        tag_days = {d for d in observed_days(spec, used, reviewed, last_day) if d <= last_day} | set(tags_by_day)
+        for tag in spec.tags:
+            slug = tag_slug(tag)
+            f = f"{base}.tag.{slug}"
+            label(f, f"{name}: {tag}", None, "count")
+            for d in tag_days:
+                out.put(f, d, float(slug in tags_by_day.get(d, set())))
 
     if t in ("time",) or (t in ("count", "moment") and by_day):
         # Clock-time features: first (and for counts, last) time of the day.

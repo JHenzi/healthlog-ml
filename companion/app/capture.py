@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from .auth import now_utc
 from .models import DayReview, Event, Observation, Tracker
 from .timeutil import local_day
-from .trackers import TrackerInputError, TrackerSpec, check_time, parse_value, validate_definition
+from .trackers import TrackerInputError, TrackerSpec, check_time, parse_tag, parse_value, validate_definition
 
 LOCKED_FIELDS = ("type", "unit", "scale_min", "scale_max", "options")
 
@@ -40,6 +40,7 @@ def spec_of(t: Tracker) -> TrackerSpec:
         scale_max=t.scale_max,
         options=tuple(t.options or ()),
         always_logged=t.always_logged,
+        tags=tuple(t.tags or ()),
     )
 
 
@@ -93,6 +94,7 @@ def new_version(db: Session, tracker: Tracker, **changes) -> Tracker:
             "scale_max",
             "scale_labels",
             "options",
+            "tags",
             "polarity",
             "category",
             "in_review",
@@ -134,6 +136,7 @@ def apply(db: Session, event: Event, trackers: dict[str, Tracker], zone: ZoneInf
             "day": local_day(observed_at, zone, boundary),
             "value_num": p.get("value_num"),
             "value_text": p.get("value_text"),
+            "tag": p.get("tag"),
             "updated_seq": event.seq,
         }
         if row is None:
@@ -209,6 +212,62 @@ def log(
     return Logged(db.get(Observation, client_id), tracker, created=True)
 
 
+def toggle_tag(
+    db: Session,
+    tracker: Tracker,
+    tag: str,
+    day: dt.date,
+    *,
+    observed_at: dt.datetime | None,
+    source: str,
+    zone: ZoneInfo,
+    boundary: dt.time,
+) -> bool:
+    """Pick a tag for ``day``, or unpick it if it's already picked. Returns whether it's now picked."""
+    if tracker.archived:
+        raise TrackerInputError("this tracker is archived")
+    slug = parse_tag(spec_of(tracker), tag)
+    picked = (
+        db.execute(
+            sa.select(Observation.client_id).where(
+                Observation.tracker_id == tracker.id,
+                Observation.day == day,
+                Observation.tag == slug,
+                Observation.deleted.is_(False),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if picked:
+        for client_id in picked:
+            delete(db, client_id, source=source)
+        return False
+    now = now_utc()
+    when = observed_at or now
+    check_time(when, now)
+    if local_day(when, zone, boundary) != day:
+        raise TrackerInputError("the time isn't on that day")
+    client_id = uuid.uuid4()
+    payload = {"tracker": tracker.key, "observed_at": when.isoformat(), "value_num": None, "value_text": None}
+    event = _append(db, "log", client_id, payload | {"tag": slug}, source)
+    apply(db, event, {tracker.key: tracker}, zone, boundary)
+    return True
+
+
+def tags_for_day(db: Session, day: dt.date) -> dict[int, set[str]]:
+    """Tracker id → the tag slugs picked on ``day``."""
+    out: dict[int, set[str]] = {}
+    rows = db.execute(
+        sa.select(Observation.tracker_id, Observation.tag).where(
+            Observation.day == day, Observation.tag.is_not(None), Observation.deleted.is_(False)
+        )
+    )
+    for tracker_id, tag in rows:
+        out.setdefault(tracker_id, set()).add(tag)
+    return out
+
+
 def edit(
     db: Session,
     client_id: uuid.UUID,
@@ -222,6 +281,8 @@ def edit(
     row = db.get(Observation, client_id)
     if row is None or row.deleted:
         raise KeyError(client_id)
+    if row.tag is not None:
+        raise TrackerInputError("a tag has no value to edit; unpick it instead")
     tracker = db.get(Tracker, row.tracker_id)
     when = observed_at or row.observed_at
     check_time(when, now_utc())
