@@ -83,3 +83,17 @@ def test_every_comparison_sentence_carries_n_and_no_causal_wording():
             assert not FORBIDDEN.search(s), s
             if "average" in s:
                 assert "21 " in s, s
+
+
+def test_tiles_show_direction_only_when_notably_different():
+    from app.today import mood_tile, tile
+
+    usual = Baseline(7200.0, 30)
+    up = tile("steps", 8412.0, usual)
+    assert (up.value, up.direction, up.change) == ("8,412", "up", "1,212 more than usual")
+    assert "30 days" in up.sentence  # the full sentence keeps its n (R13)
+    assert tile("steps", 7300.0, usual).direction == "flat"
+    assert tile("resting_hr", 52.0, Baseline(56.0, 27)).change == "4 bpm below usual"
+    assert tile("sleep", 7 + 59.9 / 60, None).value == "8:00"
+    assert tile("hrv", None, None).direction is None
+    assert mood_tile([(0.3, ("calm",)), (0.2, ("calm", "content"))]).value == "calm"

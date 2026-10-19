@@ -170,7 +170,16 @@ def main(out: str) -> None:
     try:
         seed_database(db, day)
         # HealthLog's own tables are empty in the test DB: show representative baseline sentences instead.
-        today.load_today = lambda *_args: today.TodayView(day, TODAY_SENTENCES, [])
+        tiles = (
+            today.tile("sleep", 7 + 5 / 60, today.Baseline(7.2, 28)),
+            today.tile("hrv", 61, today.Baseline(55, 27)),
+            today.tile("resting_hr", 55, today.Baseline(56, 27)),
+            today.tile("steps", 8412, today.Baseline(7209, 30)),
+            today.tile("stress", 29, today.Baseline(32, 26)),
+            today.energy_tile((24, 81)),
+            today.mood_tile([(0.3, ("calm",)), (0.2, ("calm",))]),
+        )
+        today.load_today = lambda *_args: today.TodayView(day, TODAY_SENTENCES, [], tiles)
 
         app = create_app(check_on_startup=False)
         app.dependency_overrides[get_db] = lambda: db

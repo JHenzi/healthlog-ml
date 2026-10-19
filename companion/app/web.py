@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from . import auth, features, jobs, metric_settings, metrics_view, today, upstream
+from . import auth, features, glance, jobs, metric_settings, metrics_view, today, upstream
 from .analysis import run as analysis_run
 from .config import get_settings
 from .db import get_db
@@ -159,8 +159,16 @@ def _overview(db: Session, day: dt.date) -> dict:
         "cells": cells,
         "recorded": sum(1 for _, ok in cells if ok),
         "top": top,
+        "cards": _cards(db, top),
         "preliminary_days": PRELIMINARY_DAYS,
     }
+
+
+def _cards(db: Session, insights: list[Insight]) -> dict[int, glance.Card]:
+    """Each insight's at-a-glance head, keyed by id."""
+    features = {f for i in insights for f in (i.feature_a, i.feature_b) if f}
+    defs = {d.feature: d for d in db.execute(sa.select(FeatureDef).where(FeatureDef.feature.in_(features))).scalars()}
+    return {i.id: glance.card(i, defs) for i in insights}
 
 
 # --- metrics (M2) -----------------------------------------------------------
@@ -358,6 +366,7 @@ def insights_page(
         "insights.html",
         {
             "sections": sections,
+            "cards": _cards(db, list(rows)),
             "run": last_run.value if last_run else None,
             "csrf": session.csrf_token,
             "any": bool(rows),

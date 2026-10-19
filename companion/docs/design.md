@@ -44,6 +44,21 @@ touch templates or structure. The structural decisions above (missing days
 hatched, provenance and Preliminary tags, discoveries above baselines,
 five sections) hold whichever skin is chosen.
 
+## At a glance (2026-10-19)
+
+Owner feedback: the insights were buried in text, and nothing could be read
+from arm's length. Every place that states a finding or a value now leads
+with a glance layer, with the sentence kept beneath as the detail (R10, R13):
+
+- **Overview tiles:** icon, label, big value, and ▲/▼ with the change
+  against the 30-day average. Colour (the accent) marks only values clearly
+  above or below usual; "about usual" stays quiet. The arrow says which way,
+  never whether that's good. The full sentences sit under "In words".
+- **Discovery heads:** "[icon] Sleep ▲ ↔ [icon] Productivity ▲", then strength
+  dots, "rise together" or "move opposite", and the days. Used on the
+  Overview and the Discoveries page (`app/glance.py`, `_icons.html`).
+- **Icons:** small inline line drawings, no icon font and no outside request.
+
 ## Warm candidate (2026-10-19)
 
 `web/static/warm.css` is a second look that loads after `style.css` and only

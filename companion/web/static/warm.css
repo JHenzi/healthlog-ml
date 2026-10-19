@@ -125,3 +125,8 @@ button.chip[aria-pressed="true"] { background: var(--color-accent); border-color
 label.kind, a.idea { border-radius: var(--radius-sm); border-width: 1.5px; border-color: var(--color-rule); background: var(--color-tile); }
 label.kind:has(input:checked) { background: var(--color-accent-tint); color: var(--color-text); border-color: var(--color-accent); }
 label.kind:has(input:checked) span { opacity: 1; color: var(--color-muted); }
+
+/* At a glance. */
+.tile { border-radius: var(--radius-sm); background: var(--color-bg); border-color: var(--color-hairline); }
+.tile.dir-up, .tile.dir-down { background: var(--color-accent-tint); border-color: transparent; }
+.tile-value strong, .pair .side { font-family: var(--font-display); font-weight: 600; }
