@@ -13,7 +13,7 @@ risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 |---|---|
 | Fork `main` (`JHenzi/healthlog-ml`) | upstream `main` as of its #106 release (includes #104/#105) + Companion M1, M2, M4 part 1, M5 v1 (fork PRs #1–#4, all CI green). Upstream's #108–#110 are on their `dev` and arrive with their next release. |
 | Upstream PRs | #104, #105 (backfill split) and #108 (time zone) **merged** into `anym001/healthlog:dev`; #111 (State of Mind) **merged** on 2026-10-18, with the maintainer's follow-ups in #112. The live HealthLog runs the released `:latest` image, which is still at migration 0021, so `public.state_of_mind` doesn't exist there yet |
-| Live services | `healthlog-companion` (web, port 8020) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis), built from the fork's `main` |
+| Live services | `healthlog-companion` (web, `127.0.0.1:8020`) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis), built from the fork's `main` |
 | Companion DB | schema `companion`, migrations up to `0004_trackers`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
 | Data | 76 daily series (1,834 day values since 2026-07-15), 30 State of Mind entries, 0 trackers yet |
 | Insights | engine live and validated; 0 findings yet: only 26 of 76 series have ≥ 21 days, and pairs overlap on ~25 days |
