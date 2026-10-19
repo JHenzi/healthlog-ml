@@ -97,14 +97,13 @@ contract tests check against the real upstream schema.
 ### Deploying a change
 
 ```bash
-docker compose -f docker-compose.yml -f compose.local.yml -f compose.companion.yml up -d --build companion-web
-docker compose -f docker-compose.yml -f compose.local.yml -f compose.companion.yml up -d companion-jobs
-docker exec healthlog-companion companion check-upstream
-docker exec healthlog-companion companion refresh
+companion/scripts/deploy.sh companion
 ```
 
-`companion-web` applies new migrations when it starts. `companion-jobs`
-runs a refresh when it starts.
+It takes a fresh backup, rebuilds and restarts both Companion containers
+(`companion-web` applies new migrations when it starts), then runs the
+contract check and a refresh. HealthLog upgrades, rehearsals and rollback:
+[`upgrading.md`](upgrading.md).
 
 ### Working agreement
 
