@@ -9,13 +9,16 @@ parser and upserts *only* the HR samples — the owning workouts already exist,
 and the (workout_hae_id, ts) key makes a re-run idempotent.
 
 ``rederive-state-of-mind`` does the same for Apple Health State of Mind
-entries (``stateOfMind``), keyed by HAE's entry id.
+entries (``stateOfMind``), keyed by HAE's entry id, and ``rederive-sleep`` for
+sleep sessions, e.g. unaggregated stage segments archived before the parser
+folded them into nights (the sleep upsert never downgrades a fuller night).
 
 Usage (one-shot, typically via ``docker exec``)::
 
     healthlog rederive-workout-hr
     healthlog rederive-workout-hr --dry-run   # parse + report, no writes
     healthlog rederive-state-of-mind [--dry-run]
+    healthlog rederive-sleep [--dry-run]
 
 (equivalently ``python -m app rederive-workout-hr`` or ``python -m app.rederive``.)
 """
@@ -96,6 +99,13 @@ def run_rederive_state_of_mind(db: Session, dry_run: bool = False) -> RederiveSu
     return _replay(db, lambda p: p.state_of_mind_rows, ingest_svc.store_state_of_mind, ("hae_id",), dry_run)
 
 
+def run_rederive_sleep(db: Session, dry_run: bool = False) -> RederiveSummary:
+    """Replay every archived payload, upserting its sleep sessions. The key keeps
+    every parsed row (sleep_start included) so ``store_sleep`` itself picks the
+    most complete capture per (sleep_end, source)."""
+    return _replay(db, lambda p: p.sleep_rows, ingest_svc.store_sleep, ("sleep_end", "source", "sleep_start"), dry_run)
+
+
 def _log_summary(summary: RederiveSummary, dry_run: bool, command: str = "rederive-workout-hr") -> None:
     log.info(
         "%s%s done: payloads=%d rows=%d failures=%d",
@@ -128,6 +138,16 @@ def run_state_of_mind(args: argparse.Namespace) -> int:
         summary = run_rederive_state_of_mind(db, dry_run=args.dry_run)
 
     _log_summary(summary, args.dry_run, "rederive-state-of-mind")
+    return 1 if summary.failures else 0
+
+
+def run_sleep(args: argparse.Namespace) -> int:
+    bootstrap()
+
+    with db_session() as db:
+        summary = run_rederive_sleep(db, dry_run=args.dry_run)
+
+    _log_summary(summary, args.dry_run, "rederive-sleep")
     return 1 if summary.failures else 0
 
 

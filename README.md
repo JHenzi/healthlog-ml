@@ -227,7 +227,7 @@ expects.
 | Health metrics | *All* is fine | unknown metrics are accepted and auto-registered as `secondary` |
 | Export format | **JSON** | CSV is **not** parsed |
 | Export version | **v2** | the parser targets HAE v2 payloads |
-| Aggregate Data | **on** | drastically reduces payload size |
+| Aggregate Data | **on** | drastically reduces payload size; with it off, sleep arrives as per-stage segments, which HealthLog folds into nights too |
 | Time grouping | **minutes** | the daily analyses only need a daily grid, but the **Stress** timeline (§ Grafana) reads per-minute heart-rate buckets — hourly grouping gives it only ~24 points/day. Only **Heart Rate** actually needs minutes; see the split-automation option below |
 | Batch Requests | **off** | deltas are small; large one-offs go through the backfill CLI instead |
 | Date range | **Standard** | full previous day + today; catches data Apple finalises late (e.g. sleep stages written after waking). Server-side dedup makes the overlap safe |
@@ -294,7 +294,17 @@ Each file is committed on its own; identical re-posts are skipped by content
 hash. An export too large to archive in one piece (Postgres caps a single `jsonb`
 value at 256 MB — e.g. per-second step/energy samples) is split automatically into
 smaller pieces, each archived and committed separately; re-runs stay a no-op.
+Sleep works with either export shape: one summary per night (*Aggregate Data* on)
+or per-stage segments (off), which are folded into one night per sleep period.
 Afterwards the nightly HAE automation takes over with deltas.
+
+Older HealthLog versions dropped unaggregated sleep segments silently. If your
+archive holds such an export, rebuild the sleep sessions from it once (idempotent;
+a fuller night already stored is never downgraded):
+
+```bash
+docker exec healthlog healthlog rederive-sleep
+```
 
 ## Analysis schedule
 
