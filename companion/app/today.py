@@ -74,6 +74,11 @@ def fmt_minutes_delta(hours: float) -> str:
     return fmt_hours(abs(hours))
 
 
+def fmt_clock(hours: float) -> str:
+    h, m = divmod(round(hours * 60), 60)
+    return f"{h}:{m:02d}"
+
+
 def fmt_int(value: float) -> str:
     return f"{round(value):,}"
 
@@ -167,6 +172,78 @@ def mood_sentence(entries: list[tuple[float | None, tuple[str, ...]]]) -> str:
     return ", ".join(parts) + "."
 
 
+# --- tiles: the same numbers, for a glance ------------------------------------
+
+# Per metric: tile label, icon (web/templates/_icons.html), the big value and its unit, and the change.
+TILE_FORMAT: dict[str, tuple[str, str, Callable[[float], tuple[str, str]], Callable[[float], str]]] = {
+    "sleep": ("Sleep", "moon", lambda v: (fmt_clock(v), "h"), lambda d: fmt_hours(abs(d))),
+    "hrv": ("HRV", "wave", lambda v: (f"{round(v)}", "ms"), lambda d: f"{round(abs(d))} ms"),
+    "resting_hr": ("Resting heart rate", "heart", lambda v: (f"{round(v)}", "bpm"), lambda d: f"{round(abs(d))} bpm"),
+    "steps": ("Steps", "steps", lambda v: (fmt_int(v), ""), fmt_int),
+    "stress": ("Stress", "gauge", lambda v: (f"{round(v)}", ""), lambda d: f"{round(abs(d))}"),
+}
+
+
+@dataclass(frozen=True)
+class Tile:
+    """One value at a glance. ``direction`` is up, down or flat against the usual; None without a baseline.
+    The arrow says which way, never whether that's good. ``sentence`` is the full statement, with its n (R13)."""
+
+    key: str
+    label: str
+    icon: str
+    value: str
+    unit: str
+    when: str
+    change: str | None  # e.g. "1,203 more than usual", "about usual"
+    direction: str | None
+    sentence: str
+
+
+def tile(key: str, value: float | None, base: Baseline | None) -> Tile:
+    spec = SPECS[key]
+    label, icon, big, delta = TILE_FORMAT[key]
+    said = sentence(spec, value, base)
+    if value is None:
+        return Tile(key, label, icon, "–", "", spec.when, "no data", None, said)
+    shown, unit = big(value)
+    if base is None:
+        return Tile(key, label, icon, shown, unit, spec.when, "building your usual", None, said)
+    diff = value - base.mean
+    if base.mean and abs(diff) <= ABOUT_FRACTION * abs(base.mean):
+        return Tile(key, label, icon, shown, unit, spec.when, "about usual", "flat", said)
+    more = "more than" if key == "steps" else "above"
+    less = "fewer than" if key == "steps" else "below"
+    change = f"{delta(diff)} {more if diff > 0 else less} usual"
+    return Tile(key, label, icon, shown, unit, spec.when, change, "up" if diff > 0 else "down", said)
+
+
+def energy_tile(today: tuple[int, int] | None) -> Tile:
+    said = energy_sentence(today)
+    if today is None:
+        return Tile("energy", "Energy reserve", "battery", "–", "", "yesterday", "no data", None, said)
+    return Tile(
+        "energy", "Energy reserve", "battery", f"{today[0]}–{today[1]}", "", "yesterday", "low to high", None, said
+    )
+
+
+def mood_tile(entries: list[tuple[float | None, tuple[str, ...]]]) -> Tile:
+    said = mood_sentence(entries)
+    if not entries:
+        return Tile("mood", "Mood", "smile", "–", "", "yesterday", "nothing logged", None, said)
+    labels: dict[str, int] = {}
+    for _, labs in entries:
+        for lab in labs:
+            labels[lab] = labels.get(lab, 0) + 1
+    valences = [v for v, _ in entries if v is not None]
+    if labels:
+        shown = sorted(labels.items(), key=lambda kv: (-kv[1], kv[0]))[0][0].replace("_", " ")
+    else:
+        shown = f"{statistics.fmean(valences):+.2f}" if valences else "logged"
+    n = len(entries)
+    return Tile("mood", "Mood", "smile", shown, "", "yesterday", f"{n} {'entry' if n == 1 else 'entries'}", None, said)
+
+
 # --- assembly --------------------------------------------------------------
 
 
@@ -175,6 +252,7 @@ class TodayView:
     day: dt.date  # the current Companion day
     sentences: list[str]
     problems: list[str]
+    tiles: tuple[Tile, ...] = ()
 
 
 def build_sentences(
@@ -191,6 +269,24 @@ def build_sentences(
         out.append(sentence(spec, values.get(day), baseline(values, day)))
     out.append(energy_sentence(energy.get(yesterday)))
     return out
+
+
+def build_tiles(
+    series: dict[str, dict[dt.date, float]],
+    energy: dict[dt.date, tuple[int, int]],
+    moods: list[tuple[float | None, tuple[str, ...]]],
+    today: dt.date,
+) -> tuple[Tile, ...]:
+    """The Overview tiles: the same values as the sentences, in the same order."""
+    yesterday = today - dt.timedelta(days=1)
+    out = []
+    for key, spec in SPECS.items():
+        values = series.get(key, {})
+        day = today if spec.when == "last night" else yesterday
+        out.append(tile(key, values.get(day), baseline(values, day)))
+    out.append(energy_tile(energy.get(yesterday)))
+    out.append(mood_tile(moods))
+    return tuple(out)
 
 
 # HealthLog metric names (upstream registry keys) and their daily aggregation.
@@ -245,5 +341,6 @@ def load_today(db: Session, zone: ZoneInfo, boundary: dt.time, today: dt.date) -
             StateOfMindEntry.start_time >= start, StateOfMindEntry.start_time < end
         )
     ).all()
-    lines.append(mood_sentence([(v, tuple(labels or ())) for v, labels in moods]))
-    return TodayView(today, lines, problems)
+    mood_entries = [(v, tuple(labels or ())) for v, labels in moods]
+    lines.append(mood_sentence(mood_entries))
+    return TodayView(today, lines, problems, build_tiles(series, energy, mood_entries, today))

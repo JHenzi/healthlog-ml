@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_log_controls.html" import log_controls %}
 {% from "_day_tags.html" import day_tags_block %}
+{% from "_icons.html" import icon, arrow, discovery_head %}
 {% block title %}Overview · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
@@ -25,20 +26,34 @@
 <section class="card">
   <div class="row"><h2>Worth exploring</h2><a class="small" href="/insights">All discoveries</a></div>
   {% for i in overview.top %}
-  <div class="discovery">
-    <div class="tags">{% if i.n < overview.preliminary_days %}<span class="tag tag-accent">Preliminary</span>{% endif %}<span class="tag tag-quiet">{{ i.strength }}</span></div>
-    <div class="claim">{{ i.sentence }}</div>
-    <div class="meta"><a href="/insights/{{ i.id }}">Inspect evidence ›</a></div>
-  </div>
+  <a class="discovery glance" href="/insights/{{ i.id }}">
+    {{ discovery_head(overview.cards[i.id], i.n, overview.preliminary_days) }}
+    <p class="detail-line">{{ i.sentence }}</p>
+  </a>
   {% endfor %}
 </section>
 {% endif %}
 
 <section class="card">
-  <h2>Compared with your baseline</h2>
+  <h2>Compared with your usual</h2>
+  {% if view.tiles %}
+  <p class="muted small">Last night's sleep and yesterday's day, against your 30-day average. Coloured when it's clearly above or below.</p>
+  <ul class="tiles">
+    {% for t in view.tiles %}
+    <li class="tile dir-{{ t.direction or 'none' }}">
+      <div class="tile-head">{{ icon(t.icon) }}<span>{{ t.label }}</span></div>
+      <div class="tile-value"><strong>{{ t.value }}</strong>{% if t.unit %} <span>{{ t.unit }}</span>{% endif %}</div>
+      <div class="tile-change">{{ arrow(t.direction) }}<span>{{ t.change }}</span></div>
+      <span class="visually-hidden">{{ t.sentence }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  <details class="in-words"><summary class="small">In words, with the days behind each average</summary>
+  {% endif %}
   <ul class="sentences">
     {% for line in view.sentences %}<li>{{ line }}</li>{% endfor %}
   </ul>
+  {% if view.tiles %}</details>{% endif %}
 </section>
 
 <section class="card">

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Discoveries · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
+{% from "_icons.html" import discovery_head %}
 {% block content %}
 <section class="card">
   <p class="kicker">Discover</p>
@@ -22,15 +23,11 @@
 <section class="card">
   <h2>{{ title }}</h2>
   {% for i in items %}
-  <div class="discovery">
-    <div class="tags">
-      {% if i.n < preliminary_days %}<span class="tag tag-accent">Preliminary</span>{% endif %}
-      <span class="tag tag-quiet">{{ i.strength }}</span>
-      {% if i.kind == "association" and i.lag %}<span class="tag tag-quiet">next day</span>{% endif %}
-    </div>
-    <div class="claim">{{ i.sentence }}</div>
-    <div class="meta">{{ i.n }} days · adjusted p {{ "%.2g"|format(i.p_adj) }} · <a href="/insights/{{ i.id }}">Inspect evidence ›</a></div>
-  </div>
+  <a class="discovery glance" href="/insights/{{ i.id }}">
+    {{ discovery_head(cards[i.id], i.n, preliminary_days) }}
+    <p class="detail-line">{{ i.sentence }}</p>
+    <p class="meta">{{ i.strength|capitalize }} · adjusted p {{ "%.2g"|format(i.p_adj) }} · Inspect evidence ›</p>
+  </a>
   {% endfor %}
 </section>
 {% endif %}{% endfor %}

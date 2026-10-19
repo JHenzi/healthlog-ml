@@ -354,3 +354,34 @@ code.token { display: block; padding: var(--space-2); background: var(--color-su
 button.step { min-width: 44px; justify-content: center; font-size: 20px; }
 button.step:disabled { opacity: 0.35; cursor: default; }
 .rating button[aria-pressed="true"] { outline: 3px solid var(--color-text); outline-offset: -3px; font-weight: 800; }
+
+/* — at a glance: icons, tiles, discovery heads. Colour marks only what differs from usual; the arrow says which
+   way, never whether it's good. — */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+svg.icon { width: 18px; height: 18px; flex: none; vertical-align: -3px; }
+.arrow { font-size: 0.8em; line-height: 1; }
+.arrow.up, .arrow.down { color: var(--color-accent); }
+
+.tiles { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); }
+.tile { display: grid; gap: 2px; padding: var(--space-3); border: 1px solid var(--color-divider); min-width: 0; }
+.tile-head { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--color-muted); }
+
+.tile-value strong { font-size: 28px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile-value span { font-size: 14px; color: var(--color-muted); }
+.tile-change { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--color-muted); }
+.tile.dir-up .tile-change, .tile.dir-down .tile-change { color: var(--color-accent-strong); font-weight: 700; }
+.tile.dir-up, .tile.dir-down { border-color: color-mix(in srgb, var(--color-accent) 45%, transparent); }
+details.in-words { margin-top: var(--space-3); }
+details.in-words summary { cursor: pointer; color: var(--color-muted); }
+
+a.discovery.glance { display: block; color: inherit; text-decoration: none; }
+a.discovery.glance:hover .side > span:not(.arrow) { text-decoration: underline; text-underline-offset: 3px; }
+.pair { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.pair .side { display: inline-flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 800; }
+.pair .link { font-size: 13px; color: var(--color-muted); }
+.evidence-line { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 13px; color: var(--color-muted); }
+.dots { display: inline-flex; gap: 3px; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--color-accent); }
+.dots i.on { background: var(--color-accent); }
+.detail-line { margin: 6px 0 0; font-size: 14px; color: var(--color-muted); }
+.pair .joint { color: var(--color-muted); font-size: 16px; }
