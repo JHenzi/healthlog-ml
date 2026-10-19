@@ -5,48 +5,15 @@
 {% block content %}
 <section class="card">
   <p class="kicker"><a href="/trackers">‹ Trackers</a></p>
-  <p><span class="tag tag-accent">Logged</span> <span class="tag tag-quiet">{{ t.key }}</span></p>
   <h1>{{ t.name }}</h1>
-  <p class="muted">{% if t.type == "scale" %}Rating, {{ "%g"|format(t.scale_min) }} low to {{ "%g"|format(t.scale_max) }} high{% else %}{{ type_labels[t.type] }}{% endif %}{% if t.unit %} · {{ t.unit }}{% endif %}{% if t.tags %} · tags: {{ t.tags|join(", ") }}{% endif %}{% if t.type == "choice" %} · {{ t.options|join(", ") }}{% endif %}</p>
+  <p class="muted">{% if t.type == "scale" %}Rating, {{ "%g"|format(t.scale_min) }} low to {{ "%g"|format(t.scale_max) }} high{% elif t.type == "count" %}How many{% if t.unit %} {{ t.unit }}{% endif %}{% elif t.type == "choice" %}One of: {{ t.options|join(", ")|replace("_", " ") }}{% else %}{{ type_labels[t.type] }}{% if t.unit %} · {{ t.unit }}{% endif %}{% endif %}</p>
   {% if t.archived %}<p class="note">Archived{% if successor %}: continued as <a href="/trackers/{{ successor.key }}">{{ successor.name }}</a>{% endif %}. Its history stays in the analysis.</p>{% endif %}
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
   {% if not t.archived %}
-  <h2>Log</h2>
-  {{ log_controls(t, csrf, "/trackers/" ~ t.key, new_id, with_time=t.type != "tags", tagged=tagged) }}
-  <p class="muted small">Leave the time empty for now; enter one (e.g. 11:35) to back-date within today.</p>
+  <h2>Today</h2>
+  {{ log_controls(t, csrf, "/trackers/" ~ t.key, new_id, state=state, tagged=tagged) }}
   {% endif %}
-</section>
-
-<section class="card">
-  <h2>Set up</h2>
-  <p class="muted">Log this tracker from a Shortcut, an NFC sticker, Home Assistant or any HTTP client.</p>
-  <dl class="facts">
-    <dt>URL</dt><dd><code>POST {{ log_url }}</code></dd>
-    <dt>Body</dt><dd><code>{"value": …, "time": "2026-10-17T07:10:00-04:00"}</code> (both optional for counts, checks and moments)</dd>
-    <dt>Header</dt><dd><code>Authorization: Bearer &lt;token&gt;</code></dd>
-  </dl>
-  {% if new_token %}
-  <div class="card warn">
-    <p><strong>New token, shown once.</strong> It can only log {{ t.name }}. Copy it now:</p>
-    <p><code class="token">{{ new_token }}</code></p>
-    <p class="small"><code>curl -X POST -H "Authorization: Bearer {{ new_token }}" -H "Content-Type: application/json" -d '{}' {{ log_url }}</code></p>
-  </div>
-  {% endif %}
-  <form method="post" action="/trackers/{{ t.key }}/token" class="inline">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <button type="submit" class="secondary">Create a log-only token</button>
-  </form>
-  {% if tokens %}
-  <ul class="entries">
-    {% for tok in tokens %}
-    <li><span>#{{ tok.id }} · created {{ tok.created_at.strftime("%b %-d") }} · {% if tok.revoked_at %}revoked{% elif tok.last_used_at %}last used {{ tok.last_used_at.strftime("%b %-d %H:%M") }}{% else %}never used{% endif %}</span>
-      {% if not tok.revoked_at %}<form method="post" action="/tokens/{{ tok.id }}/revoke" class="inline">
-        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/trackers/{{ t.key }}">
-        <button type="submit" class="link small">revoke</button></form>{% endif %}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-  <p class="muted small">Siri: a Shortcut named after this tracker that runs <em>Get Contents of URL</em> (method POST, the header above) and speaks the reply's <code>message</code>.</p>
+  <p class="small"><a href="/trackers/{{ t.key }}/connect">Log from a Shortcut, Siri or another app ›</a></p>
 </section>
 
 <section class="card">
@@ -60,7 +27,7 @@
     <button type="submit">Save</button>
   </form>
   {% if locked and not t.archived and t.type in ("count", "quantity", "duration", "scale", "choice") %}
-  <h3>Change the unit, scale or options</h3>
+  <details><summary class="small">Change the unit, scale or options</summary>
   <p class="muted small">These are locked because the tracker has data: changing a 1–5 scale to 1–10 would silently change what old entries mean. Instead, this creates a new version; the current one is archived with its history.</p>
   <form method="post" action="/trackers/{{ t.key }}/version" class="settings">
     <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -69,11 +36,12 @@
     {% if t.type == "choice" %}<label for="v_opts">Options</label><input id="v_opts" name="options" value="{{ t.options|join(', ') }}">{% endif %}
     <button type="submit" class="secondary">Create new version</button>
   </form>
+  </details>
   {% endif %}
 </section>
 
 <section class="card">
-  <h2>Recent entries</h2>
+  <details><summary><strong>History</strong> <span class="muted small">every entry, newest first</span></summary>
   {% if entries %}
   <ul class="entries">
     {% for e, shown, local in entries %}
@@ -84,5 +52,6 @@
     {% endfor %}
   </ul>
   {% else %}<p class="muted">Nothing logged yet.</p>{% endif %}
+  </details>
 </section>
 {% endblock %}

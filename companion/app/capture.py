@@ -243,6 +243,71 @@ def log(
     return Logged(db.get(Observation, client_id), tracker, created=True)
 
 
+SINGLE_VALUE_TYPES = ("scale", "check", "choice")  # one value per day: a new tap replaces it
+
+
+def day_values(db: Session, tracker: Tracker, day: dt.date) -> list[Observation]:
+    """The tracker's live entries on ``day`` (tags excluded), oldest first."""
+    return list(
+        db.execute(
+            sa.select(Observation)
+            .where(
+                Observation.tracker_id == tracker.id,
+                Observation.day == day,
+                Observation.tag.is_(None),
+                Observation.deleted.is_(False),
+            )
+            .order_by(Observation.observed_at)
+        ).scalars()
+    )
+
+
+def set_day_value(
+    db: Session,
+    tracker: Tracker,
+    raw_value: object,
+    day: dt.date,
+    *,
+    observed_at: dt.datetime | None,
+    client_id: uuid.UUID | None,
+    source: str,
+    zone: ZoneInfo,
+    boundary: dt.time,
+) -> bool:
+    """A rating, yes/no or pick-one has one value a day: a new tap replaces it, the same tap clears it.
+
+    The replaced entries are tombstoned in the event log, so the history is kept. Returns whether a value is set.
+    """
+    if client_id is not None and db.get(Observation, client_id) is not None:
+        return True  # a double tap
+    value_num, value_text = parse_value(spec_of(tracker), raw_value)
+    current = day_values(db, tracker, day)
+    same = len(current) == 1 and (current[0].value_num, current[0].value_text) == (value_num, value_text)
+    for o in current:
+        delete(db, o.client_id, source=source)
+    if same:
+        return False
+    logged = log(
+        db,
+        tracker,
+        raw_value,
+        observed_at=observed_at,
+        client_id=client_id,
+        source=source,
+        zone=zone,
+        boundary=boundary,
+    )
+    if logged.observation.day != day:
+        raise TrackerInputError("the time isn't on that day")
+    return True
+
+
+def undo_last(db: Session, tracker: Tracker, day: dt.date, *, source: str) -> bool:
+    """Take back the day's latest entry (the minus button). It stays in the event log as a tombstone."""
+    current = day_values(db, tracker, day)
+    return bool(current) and delete(db, current[-1].client_id, source=source)
+
+
 def toggle_tag(
     db: Session,
     tracker: Tracker,

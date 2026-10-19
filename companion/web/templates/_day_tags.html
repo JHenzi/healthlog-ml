@@ -1,0 +1,30 @@
+{# The day's tags: tiles you tap on and off, and one box to find or add a tag (typing one picks it for the day).
+   The browser's own list suggests tags you already have as you type. #}
+{% macro day_tags_block(tracker, tagged, csrf, back, day=None, manage=False) %}
+{% set tags = tracker.tags if tracker else [] %}
+{% if tags %}
+<div class="chips" role="group" aria-label="Tags">
+  {% for tag in tags %}<form method="post" action="/log/{{ tracker.key }}/tag" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="{{ back }}">
+    {% if day %}<input type="hidden" name="day" value="{{ day.isoformat() }}">{% endif %}
+    <input type="hidden" name="tag" value="{{ tag }}"><button type="submit" class="chip" aria-pressed="{{ 'true' if tag|tag_slug in tagged else 'false' }}">{{ tag }}</button></form>{% endfor %}
+</div>
+{% endif %}
+<form method="post" action="/day-tags" class="add-tags">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="{{ back }}">
+  {% if day %}<input type="hidden" name="day" value="{{ day.isoformat() }}">{% endif %}
+  <div class="input-row">
+    <input name="tags" required maxlength="400" list="day-tag-list" autocomplete="off" aria-label="Find or add a tag" placeholder="{{ 'Find or add a tag' if tags else 'Add your first tag' }}">
+    <button type="submit">Add</button>
+  </div>
+  {% if tags %}<datalist id="day-tag-list">{% for tag in tags %}<option value="{{ tag }}">{% endfor %}</datalist>{% endif %}
+</form>
+{% if manage and tags %}
+<details class="manage"><summary class="small">Edit list</summary>
+  <ul class="entries">{% for tag in tags %}<li><span>{{ tag }}</span><form method="post" action="/day-tags/remove" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tag" value="{{ tag }}">
+    <button type="submit" class="link small">remove</button></form></li>{% endfor %}</ul>
+  <p class="muted small">Removing a tag takes it off the list for good. Days you already tagged keep it.</p>
+</details>
+{% endif %}
+{% endmacro %}

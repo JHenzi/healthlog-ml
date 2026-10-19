@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
+from dataclasses import dataclass
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Form, Request, status
@@ -75,12 +76,6 @@ IDEAS = (
     ),
 )
 IDEAS_BY_SLUG = {slugify(i["name"]): i for _, ideas in IDEAS for i in ideas}
-# Tags describe the day ("meeting heavy", "travel"); each one is its own yes/no series in the analysis.
-TAG_IDEAS = (
-    ("Work", ("meeting heavy", "in-fighting", "deadline", "focused", "good teamwork", "worked from home", "on call")),
-    ("Body", ("headache", "back pain", "sick", "allergies", "hungover")),
-    ("Life", ("travel", "social", "late night", "family time", "hosting", "kids up at night", "alone time")),
-)
 
 
 def _csrf_ok(session: WebSession, csrf: str) -> bool:
@@ -138,18 +133,10 @@ def trackers_page(
     if (redirect := _signed_in(session)) is not None:
         return redirect
     rows = db.execute(sa.select(Tracker).order_by(Tracker.archived, Tracker.name)).scalars().all()
-    counts = dict(
-        db.execute(
-            sa.select(Observation.tracker_id, sa.func.count())
-            .where(Observation.deleted.is_(False))
-            .group_by(Observation.tracker_id)
-        ).all()
-    )
     keys = {t.key for t in rows}
     if form is None and (picked := IDEAS_BY_SLUG.get(idea)) is not None:
         form = dict(picked)
     day = capture.day_tags(db)
-    have = {tag_slug(t) for t in day.tags} if day else set()
     return templates.TemplateResponse(
         request,
         "trackers.html",
@@ -158,8 +145,6 @@ def trackers_page(
             "archived": [t for t in rows if t.archived and t.key != DAY_TAGS_KEY],
             "day": day,
             "tagged": capture.tags_for_day(db, _today()).get(day.id, set()) if day else set(),
-            "tag_ideas": [(who, [x for x in tags if tag_slug(x) not in have]) for who, tags in TAG_IDEAS],
-            "counts": counts,
             "type_labels": TYPE_LABELS,
             "type_hints": list(TYPE_HINTS.items()),
             "common_types": COMMON_TYPES,
@@ -232,8 +217,28 @@ def tracker_detail(
     return _render_detail(key, request, session, db)
 
 
+@router.get("/trackers/{key}/connect", response_class=HTMLResponse)
+def tracker_connect(
+    key: str,
+    request: Request,
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Logging from a Shortcut, an NFC sticker or any HTTP client: the URL and log-only tokens."""
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    return _render_detail(key, request, session, db, page="tracker_connect.html")
+
+
 def _render_detail(
-    key: str, request: Request, session: WebSession, db: Session, *, error: str = "", new_token: str = ""
+    key: str,
+    request: Request,
+    session: WebSession,
+    db: Session,
+    *,
+    error: str = "",
+    new_token: str = "",
+    page: str = "tracker_detail.html",
 ) -> Response:
     """``error`` and ``new_token`` come only from the POST that produced them, never from the URL."""
     tracker = _tracker_or_404(db, key)
@@ -254,7 +259,7 @@ def _render_detail(
     base_url = str(request.base_url).rstrip("/")
     return templates.TemplateResponse(
         request,
-        "tracker_detail.html",
+        page,
         {
             "t": tracker,
             "entries": [(e, _display(e, tracker), _local(e.observed_at)) for e in entries],
@@ -264,6 +269,7 @@ def _render_detail(
             "log_url": f"{base_url}/api/log/{key}",
             "successor": successor,
             "tagged": capture.tags_for_day(db, _today()).get(tracker.id, set()),
+            "state": day_state(db, _today()).get(tracker.id),
             "type_labels": TYPE_LABELS,
             "csrf": session.csrf_token,
             "error": error,
@@ -312,21 +318,48 @@ def edit_tracker(
 def add_day_tags(
     csrf: str = Form(""),
     tags: str = Form(""),
+    day: str = Form(""),
+    back: str = Form("/trackers"),
     session: WebSession | None = Depends(current_session),
     db: Session = Depends(get_db),
 ) -> Response:
-    """Add one or more tags (separated by commas) to the day's list."""
+    """Find or add tags (separated by commas) and pick them for the day: typing a tag means it applies."""
     if (redirect := _signed_in(session)) is not None:
         return redirect
     if not _csrf_ok(session, csrf):
         return _forbidden()
+    settings = get_settings()
+    target = _back(back, "/trackers")
     try:
-        capture.add_day_tags(db, parse_tags(tags))
-    except TrackerInputError as exc:
+        the_day = dt.date.fromisoformat(day) if day else _today()
+        if the_day > _today():
+            raise TrackerInputError("that day is in the future")
+        names = parse_tags(tags)
+        if not names:
+            raise TrackerInputError("type a tag")
+        tracker = capture.add_day_tags(db, names)
+        picked = capture.tags_for_day(db, the_day).get(tracker.id, set())
+        for name in names:
+            if tag_slug(name) not in picked:
+                capture.toggle_tag(
+                    db,
+                    tracker,
+                    name,
+                    the_day,
+                    observed_at=_when(the_day, ""),
+                    source="web",
+                    zone=settings.zone,
+                    boundary=settings.day_boundary,
+                )
+    except (TrackerInputError, ValueError) as exc:
         db.rollback()
-        return RedirectResponse(f"/trackers?tag_error={str(exc)[:200]}#tags", status_code=status.HTTP_303_SEE_OTHER)
+        path, _, anchor = target.partition("#")
+        key = "tag_error" if path.startswith("/trackers") else "error"
+        sep = "&" if "?" in path else "?"
+        url = f"{path}{sep}{key}={str(exc)[:200]}" + (f"#{anchor}" if anchor else "")
+        return RedirectResponse(url, status_code=status.HTTP_303_SEE_OTHER)
     db.commit()
-    return RedirectResponse("/trackers#tags", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/day-tags/remove")
@@ -397,7 +430,7 @@ def create_tracker_token(
         return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
     raw, _ = auth.create_token(db, f"{tracker.name} (log only)", f"log:{key}")
     db.commit()
-    response = _render_detail(key, request, session, db, new_token=raw)
+    response = _render_detail(key, request, session, db, new_token=raw, page="tracker_connect.html")
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -471,22 +504,76 @@ def quick_log(
     try:
         the_day = dt.date.fromisoformat(day) if day else _today()
         cid = uuid.UUID(client_id) if client_id else None
-        capture.log(
-            db,
-            tracker,
-            value if value != "" else None,
+        if the_day > _today():
+            raise TrackerInputError("that day is in the future")
+        raw = value if value != "" else None
+        how = dict(
             observed_at=_when(the_day, at),
             client_id=cid,
             source="web",
             zone=settings.zone,
             boundary=settings.day_boundary,
         )
+        if tracker.type in capture.SINGLE_VALUE_TYPES:
+            capture.set_day_value(db, tracker, raw, the_day, **how)
+        else:
+            capture.log(db, tracker, raw, **how)
     except (TrackerInputError, ValueError) as exc:
         db.rollback()
         sep = "&" if "?" in target else "?"
         return RedirectResponse(f"{target}{sep}error={str(exc)[:200]}", status_code=status.HTTP_303_SEE_OTHER)
     db.commit()
     return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/log/{key}/undo")
+def undo_log(
+    key: str,
+    csrf: str = Form(""),
+    day: str = Form(""),
+    back: str = Form("/"),
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    """The minus button: take back the day's latest entry."""
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    if not _csrf_ok(session, csrf):
+        return _forbidden()
+    tracker = _tracker_or_404(db, key)
+    if tracker is None:
+        return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
+    try:
+        the_day = dt.date.fromisoformat(day) if day else _today()
+    except ValueError:
+        return Response("Bad day", status_code=status.HTTP_400_BAD_REQUEST)
+    capture.undo_last(db, tracker, the_day, source="web")
+    db.commit()
+    return RedirectResponse(_back(back), status_code=status.HTTP_303_SEE_OTHER)
+
+
+@dataclass
+class DayState:
+    """What a tracker shows for one day: the number, not the entries behind it."""
+
+    n: int = 0
+    total: float = 0.0
+    num: float | None = None  # the latest value
+    text: str | None = None
+    first: dt.datetime | None = None
+
+
+def day_state(db: Session, day: dt.date) -> dict[int, DayState]:
+    out: dict[int, DayState] = {}
+    for o, t in capture.entries_for_day(db, day):
+        if o.tag is not None:
+            continue
+        st = out.setdefault(t.id, DayState())
+        st.n += 1
+        st.total += o.value_num or 0.0
+        st.num, st.text = o.value_num, o.value_text
+        st.first = st.first or _local(o.observed_at)
+    return out
 
 
 @router.post("/log/{key}/tag")
@@ -567,11 +654,6 @@ def review_page(
         the_day = today
     if the_day > today:
         the_day = today
-    entries = capture.entries_for_day(db, the_day)
-    by_tracker: dict[int, list] = {}
-    for o, t in entries:
-        if o.tag is None:  # picked tags show as pressed chips instead
-            by_tracker.setdefault(t.id, []).append((o, _display(o, t), _local(o.observed_at)))
     rows = _active(db)
     return templates.TemplateResponse(
         request,
@@ -582,7 +664,7 @@ def review_page(
             "prev": the_day - dt.timedelta(days=1),
             "next": the_day + dt.timedelta(days=1) if the_day < today else None,
             "trackers": [t for t in rows if t.key != DAY_TAGS_KEY],
-            "by_tracker": by_tracker,
+            "state": day_state(db, the_day),
             "tagged": capture.tags_for_day(db, the_day),
             "reviewed": capture.is_reviewed(db, the_day),
             "csrf": session.csrf_token,
@@ -623,13 +705,10 @@ def _active(db: Session) -> list[Tracker]:
 def today_capture(db: Session, day: dt.date) -> dict:
     """Trackers, the day's tags and today's entries, for the Overview page."""
     rows = _active(db)
-    entries = [
-        (o, t, _display(o, t), _local(o.observed_at)) for o, t in capture.entries_for_day(db, day) if o.tag is None
-    ]
     return {
         "trackers": [t for t in rows if t.key != DAY_TAGS_KEY],
         "day_tags": next((t for t in rows if t.key == DAY_TAGS_KEY), None),
-        "entries": entries,
+        "state": day_state(db, day),
         "tagged": capture.tags_for_day(db, day),
         "new_id": lambda: str(uuid.uuid4()),
     }

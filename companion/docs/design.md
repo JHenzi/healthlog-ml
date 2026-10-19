@@ -64,6 +64,12 @@ five sections) hold whichever skin is chosen.
   better" anywhere: the data says which way a tracker goes (meeting-heavy
   days might go with less drinking, or more crochet). The Trackers page is
   three bounded panels: what you track, day tags, new tracker.
+- Third pass (2026-10-19): day tags start empty, no suggestions or
+  categories; one find-or-add box picks a tag for the day, tiles toggle,
+  removing for good sits under "Edit list". Logging shows the number
+  ("2 cups", − / +), never a list of timed entries: the history is like git
+  history, invisible but kept. A tracker's page is the number and its
+  settings; connecting a Shortcut or token is a separate page.
 - Tone: friendly beats stark. WaterLlama (a friendly, non-threatening bear
   mascot) is a reference people like.
 
