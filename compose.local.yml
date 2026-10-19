@@ -1,6 +1,10 @@
 # Local-only services for this fork. Upstream's docker-compose.yml stays untouched (companion R1).
 # Run with: docker compose -f docker-compose.yml -f compose.local.yml up -d
 services:
+  healthlog:
+    # deploy.sh healthlog build runs HealthLog built from this checkout (HEALTHLOG_IMAGE=healthlog-local).
+    image: ${HEALTHLOG_IMAGE:-ghcr.io/anym001/healthlog}:${HEALTHLOG_VERSION:-latest}
+
   grafana:
     image: grafana/grafana:11.5.2
     container_name: healthlog-grafana

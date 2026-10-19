@@ -1,0 +1,52 @@
+{
+  "data" : {
+    "metrics" : [],
+    "symptoms" : [
+      {
+        "source" : "Health",
+        "userEntered" : true,
+        "end" : "2026-07-13 17:23:49 +0200",
+        "start" : "2026-07-06 17:23:49 +0200",
+        "cycleStart" : false,
+        "severity" : "Leicht",
+        "name" : "Kopfschmerzen"
+      },
+      {
+        "end" : "2026-07-08 17:23:49 +0200",
+        "source" : "Health",
+        "start" : "2026-07-08 17:23:49 +0200",
+        "userEntered" : true,
+        "cycleStart" : false,
+        "severity" : "Mäßig",
+        "name" : "Kopfschmerzen"
+      },
+      {
+        "source" : "Health",
+        "end" : "2026-07-09 17:23:49 +0200",
+        "start" : "2026-07-09 17:23:49 +0200",
+        "userEntered" : true,
+        "cycleStart" : false,
+        "severity" : "Schwer",
+        "name" : "Rückenschmerzen"
+      },
+      {
+        "source" : "Health",
+        "end" : "2026-07-13 17:24:49 +0200",
+        "start" : "2026-07-09 17:24:49 +0200",
+        "userEntered" : true,
+        "cycleStart" : false,
+        "severity" : "Leicht",
+        "name" : "Husten"
+      },
+      {
+        "userEntered" : true,
+        "end" : "2026-07-13 17:23:49 +0200",
+        "start" : "2026-07-13 17:23:49 +0200",
+        "source" : "Health",
+        "cycleStart" : false,
+        "severity" : "Nicht vorhanden",
+        "name" : "Kopfschmerzen"
+      }
+    ]
+  }
+}

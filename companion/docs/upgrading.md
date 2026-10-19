@@ -10,6 +10,7 @@ is a safety net, not part of a deploy: a change at 3 pm needs a backup from
 | Script | What it does |
 |---|---|
 | `deploy.sh companion` | backup → rebuild and restart the Companion from this checkout → contract check and refresh |
+| `deploy.sh healthlog build` | the same, but HealthLog is built from this checkout as `healthlog-local:<commit>` instead of pulled. **This is how live runs now** |
 | `deploy.sh healthlog <tag>` | backup → **rehearsal** on a copy of that backup → pin `HEALTHLOG_VERSION=<tag>` in `.env` → restart HealthLog (its migrations run) → `RUN` commands → contract check and refresh |
 | `upgrade_rehearsal.sh <tag>` | restore a backup into a throwaway TimescaleDB on a network with no route out, run HealthLog `<tag>` on it, then the Companion's contract check and refresh; prints schema version and row counts before and after. Nothing live is touched. `KEEP=1` leaves the copy up |
 | `restore.sh <dump> --replace-live-data` | put the live database back to a backup (HealthLog and the Companion together) |
@@ -20,7 +21,28 @@ release asks for, to both the rehearsal and the live deploy.
 `backup.sh` lives at the repository root and isn't committed (it reads
 `.env`). The scripts call it, so a machine without it can't deploy.
 
-## Upgrading HealthLog
+## Folding in upstream changes (how we upgrade now)
+
+Since 2026-10-19 live runs HealthLog **built from this fork**, not his
+published image. `compose.local.yml` points the `healthlog` service at
+`${HEALTHLOG_IMAGE}:${HEALTHLOG_VERSION}`, and `deploy.sh healthlog build`
+sets both (`healthlog-local` and the commit). His changes arrive as a merge:
+
+1. `git fetch upstream && git checkout -b feature/sync-upstream-<date> main`
+2. `git merge upstream/dev` (or a release tag). Read
+   `git diff HEAD^1 HEAD -- backend/migrations` and the release notes for
+   re-derives the change asks for.
+3. `RUN="…" companion/scripts/upgrade_rehearsal.sh` against an image built
+   from the branch (`docker build -f backend/Dockerfile -t healthlog-local:<commit> .`,
+   then `HEALTHLOG_IMAGE=healthlog-local companion/scripts/upgrade_rehearsal.sh <commit>`).
+4. Fork PR, green CI (his backend tests run too), merge.
+5. On `main`: `RUN="…" companion/scripts/deploy.sh healthlog build`.
+
+The path check (R1) compares against `upstream/dev`, so after a sync only
+our own paths show as changed. Nothing is pulled from his registry, so
+nothing changes until we merge and deploy.
+
+## Upgrading HealthLog from his published images
 
 HealthLog's tables are not a contract: they change for correctness fixes,
 new data types, storage and performance (#107). So:
@@ -62,3 +84,5 @@ On a copy of the 2026-10-19 04:30 backup (1.6 GB database, 5.8 M samples):
   values, with 32 of 87 series now eligible instead of 27.
 - **Rollback:** `restore.sh` put the upgraded copy back to `0021` in 29 s,
   with identical row counts.
+- **Fork build:** upstream `dev` (aa27590) merged into the fork and built as
+  `healthlog-local:439fd51` gave the same results as his `dev` image.

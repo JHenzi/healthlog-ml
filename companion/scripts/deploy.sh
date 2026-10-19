@@ -2,7 +2,8 @@
 # The one way to change what runs live. Every deploy starts with a fresh backup and stops at the first failure.
 #
 #   companion/scripts/deploy.sh companion           # rebuild and restart the Companion from this checkout
-#   companion/scripts/deploy.sh healthlog <tag>     # move HealthLog to <tag>, rehearsed on a copy first
+#   companion/scripts/deploy.sh healthlog <tag>     # move HealthLog to his published image <tag>, rehearsed on a copy first
+#   companion/scripts/deploy.sh healthlog build     # build HealthLog from this checkout (healthlog-local:<commit>) and move to it
 #   RUN="rederive-state-of-mind rederive-sleep" companion/scripts/deploy.sh healthlog <tag>
 #
 # healthlog: backup → rehearsal on a copy of that backup (upgrade_rehearsal.sh) → pin HEALTHLOG_VERSION in .env →
@@ -16,6 +17,13 @@ here=$(cd "$(dirname "$0")" && pwd)
 backup_dir=${BACKUP_DIR:-/mnt/backup/healthlog}
 compose() { docker compose -f "$repo/docker-compose.yml" -f "$repo/compose.local.yml" -f "$repo/compose.companion.yml" "$@"; }
 env_value() { grep -E "^$1=" "$repo/.env" | tail -1 | cut -d= -f2-; }
+set_env() {
+    if grep -qE "^#?$1=" "$repo/.env"; then
+        sed -i -E "s|^#?$1=.*|$1=$2|" "$repo/.env"
+    else
+        echo "$1=$2" >> "$repo/.env"
+    fi
+}
 healthy() { docker exec "$1" python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')" \
     >/dev/null 2>&1; }
 wait_healthy() {
@@ -35,7 +43,8 @@ echo "== backup"
 "$repo/backup.sh"
 dump=$(ls -1t "$backup_dir"/db/healthlog-*.dump | head -1)
 previous=$(env_value HEALTHLOG_VERSION || true)
-trap 'echo; echo "!! deploy stopped. To put the data back: companion/scripts/restore.sh $dump --replace-live-data"; [ -n "${tag:-}" ] && echo "   and set HEALTHLOG_VERSION=${previous:-latest} in .env"' EXIT
+previous_image=$(env_value HEALTHLOG_IMAGE || true)
+trap 'echo; echo "!! deploy stopped. To put the data back: companion/scripts/restore.sh $dump --replace-live-data"; [ -n "${tag:-}" ] && echo "   and set HEALTHLOG_IMAGE=${previous_image:-ghcr.io/anym001/healthlog} HEALTHLOG_VERSION=${previous:-latest} in .env"' EXIT
 
 case "$what" in
 companion)
@@ -44,16 +53,21 @@ companion)
     wait_healthy healthlog-companion
     ;;
 healthlog)
-    tag=${2:?usage: deploy.sh healthlog <tag>}
-    echo "== rehearsal of HealthLog $tag on a copy of $(basename "$dump")"
-    "$here/upgrade_rehearsal.sh" "$tag" "$dump"
-    echo "== HealthLog ${previous:-latest} -> $tag"
-    if grep -qE '^#?HEALTHLOG_VERSION=' "$repo/.env"; then
-        sed -i -E "s|^#?HEALTHLOG_VERSION=.*|HEALTHLOG_VERSION=$tag|" "$repo/.env"
-    else
-        echo "HEALTHLOG_VERSION=$tag" >> "$repo/.env"
+    tag=${2:?usage: deploy.sh healthlog <tag> | build}
+    image=ghcr.io/anym001/healthlog
+    if [ "$tag" = build ]; then
+        [ -z "$(git -C "$repo" status --porcelain -- backend root)" ] || { echo "backend/ or root/ has uncommitted changes" >&2; exit 2; }
+        tag=$(git -C "$repo" rev-parse --short HEAD)
+        image=healthlog-local
+        echo "== build HealthLog from $tag"
+        docker build -q -f "$repo/backend/Dockerfile" --build-arg APP_VERSION="fork-$tag" -t "$image:$tag" "$repo" >/dev/null
     fi
-    compose pull -q healthlog
+    echo "== rehearsal of HealthLog $image:$tag on a copy of $(basename "$dump")"
+    HEALTHLOG_IMAGE=$image "$here/upgrade_rehearsal.sh" "$tag" "$dump"
+    echo "== HealthLog ${previous_image:-ghcr.io/anym001/healthlog}:${previous:-latest} -> $image:$tag"
+    set_env HEALTHLOG_IMAGE "$image"
+    set_env HEALTHLOG_VERSION "$tag"
+    [ "$image" = healthlog-local ] || compose pull -q healthlog
     compose up -d healthlog
     app=$(compose ps -q healthlog)
     wait_healthy "$app"

@@ -227,7 +227,7 @@ expects.
 | Health metrics | *All* is fine | unknown metrics are accepted and auto-registered as `secondary` |
 | Export format | **JSON** | CSV is **not** parsed |
 | Export version | **v2** | the parser targets HAE v2 payloads |
-| Aggregate Data | **on** | drastically reduces payload size |
+| Aggregate Data | **on** | drastically reduces payload size; with it off, sleep arrives as per-stage segments, which HealthLog folds into nights too |
 | Time grouping | **minutes** | the daily analyses only need a daily grid, but the **Stress** timeline (§ Grafana) reads per-minute heart-rate buckets — hourly grouping gives it only ~24 points/day. Only **Heart Rate** actually needs minutes; see the split-automation option below |
 | Batch Requests | **off** | deltas are small; large one-offs go through the backfill CLI instead |
 | Date range | **Standard** | full previous day + today; catches data Apple finalises late (e.g. sleep stages written after waking). Server-side dedup makes the overlap safe |
@@ -294,7 +294,17 @@ Each file is committed on its own; identical re-posts are skipped by content
 hash. An export too large to archive in one piece (Postgres caps a single `jsonb`
 value at 256 MB — e.g. per-second step/energy samples) is split automatically into
 smaller pieces, each archived and committed separately; re-runs stay a no-op.
+Sleep works with either export shape: one summary per night (*Aggregate Data* on)
+or per-stage segments (off), which are folded into one night per sleep period.
 Afterwards the nightly HAE automation takes over with deltas.
+
+Older HealthLog versions dropped unaggregated sleep segments silently. If your
+archive holds such an export, rebuild the sleep sessions from it once (idempotent;
+a fuller night already stored is never downgraded):
+
+```bash
+docker exec healthlog healthlog rederive-sleep
+```
 
 ## Analysis schedule
 
@@ -318,7 +328,8 @@ Schedule: `INTRADAY_CRON`, default `15 * * * *` (hourly at :15); set it to
 Before trusting the findings, run a read-only data-quality audit — it reports the
 latest findings snapshot, per-metric coverage (flagging core metrics with no data or
 below the ~6-week `analysis.min_overlap` floor), units that diverge from canonical,
-and workout names that map to no canonical sport (map them via `workouts.type_map`):
+workout names that map to no canonical sport (map them via `workouts.type_map`), and
+whether `TZ` matches the UTC offsets Health Auto Export stamps on your data:
 
 ```bash
 docker exec healthlog healthlog audit
@@ -336,6 +347,17 @@ replay it from the raw archive once (idempotent):
 
 ```bash
 docker exec healthlog healthlog rederive-workout-hr
+```
+
+Apple Health **State of Mind** entries (momentary emotions and daily moods,
+logged on the iPhone or Watch) are stored too: add one more REST API automation
+like the Workouts one with Data type **State of Mind**, and the entries land in the
+`state_of_mind` table (§4.11 of the architecture doc) and show up in the collapsed
+**Mood (State of Mind)** row of the Overview dashboard. For payloads archived before
+this feature, replay them once (idempotent):
+
+```bash
+docker exec healthlog healthlog rederive-state-of-mind
 ```
 
 ## Stress score
@@ -548,7 +570,7 @@ the Ollama host. The steps below use macOS as the example.
 |---|---|---|
 | `DATABASE_URL` | *(required)* | TimescaleDB/Postgres connection (psycopg v3 URL) |
 | `INGEST_SECRET` | *(required)* | shared secret expected in the `X-Ingest-Token` header |
-| `TZ` | `Europe/Vienna` | container clock (log timestamps) **and** the daily-bucket timezone for analysis |
+| `TZ` | `Europe/Vienna` | container clock (log timestamps) **and** the timezone every daily value is bucketed in: the analysis, the `daily_metrics` view and the dashboards' SQL-side `$tz` (mirrored into the `app_settings` table at each start). **Set it to your IANA zone** (e.g. `America/New_York`); after changing it, recreate the container and run `rederive-stress`, `rederive-body-battery` and `analyze`. `healthlog audit` warns when it doesn't match your data |
 | `ANALYSIS_CRON` | `30 3 * * *` | when the nightly analysis runs (5-field cron, in `TZ`) |
 | `INTRADAY_CRON` | `15 * * * *` | when the intraday stress/Body-Battery refresh runs (5-field cron, in `TZ`); `off` disables it |
 | `MAX_PAYLOAD_BYTES` | `33554432` | max accepted ingest body (32 MiB); larger histories use the backfill CLI |
