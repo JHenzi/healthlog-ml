@@ -151,6 +151,7 @@ data immediately.
 - [ ] Glance treatment on Metrics and the evidence page.
 - [ ] Boundary checks in CI: route sweep, no-network container, one port, database role, extensions (roadmap B12).
 - [ ] Grant `SELECT` on the contract tables only.
+- [x] Deploy, rehearsal and rollback scripts; restore and upgrade tested on a copy of real data ([`upgrading.md`](upgrading.md)).
 - [ ] Pin the HealthLog image; nightly contract check against `:dev`.
 
 ## M6 and later (ordered by what the data asks for)

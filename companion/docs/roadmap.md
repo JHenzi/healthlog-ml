@@ -99,6 +99,8 @@ machine setup, the work queue, and lessons learned. In short:
    - Pin the HealthLog image to a release instead of `:latest`:
      `HEALTHLOG_VERSION=v0.6.1` in `.env` (what runs today; their compose
      file already reads it).
+   - Upgrade path tested end to end (2026-10-19, [`upgrading.md`](upgrading.md)):
+     backup, rehearsal on a copy, deploy, rollback.
    - Add a nightly CI job that runs our contract check against
      `ghcr.io/anym001/healthlog:dev`, so a breaking schema change shows up
      the day it lands, before a release.
@@ -127,15 +129,12 @@ touches Grafana or HealthLog's own findings.
 changes for correctness, new data types and performance (#107). The
 contract check is our early warning.
 
-**How:**
-1. Read the release notes and `git log <old>..<new> -- backend/migrations`
-   for dropped or rebuilt tables we read (`app/upstream.py` lists them).
-2. Check the nightly `:dev` contract job (once it exists): if it went red,
-   fix `app/upstream.py` first.
-3. Run `backup.sh`, bump `HEALTHLOG_VERSION` in `.env`, `up -d` HealthLog, then
-   `docker exec healthlog-companion companion check-upstream`.
-4. Run any re-derive the release adds (for example `healthlog
-   rederive-sleep`), then `companion refresh`.
+**How:** [`upgrading.md`](upgrading.md). In short:
+`RUN="<re-derives>" companion/scripts/upgrade_rehearsal.sh <tag>` on a copy
+of the data, then `companion/scripts/deploy.sh healthlog <tag>` (fresh
+backup, rehearsal again, pin, migrate, re-derive, verify). `restore.sh` is
+the tested way back. Read the release notes and
+`git log <old>..<new> -- backend/migrations` first.
 5. Merge `upstream/main` into the fork only if we want their files in the
    repo. The Companion doesn't need it, since it runs their published image.
 
