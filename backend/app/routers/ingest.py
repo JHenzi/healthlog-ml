@@ -111,7 +111,7 @@ async def ingest_payload(
     audit.info(
         "ingest.stored ip=%s metrics=%d(%d new) sleep=%d(%d new) workouts=%d(%d new) "
         "state_of_mind=%d(%d new) unknown=%d flagged_units=%d implausible=%d dropped_workouts=%d "
-        "dropped_state_of_mind=%d",
+        "dropped_sleep=%d dropped_state_of_mind=%d",
         ip,
         result.metric_rows,
         result.metric_new,
@@ -125,6 +125,7 @@ async def ingest_payload(
         result.flagged_units,
         result.implausible_values,
         result.dropped_workouts,
+        result.dropped_sleep,
         result.dropped_state_of_mind,
     )
     # Best-effort push after the response is sent (never blocks the HAE sync).
@@ -147,6 +148,7 @@ async def ingest_payload(
         flagged_units=result.flagged_units,
         implausible_values=result.implausible_values,
         dropped_workouts=result.dropped_workouts,
+        dropped_sleep=result.dropped_sleep,
         state_of_mind_rows=result.state_of_mind_rows,
         dropped_state_of_mind=result.dropped_state_of_mind,
         metric_new=result.metric_new,

@@ -33,7 +33,7 @@ local LLM. Everything runs on the user's own hardware — no external calls.
     `__init__.py` re-exports the flat public API.
   - `cli.py` — the `healthlog` operator CLI (`backfill`, `analyze`, `audit`,
     `narrate`, `check-workout-hr`, `rederive-workout-hr`, `rederive-state-of-mind`,
-    `rederive-stress`, `rederive-body-battery`); `cli_support.py` — shared command scaffolding
+    `rederive-sleep`, `rederive-stress`, `rederive-body-battery`); `cli_support.py` — shared command scaffolding
     (`bootstrap`, `db_session`, `module_main`)
   - `registry.py`, `units.py`, `workout_types.py` — normalisation (metric registry,
     unit guard, localised-workout-name → canonical-slug map)

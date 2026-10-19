@@ -35,6 +35,7 @@ def test_every_subcommand_is_wired_to_a_runner():
         ["check-workout-hr"],
         ["rederive-workout-hr"],
         ["rederive-state-of-mind"],
+        ["rederive-sleep"],
         ["rederive-stress"],
         ["rederive-body-battery"],
         ["narrate"],

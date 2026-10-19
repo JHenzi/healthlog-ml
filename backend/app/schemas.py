@@ -20,6 +20,7 @@ class IngestResponse(BaseModel):
     flagged_units: int = 0  # values whose unit deviated with no known conversion
     implausible_values: int = 0  # values dropped for failing the plausibility envelope
     dropped_workouts: int = 0  # workouts dropped for a missing/unparseable id
+    dropped_sleep: int = 0  # sleep points/segments that could not become a night
     state_of_mind_rows: int = 0
     dropped_state_of_mind: int = 0  # State of Mind entries dropped for a missing id/start
     metric_new: int = 0

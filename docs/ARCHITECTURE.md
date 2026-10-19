@@ -187,6 +187,24 @@ HAE delivers, per night, `sleepStart`/`sleepEnd`/`inBedStart`/`inBedEnd`, the ph
 `date=06-09`, `sleepStart=06-08 20:56`, `sleepEnd=06-09 05:56`) → `sleep_date`
 adoptable 1:1, matching the correlation convention. Sleep crossing midnight stays one row.
 
+**Unaggregated sleep** (HAE *Aggregate Data* off, e.g. a history export) arrives as one
+point per stage segment (`value` = Core/Deep/REM/Awake/In Bed/Asleep/Unspecified,
+`startDate`/`endDate`) instead of one summary per night. The parser folds those
+segments into rows of the aggregated shape (`fold_sleep_segments`, pure): segments
+are split into sleep periods wherever a gap exceeds `SLEEP_SESSION_GAP` (3 h, so a
+nap is its own period), stage hours are summed from the timestamps, and
+`sleep_date` is the local wake-up day from the segments' own UTC offset (as HAE's
+aggregated `date`). Stages come from one source per period — the one with the most
+asleep time — so two trackers on the same night never double-count; the in-bed
+window spans all sources (often only the iPhone records it). `Asleep`/`Unspecified`
+(sources without stage tracking) fill `asleep_h`; stages never recorded stay NULL,
+not 0. The folded rows go through the same `(sleep_end, source)` upsert and
+`sleep_nightly` view as aggregated ones. Anything that can't become a night (an
+unknown stage, unparseable times, a period without any asleep stage, an aggregated
+point without `sleepStart`) is counted as `dropped_sleep` and logged — the raw
+archive keeps it, and `healthlog rederive-sleep` replays the archive into
+`sleep_sessions`.
+
 ### 4.4 Workouts
 
 HAE delivers, per workout, a **stable `id` (UUID)** — a better idempotency key than
