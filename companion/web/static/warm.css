@@ -1,0 +1,127 @@
+/* Companion — "Warm" look, a candidate to replace the Modernist one (owner feedback 2026-10-18: warm and
+   organic, browns and greens, softer type, friendly rather than stark). Loaded after style.css and only
+   overrides it, so the two can be compared and switching is one <link>. Structure is unchanged: missing days
+   stay hatched, provenance and Preliminary tags stay, ratings stay one ramp with 10 darkest.
+   Fonts are self-hosted (R5): Fraunces for headings, Nunito for text, both SIL OFL (fonts/OFL-warm.txt). */
+
+@font-face {
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("fonts/fraunces-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url("fonts/nunito-latin.woff2") format("woff2");
+}
+
+:root {
+  --color-bg: #f6f1e7;          /* paper */
+  --color-surface: #ede4d3;     /* oat */
+  --color-tile: #fbf8f2;
+  --color-text: #33271c;        /* soil */
+  --color-muted: #6e5f4e;
+  --color-accent: #4f7a4a;      /* moss: the primary action */
+  --color-accent-strong: #3b5f37;
+  --color-accent-tint: #e4ecdc;
+  --color-rule: #d8cbb4;
+  --color-divider: color-mix(in srgb, #33271c 14%, transparent);
+  --color-hairline: color-mix(in srgb, #33271c 8%, transparent);
+  --color-hatch: color-mix(in srgb, #33271c 20%, transparent);
+  --color-on-accent: #fffaf1;
+  --font: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1d1813;
+    --color-surface: #2a231b;
+    --color-tile: #251f18;
+    --color-text: #f1e8da;
+    --color-muted: #b5a690;
+    --color-accent: #8fbf86;
+    --color-accent-strong: #a9d39f;
+    --color-accent-tint: #263222;
+    --color-rule: #4a3f33;
+    --color-divider: color-mix(in srgb, #f1e8da 16%, transparent);
+    --color-hairline: color-mix(in srgb, #f1e8da 8%, transparent);
+    --color-hatch: color-mix(in srgb, #f1e8da 22%, transparent);
+    --color-on-accent: #1d1813;
+  }
+}
+
+body { font-size: 16px; font-variant-numeric: normal; }
+h1, h2, h3, .brand { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
+h1 { font-size: 36px; }
+h2 { font-size: 22px; }
+.discovery .claim, .tracker-name, .day-num strong, .stats dd, .coverage-head strong {
+  font-family: var(--font-display); font-weight: 600;
+}
+
+/* Header: a soft bar, no hard rule. */
+.bar { border-bottom: 1px solid var(--color-rule); background: var(--color-bg); }
+.brand { font-size: 22px; color: var(--color-accent-strong); }
+.nav a:hover, .nav a[aria-current="page"] { color: var(--color-accent-strong); }
+@media (max-width: 720px) {
+  .nav .tabs { border-top: 1px solid var(--color-rule); background: var(--color-tile); }
+  .nav .tabs a { justify-content: center; border-left: 0; font-weight: 700; }
+  .nav .tabs a[aria-current="page"] { box-shadow: none; background: var(--color-accent-tint); border-radius: 12px; margin: 6px 2px; }
+}
+
+/* Sections are soft tiles instead of rules. The page heading sits on the paper. */
+.card {
+  margin: 0 0 var(--space-4); padding: var(--space-4) var(--space-4) var(--space-4);
+  background: var(--color-tile); border: 1px solid var(--color-hairline); border-radius: var(--radius);
+}
+main > .card:first-child { background: none; border: 0; padding: var(--space-2) 0 0; }
+.card.panel { border: 1px solid var(--color-rule); }
+.card.narrow { border: 1px solid var(--color-rule); }
+.card.warn { border-color: #c98a3c; background: color-mix(in srgb, #c98a3c 10%, var(--color-tile)); }
+.card .card.warn { border-radius: var(--radius-sm); border-width: 1px; }
+
+/* Labels in sentence case: friendlier than tracked capitals. */
+.kicker, .muted.small.crumbs, label, fieldset.kinds legend, .ideas dt, .stats dt, .facts dt, th {
+  font-size: 13px; letter-spacing: 0; text-transform: none; font-weight: 700;
+}
+.tag { border-radius: 999px; text-transform: none; letter-spacing: 0; font-size: 12px; padding: 2px 10px; }
+
+.sentences li:first-child, .discovery:first-of-type { border-top: 1px solid var(--color-divider); }
+.spark { border-bottom: 1px solid var(--color-rule); }
+.stats { border-top: 1px solid var(--color-rule); }
+.spark polyline { stroke: var(--color-accent); }
+.coverage { gap: 3px; }
+.coverage span { border-radius: 4px; background: var(--color-accent); }
+
+/* Buttons and inputs: rounded, centred, moss for the main action. */
+button { justify-content: center; text-align: center; border-radius: 999px; font-weight: 800; padding: 9px 18px; }
+button:hover { background: var(--color-accent-strong); border-color: var(--color-accent-strong); }
+button:active { background: #2f4d2c; border-color: #2f4d2c; }
+button.secondary { border: 1.5px solid var(--color-rule); }
+button.secondary:hover { border-color: var(--color-text); }
+button.link { border-radius: 0; padding: 0; }
+input[type="password"], .settings select, .settings input:not([type="checkbox"]), .input-row input,
+.controls input.num, .controls input.time {
+  border-radius: var(--radius-sm); background: var(--color-tile); border: 1.5px solid var(--color-rule);
+  padding: 8px 12px; font: inherit;
+}
+.controls { gap: 6px; }
+.controls button.secondary { margin-left: 0; }
+
+/* Ratings: one warm ramp, rounded steps. */
+.rating { gap: 4px; --rate-lo: #f3ead9; --rate-hi: #7a5638; }
+.rating button { border-radius: var(--radius-sm); }
+.rating button[aria-pressed="true"] { outline-offset: -3px; outline-color: var(--color-text); }
+
+/* Tags and tiles. */
+button.chip { border-radius: 999px; border-width: 1.5px; border-color: var(--color-rule); font-weight: 700; }
+button.chip[aria-pressed="true"] { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
+label.kind, a.idea { border-radius: var(--radius-sm); border-width: 1.5px; border-color: var(--color-rule); background: var(--color-tile); }
+label.kind:has(input:checked) { background: var(--color-accent-tint); color: var(--color-text); border-color: var(--color-accent); }
+label.kind:has(input:checked) span { opacity: 1; color: var(--color-muted); }
