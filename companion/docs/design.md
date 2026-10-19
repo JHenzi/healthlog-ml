@@ -26,7 +26,7 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | 1b Discoveries | `/insights` | built, without the likely-range bar (needs intervals) |
 | 1c Evidence | `/insights/{id}` | built: finding, method, effect, days, effective days, p. Raw-observation plot and "things that could explain this" to come |
 | 2a Daily log | `/review` | built: per-type controls, coloured ratings, tag chips, reviewed state. "Not recorded" toggling to come |
-| 2b Metric builder | `/trackers` | built, simplified past the wireframe: presets, then name + kind + only the needed detail. Reminders come with web push (M11) |
+| 2b Metric builder | `/trackers` | built, reshaped: your trackers (where each shows), today's tags, then name + kind + only the needed detail, with ideas that fill in the form. Reminders come with web push (M11) |
 | 3a Explore | — | not built: aligned timelines, scatter, calendar, lag option |
 | 3b Metric detail | `/metrics/{feature}`, `/trackers/{key}` | built: provenance, 30-day comparison, weekday profile, recent days |
 | 4a Experiments | — | not built (M9) |
@@ -55,6 +55,10 @@ five sections) hold whichever skin is chosen.
 - **Tags** in setup and daily capture, e.g. "Work day" rated 1–10 with
   "in-fighting" and "meeting heavy" to tap, so a tag can be related to, say,
   fewer steps.
+- Ideas, not pre-listed trackers: suggestions fill in the form and are
+  grouped by who they fit ("at work", "training"…). Nothing overlapping
+  Apple Health (coffee, alcohol, water): there's no way to write back to it,
+  so those are logged there.
 - Tone: friendly beats stark. WaterLlama (a friendly, non-threatening bear
   mascot) is a reference people like.
 

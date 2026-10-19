@@ -32,7 +32,7 @@ TYPE_LABELS = {
 # the first COMMON_TYPES are shown, the rest sit under "More kinds".
 TYPE_HINTS = {
     "scale": "How good, bad or intense something was",
-    "count": "How many: cups, drinks, cigarettes",
+    "count": "How many: snacks, cigarettes, pages",
     "check": "Did it happen today",
     "moment": "Log each time it happens: a headache, an argument",
     "tags": "Pick what applied today: meeting heavy, travel",

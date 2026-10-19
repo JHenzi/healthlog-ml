@@ -30,21 +30,52 @@ router = APIRouter()
 
 POLARITIES = ("neutral", "good", "bad")
 
-# One-tap starters on the New metric page: sensible assumptions instead of a blank form.
-PRESETS = (
-    {"name": "Coffee", "type": "count", "unit": "cups"},
-    {"name": "Alcohol", "type": "count", "unit": "drinks"},
-    {"name": "Productivity", "type": "scale", "polarity": "good"},
-    {"name": "Energy", "type": "scale", "polarity": "good"},
-    {
-        "name": "Work day",
-        "type": "scale",
-        "polarity": "good",
-        "tags": "meeting heavy, in-fighting, deadline, focused, good teamwork",
-    },
-    {"name": "Headache", "type": "moment"},
-    {"name": "Day tags", "type": "tags", "tags": "travel, sick, social, late night, family time"},
+# Ideas for a new tracker, by the kind of life they fit. Choosing one fills in the form; nothing is created
+# until you tap Create. Caffeine, alcohol and water are left out: Apple Health already records them.
+IDEAS = (
+    (
+        "At work",
+        (
+            {
+                "name": "Work day",
+                "type": "scale",
+                "polarity": "good",
+                "tags": "meeting heavy, in-fighting, deadline, focused, good teamwork",
+            },
+            {"name": "Focus", "type": "scale", "polarity": "good"},
+        ),
+    ),
+    (
+        "Training",
+        (
+            {"name": "Soreness", "type": "scale", "polarity": "bad"},
+            {"name": "Motivation", "type": "scale", "polarity": "good"},
+        ),
+    ),
+    (
+        "Living with pain or a condition",
+        (
+            {"name": "Headache", "type": "moment"},
+            {"name": "Pain", "type": "scale", "polarity": "bad", "tags": "back, joints, stomach, head"},
+        ),
+    ),
+    (
+        "Home life",
+        (
+            {"name": "Day tags", "type": "tags", "tags": "travel, sick, social, late night, family time"},
+            {"name": "Screens after 10pm", "type": "check"},
+        ),
+    ),
+    (
+        "Anyone",
+        (
+            {"name": "Energy", "type": "scale", "polarity": "good"},
+            {"name": "Productivity", "type": "scale", "polarity": "good"},
+        ),
+    ),
 )
+IDEAS_BY_SLUG = {slugify(i["name"]): i for _, ideas in IDEAS for i in ideas}
+TOGGLES = ("pinned", "in_review")
 
 
 def _csrf_ok(session: WebSession, csrf: str) -> bool:
@@ -96,6 +127,7 @@ def trackers_page(
     db: Session = Depends(get_db),
     error: str = "",
     form: dict | None = None,
+    idea: str = "",
 ) -> Response:
     if (redirect := _signed_in(session)) is not None:
         return redirect
@@ -108,16 +140,25 @@ def trackers_page(
         ).all()
     )
     keys = {t.key for t in rows}
+    if form is None and (picked := IDEAS_BY_SLUG.get(idea)) is not None:
+        form = dict(picked)
+    tagged = capture.tags_for_day(db, _today())
     return templates.TemplateResponse(
         request,
         "trackers.html",
         {
-            "trackers": rows,
+            "trackers": [t for t in rows if not t.archived],
+            "archived": [t for t in rows if t.archived],
+            "tag_trackers": [t for t in rows if t.tags and not t.archived],
+            "tagged": tagged,
             "counts": counts,
             "type_labels": TYPE_LABELS,
             "type_hints": list(TYPE_HINTS.items()),
             "common_types": COMMON_TYPES,
-            "presets": [p for p in PRESETS if slugify(p["name"]) not in keys],
+            "ideas": [
+                (who, [(slugify(i["name"]), i) for i in ideas if slugify(i["name"]) not in keys])
+                for who, ideas in IDEAS
+            ],
             "csrf": session.csrf_token,
             "error": error,
             "form": form or {},
@@ -143,7 +184,7 @@ def create_tracker(
         return redirect
     if not _csrf_ok(session, csrf):
         return _forbidden()
-    form = dict(name=name, type=type, unit=unit, options=options, tags=tags)
+    form = dict(name=name, type=type, unit=unit, options=options, tags=tags, polarity=polarity)
     try:
         if polarity not in POLARITIES:
             raise TrackerInputError("unknown polarity")
@@ -165,7 +206,7 @@ def create_tracker(
         )
     except TrackerInputError as exc:
         db.rollback()
-        return trackers_page(request, session, db, error=str(exc), form=form)
+        return trackers_page(request, session, db, error=str(exc), form=form, idea="")
     db.commit()
     return RedirectResponse(f"/trackers/{tracker.key}", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -271,6 +312,29 @@ def edit_tracker(
         return _render_detail(key, request, session, db, error=str(exc))
     db.commit()
     return RedirectResponse(f"/trackers/{key}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/trackers/{key}/show")
+def toggle_tracker_place(
+    key: str,
+    csrf: str = Form(""),
+    field: str = Form(""),
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Switch a tracker in or out of Quick add (``pinned``) or the daily log (``in_review``)."""
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    if not _csrf_ok(session, csrf):
+        return _forbidden()
+    tracker = _tracker_or_404(db, key)
+    if tracker is None:
+        return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
+    if field not in TOGGLES:
+        return Response("Unknown setting", status_code=status.HTTP_400_BAD_REQUEST)
+    capture.update_tracker(db, tracker, **{field: not getattr(tracker, field)})
+    db.commit()
+    return RedirectResponse("/trackers", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/trackers/{key}/version")
