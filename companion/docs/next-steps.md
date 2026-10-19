@@ -5,7 +5,7 @@ set up a machine to work on it, and the work queue in order. Strategy is in
 [`roadmap.md`](roadmap.md), the milestone checklist in [`plan.md`](plan.md),
 risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 
-*Last updated 2026-10-18.*
+*Last updated 2026-10-19.*
 
 ## 1. Where things stand
 
@@ -130,11 +130,16 @@ runs a refresh when it starts.
   To switch: add the table to `CONTRACT`, point `mood.sync_from_raw` at it
   (or replace it), and keep the `mood_entries` copy so history and the
   analysis don't change.
-- **A4 unaggregated sleep:** a small upstream PR so HealthLog at least
-  counts and warns about `sleep_analysis` segments it drops. Today the
-  parser needs `sleepStart` and silently skips the per-stage shape (`value`:
-  Core/Deep/REM/Awake, `startDate`/`endDate`, `qty` in hours). Better still,
-  fold segments into nights. Branch from `upstream/dev`.
+- **A4 unaggregated sleep:** fixed upstream in #113 (folds segments into
+  nights, counts what it can't use, adds `healthlog rederive-sleep`). When a
+  release ships it, follow *Folding in upstream changes* in
+  [`roadmap.md`](roadmap.md) and run the re-derive.
+- **Defensive sync (do next):** pin the HealthLog image to a release tag
+  instead of `:latest` (`HEALTHLOG_VERSION=v0.6.1` in `.env`, the version
+  running today), and add a nightly CI job that runs the contract
+  check against `:dev`.
+- **Read API v1 (A6):** offered by the maintainer, requirements on #107.
+  Not scheduled.
 - **A2 registry entries** (caffeine, alcohol, water, mindful minutes), as
   asked on #107. Not symptoms: see A5.
 - **A5 Symptoms and Medications** (low priority: we track neither yet;
@@ -159,16 +164,18 @@ runs a refresh when it starts.
 
 - **Settings:** opt-in config with a coarse home location rounded to ~10 km
   (ENV or a `settings` row; never commit it).
-- **Fetcher:** an Open-Meteo client for daily (and hourly) temperature,
-  humidity, pressure and its 24 h change, precipitation, cloud, wind, UV, and
-  air quality. Historical backfill since 2026-07-15, then a nightly
-  increment, cached in a `source_cache` table (migration `0005`). Add
-  `httpx` to `requirements.txt`.
-- **Network rule:** this is the first outbound call. Put it in one module
-  with a host allowlist. Update `tests/privacy` so that module is the only
-  allowed HTTP client and the egress test still passes with it disabled
-  (R5, risks.md E2/E3). Unit-test that the request carries only the rounded
-  coordinates and dates.
+- **Collector sidecar (design 2026-10-19):** the Companion itself makes no
+  outbound calls. A separate `companion-collector` container fetches from
+  Open-Meteo (daily and hourly temperature, humidity, pressure and its 24 h
+  change, precipitation, cloud, wind, UV, air quality): a historical backfill
+  since 2026-07-15, then a nightly increment. It has network access but no
+  database credentials and no health data. It validates every value against
+  a strict numeric schema and writes CSV files to a shared volume (read-only
+  for the Companion). `httpx` goes in the collector's requirements only.
+- **Network rule:** the Companion's egress tests stay as they are (no HTTP
+  client, works offline). New tests: the collector's request carries only
+  the rounded coordinates and dates, and a file that fails the schema is
+  rejected, not partly read (R5, risks.md E2/E3).
 - **Computed locally:** daylight (`astral`) and public holidays
   (`holidays`), no network.
 - **Analysis:** features `weather.*` as their own family, one value per
@@ -198,10 +205,17 @@ runs a refresh when it starts.
 - **Minutes after waking** for time-of-day trackers, once sleep history is
   complete (§2.3).
 
-### 4.3b Design (wireframes v1)
+### 4.3b Design
 
-The Modernist look is in place ([`../docs/design.md`](design.md)). Next
-from the wireframes:
+The warm look and the at-a-glance layer are live
+([`design.md`](design.md)). Next:
+
+- The glance treatment on Metrics (arrow and colour per row) and on the
+  evidence page.
+- Permanent per-tag colours, if shifting colours after a removal bothers
+  anyone.
+
+From the wireframes:
 
 - **Evidence intervals** on discoveries (1b, 1c). Bootstrap or
   Fisher-z intervals from the effective n, drawn as a likely-range bar with
@@ -211,7 +225,8 @@ from the wireframes:
 - **Experiments** (4a, with M9).
 
 Regenerate the review page after UI changes with
-`companion/scripts/design_preview/run.sh <dir>`, then republish it.
+`companion/scripts/design_preview/run.sh <dir>` (`SKIN=modernist` for the
+old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7pG.
 
 ### 4.4 M5 follow-ups and M6
 

@@ -32,3 +32,6 @@ HealthAutoExport-*.json
 .DS_Store
 .idea/
 .vscode/
+
+# Private notes: local only, never pushed
+/companion/docs/private/

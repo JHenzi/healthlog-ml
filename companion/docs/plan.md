@@ -142,6 +142,17 @@ data immediately.
 
 **Done when:** the validation suite passes, and the Insights feed shows ranked, explained insights on real data, each with *n* and strength.
 
+## Design and hardening (2026-10-19)
+
+- [x] Warm look live (`warm.css` over `style.css`; Modernist one `<link>` away).
+- [x] At a glance: Overview tiles, discovery heads, inline icons (`app/glance.py`).
+- [x] Day tags in eight fixed colours, by list position.
+- [x] Web port bound to `127.0.0.1`.
+- [ ] Glance treatment on Metrics and the evidence page.
+- [ ] Boundary checks in CI: route sweep, no-network container, one port, database role, extensions (roadmap B12).
+- [ ] Grant `SELECT` on the contract tables only.
+- [ ] Pin the HealthLog image; nightly contract check against `:dev`.
+
 ## M6 and later (ordered by what the data asks for)
 
 | Milestone | Scope (design ref.) | Needs |
