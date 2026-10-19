@@ -36,3 +36,13 @@ def test_icons_by_feature_then_family():
     assert icon_for("tracker.day_tags.tag.travel") == "tag"
     assert icon_for("hl.resting_heart_rate", "vital") == "heart"
     assert icon_for("something.new") == "dot"
+
+
+def test_day_tags_keep_their_colour_and_show_as_pills():
+    from app.glance import tag_colours
+
+    tags = tag_colours(["meeting heavy", "Travel", *[f"t{k}" for k in range(7)]])
+    assert tags["meeting_heavy"] == ("meeting heavy", 0) and tags["travel"] == ("Travel", 1)
+    assert tags["t6"][1] == 0  # eight colours, then they repeat
+    c = card(_insight(feature_a="tracker.day_tags.tag.travel", effect=-0.3, strength="moderate"), DEFS, tags)
+    assert (c.a.label, c.a.colour, c.a.arrow) == ("Travel", 1, "up") and c.b.colour is None

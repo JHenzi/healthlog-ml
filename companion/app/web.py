@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from . import auth, features, glance, jobs, metric_settings, metrics_view, today, upstream
+from . import auth, capture, features, glance, jobs, metric_settings, metrics_view, today, upstream
 from .analysis import run as analysis_run
 from .config import get_settings
 from .db import get_db
@@ -168,7 +168,9 @@ def _cards(db: Session, insights: list[Insight]) -> dict[int, glance.Card]:
     """Each insight's at-a-glance head, keyed by id."""
     features = {f for i in insights for f in (i.feature_a, i.feature_b) if f}
     defs = {d.feature: d for d in db.execute(sa.select(FeatureDef).where(FeatureDef.feature.in_(features))).scalars()}
-    return {i.id: glance.card(i, defs) for i in insights}
+    day = capture.day_tags(db)
+    tags = glance.tag_colours(day.tags if day else ())
+    return {i.id: glance.card(i, defs, tags) for i in insights}
 
 
 # --- metrics (M2) -----------------------------------------------------------
