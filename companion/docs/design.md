@@ -59,6 +59,19 @@ with a glance layer, with the sentence kept beneath as the detail (R10, R13):
   Overview and the Discoveries page (`app/glance.py`, `_icons.html`).
 - **Icons:** small inline line drawings, no icon font and no outside request.
 
+## Warm look, live (2026-10-19)
+
+The owner chose the warm look to pressure-test in daily use: `base.html`
+now loads `warm.css` after `style.css`. Removing that one `<link>` brings back
+the Modernist look. `SKIN=modernist` renders the review page in the old look
+for comparison.
+
+**Day tag colours:** each day tag keeps one of eight colours (`tc-0` … `tc-7`
+in `style.css`: golden, teal, plum, brick, blue, forest, rose, violet),
+assigned by its place in the list. It's filled when on, with coloured outline and text
+when off, and a coloured pill when a discovery is about it. Removing a tag
+shifts the colours of the tags after it.
+
 ## Warm candidate (2026-10-19)
 
 `web/static/warm.css` is a second look that loads after `style.css` and only

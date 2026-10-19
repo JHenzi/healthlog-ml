@@ -6,10 +6,11 @@ direction, never a judgement: whether "up" is good is for the person to decide.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from .models import FeatureDef, Insight
+from .trackers import tag_slug
 
 # Feature prefix → icon name (see web/templates/_icons.html). First match wins.
 ICONS = (
@@ -25,6 +26,8 @@ ICONS = (
 )
 FAMILY_ICONS = {"activity": "steps", "vital": "heart", "sleep": "moon", "mood": "smile"}
 STRENGTH_DOTS = {"weak": 1, "moderate": 2, "strong": 3}
+TAG_COLOURS = 8  # day tags take colours tc-0 … tc-7 in list order, the same on every page (style.css)
+DAY_TAG_PREFIX = "tracker.day_tags.tag."
 WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")  # Python weekday() order
 
 
@@ -40,6 +43,7 @@ class Side:
     label: str
     icon: str
     arrow: str | None  # "up" | "down" | None
+    colour: int | None = None  # a day tag's colour index, shown as its chip
 
 
 @dataclass(frozen=True)
@@ -51,19 +55,27 @@ class Card:
     dots: int
 
 
-def _side(feature: str, defs: Mapping[str, FeatureDef], arrow: str | None) -> Side:
+def tag_colours(tags: Sequence[str]) -> dict[str, tuple[str, int]]:
+    """Day tag slug → (its text, its colour index): by position in the list, so a tag keeps its colour."""
+    return {tag_slug(t): (t, k % TAG_COLOURS) for k, t in enumerate(tags)}
+
+
+def _side(feature: str, defs: Mapping[str, FeatureDef], arrow: str | None, tags: Mapping[str, tuple[str, int]]) -> Side:
+    if feature.startswith(DAY_TAG_PREFIX) and (tag := tags.get(feature.removeprefix(DAY_TAG_PREFIX))):
+        return Side(tag[0], "tag", arrow, tag[1])
     d = defs.get(feature)
     return Side(d.label if d else feature, icon_for(feature, d.family if d else None), arrow)
 
 
-def card(i: Insight, defs: Mapping[str, FeatureDef]) -> Card:
+def card(i: Insight, defs: Mapping[str, FeatureDef], tags: Mapping[str, tuple[str, int]] | None = None) -> Card:
     """An association reads as "A ▲ B ▲" (or ▼ when they move apart); a change as "A ▲ lately"."""
+    tags = tags or {}
     dots = STRENGTH_DOTS.get(i.strength, 1)
     if i.kind == "association" and i.feature_b:
         same = i.effect >= 0
         return Card(
-            _side(i.feature_a, defs, "up"),
-            _side(i.feature_b, defs, "up" if same else "down"),
+            _side(i.feature_a, defs, "up", tags),
+            _side(i.feature_b, defs, "up" if same else "down", tags),
             "together" if same else "opposite",
             bool(i.lag),
             dots,
@@ -71,9 +83,9 @@ def card(i: Insight, defs: Mapping[str, FeatureDef]) -> Card:
     details = i.details or {}
     if i.kind == "change":
         up = details.get("pct", i.effect) >= 0
-        return Card(_side(i.feature_a, defs, "up" if up else "down"), None, "lately", False, dots)
+        return Card(_side(i.feature_a, defs, "up" if up else "down", tags), None, "lately", False, dots)
     if "high" in details and "low" in details:
         link = f"highest {WEEKDAYS[int(details['high'])]}, lowest {WEEKDAYS[int(details['low'])]}"
     else:
         link = "by weekday"
-    return Card(_side(i.feature_a, defs, None), None, link, False, dots)
+    return Card(_side(i.feature_a, defs, None, tags), None, link, False, dots)

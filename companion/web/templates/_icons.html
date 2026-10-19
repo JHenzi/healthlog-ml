@@ -16,11 +16,13 @@
 {% macro arrow(direction) %}{% if direction == "up" %}<span class="arrow up" aria-hidden="true">▲</span>{% elif direction == "down" %}<span class="arrow down" aria-hidden="true">▼</span>{% endif %}{% endmacro %}
 
 {# A discovery at a glance: "[icon] Sleep ▲ ↔ [icon] Productivity ▲", strength dots, days. #}
+{% macro side(s) %}<span class="side">{% if s.colour is not none %}<span class="tag-pill tc-{{ s.colour }}">{{ s.label }}</span>{% else %}{{ icon(s.icon) }}<span>{{ s.label }}</span>{% endif %}{{ arrow(s.arrow) }}</span>{% endmacro %}
+
 {% macro discovery_head(c, n, preliminary_days) %}
 <div class="pair">
-  <span class="side">{{ icon(c.a.icon) }}<span>{{ c.a.label }}</span>{{ arrow(c.a.arrow) }}</span>
+  {{ side(c.a) }}
   {% if c.b %}<span class="joint" aria-hidden="true">↔</span>
-  <span class="side">{{ icon(c.b.icon) }}<span>{{ c.b.label }}</span>{{ arrow(c.b.arrow) }}</span>{% endif %}
+  {{ side(c.b) }}{% endif %}
 </div>
 <div class="evidence-line">
   <span class="dots" role="img" aria-label="strength {{ c.dots }} of 3">{% for k in range(3) %}<i{% if k < c.dots %} class="on"{% endif %}></i>{% endfor %}</span>

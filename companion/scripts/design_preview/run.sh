@@ -2,7 +2,7 @@
 # Rebuild the design-review page: the app's real templates rendered with synthetic data (never real data, R4).
 #
 #   companion/scripts/design_preview/run.sh <out-dir>     # writes <out-dir>/preview/companion-design-review.html
-#   SKIN=warm companion/scripts/design_preview/run.sh <out-dir>   # the Warm candidate look
+#   SKIN=modernist companion/scripts/design_preview/run.sh <out-dir>   # the earlier Modernist look, for comparison
 #
 # Needs the throwaway test DB with the companion schema migrated: run companion/scripts/test.sh once first.
 # Everything the renderer writes is rolled back.
@@ -19,12 +19,12 @@ docker run --rm --network host -v "$repo:/repo:ro" -v "$out:/out" -v healthlog-t
         PYTHONPATH=/repo/companion python -W ignore scripts/design_preview/render.py /out/preview/screens
         chown -R $(id -u):$(id -g) /out/preview"
 cp "$repo/companion/web/static/style.css" "$out/preview/screens/"
-# SKIN=warm previews the Warm candidate: warm.css layered over style.css, as the app would load it.
-if [ "${SKIN:-}" = warm ]; then cat "$repo/companion/web/static/warm.css" >> "$out/preview/screens/style.css"; fi
+# The app loads warm.css over style.css; SKIN=modernist leaves it off to show the earlier look.
+if [ "${SKIN:-}" != modernist ]; then cat "$repo/companion/web/static/warm.css" >> "$out/preview/screens/style.css"; fi
 cp "$repo"/companion/web/static/fonts/*.woff2 "$out/preview/screens/fonts/"
 sed -i 's#https://testserver/#https://companion.example/#g' "$out"/preview/screens/*.html
 template=review_template.html
-[ "${SKIN:-}" = warm ] && template=review_template_warm.html
+[ "${SKIN:-}" != modernist ] && template=review_template_warm.html
 cp "$here/$template" "$out/review_template.html"
 python3 "$here/build.py" "$out"
 echo "$out/preview/companion-design-review.html"

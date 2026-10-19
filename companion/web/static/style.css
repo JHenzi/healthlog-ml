@@ -385,3 +385,23 @@ a.discovery.glance:hover .side > span:not(.arrow) { text-decoration: underline; 
 .dots i.on { background: var(--color-accent); }
 .detail-line { margin: 6px 0 0; font-size: 14px; color: var(--color-muted); }
 .pair .joint { color: var(--color-muted); font-size: 16px; }
+
+/* — day tag colours: each tag keeps one colour everywhere, by its place in the list (glance.TAG_COLOURS). Filled
+   when on, coloured outline and text when off. — */
+.tc-0 { --tc: #8a6a12; --tc-ink: #6b520b; }  /* golden */
+.tc-1 { --tc: #2f6f6a; --tc-ink: #23544f; }  /* teal */
+.tc-2 { --tc: #7a3f6e; --tc-ink: #633259; }  /* plum */
+.tc-3 { --tc: #a3472c; --tc-ink: #853820; }  /* brick */
+.tc-4 { --tc: #3a5f8f; --tc-ink: #2e4b72; }  /* blue */
+.tc-5 { --tc: #3f6b45; --tc-ink: #315436; }  /* forest */
+.tc-6 { --tc: #a0465c; --tc-ink: #83384a; }  /* rose */
+.tc-7 { --tc: #5b4f8f; --tc-ink: #4a4075; }  /* violet */
+@media (prefers-color-scheme: dark) {
+  .tc-0 { --tc-ink: #e3c26a; } .tc-1 { --tc-ink: #7fc9c1; } .tc-2 { --tc-ink: #d79bc8; } .tc-3 { --tc-ink: #f0a184; }
+  .tc-4 { --tc-ink: #9dbbe6; } .tc-5 { --tc-ink: #9ccc9f; } .tc-6 { --tc-ink: #eda0b2; } .tc-7 { --tc-ink: #b8acec; }
+}
+button.chip[class*="tc-"] { color: var(--tc-ink); border-color: color-mix(in srgb, var(--tc) 60%, transparent); }
+button.chip[class*="tc-"]:hover { border-color: var(--tc); background: color-mix(in srgb, var(--tc) 10%, transparent); }
+button.chip[class*="tc-"][aria-pressed="true"] { color: #fffaf1; background: var(--tc); border-color: var(--tc); }
+.tag-pill { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 15px; font-weight: 700; color: #fffaf1; background: var(--tc); }
+.tag-text { color: var(--tc-ink); font-weight: 700; }
