@@ -24,7 +24,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -195,6 +195,23 @@ class WorkoutRoutePoint(Base):
     speed_mps: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
+class StateOfMind(Base):
+    """Apple Health State of Mind entry (HAE ``stateOfMind``), keyed by HAE's
+    stable UUID. ``valence`` is in [-1, 1]; ``labels`` (emotions) and
+    ``associations`` (life areas) are Apple's open vocabularies (migration 0023)."""
+
+    __tablename__ = "state_of_mind"
+
+    hae_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    start_time: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    end_time: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    kind: Mapped[str | None] = mapped_column(Text, nullable=True)
+    valence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    valence_classification: Mapped[str | None] = mapped_column(Text, nullable=True)
+    labels: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    associations: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+
+
 class StressIntraday(Base):
     """One intraday stress-proxy bucket (ARCHITECTURE.md §4.9).
 
@@ -310,6 +327,21 @@ class MetricRegistry(Base):
     # True => created automatically by the tolerant ingest, awaiting curation.
     auto_registered: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AppSetting(Base):
+    """Runtime settings mirrored into the DB for SQL-side consumers.
+
+    Views and Grafana queries cannot read environment variables, so values such
+    as ``TZ`` are written here at container start (``app.db_settings``) and read
+    by e.g. the ``daily_metrics`` view (migration 0022).
+    """
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class _FindingColumns:
