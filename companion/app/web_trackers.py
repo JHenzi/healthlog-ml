@@ -14,12 +14,37 @@ from . import auth, capture
 from .config import get_settings
 from .db import get_db
 from .models import ApiToken, Observation, Tracker, WebSession
-from .trackers import TYPE_LABELS, TYPES, TrackerInputError, slugify
+from .trackers import (
+    COMMON_TYPES,
+    DEFAULT_SCALE,
+    TYPE_HINTS,
+    TYPE_LABELS,
+    TrackerInputError,
+    parse_tags,
+    slugify,
+    tag_slug,
+)
 from .web import _signed_in, _today, current_session, templates
 
 router = APIRouter()
 
 POLARITIES = ("neutral", "good", "bad")
+
+# One-tap starters on the New metric page: sensible assumptions instead of a blank form.
+PRESETS = (
+    {"name": "Coffee", "type": "count", "unit": "cups"},
+    {"name": "Alcohol", "type": "count", "unit": "drinks"},
+    {"name": "Productivity", "type": "scale", "polarity": "good"},
+    {"name": "Energy", "type": "scale", "polarity": "good"},
+    {
+        "name": "Work day",
+        "type": "scale",
+        "polarity": "good",
+        "tags": "meeting heavy, in-fighting, deadline, focused, good teamwork",
+    },
+    {"name": "Headache", "type": "moment"},
+    {"name": "Day tags", "type": "tags", "tags": "travel, sick, social, late night, family time"},
+)
 
 
 def _csrf_ok(session: WebSession, csrf: str) -> bool:
@@ -44,18 +69,10 @@ def _options(raw: str) -> list[str]:
     return [o.strip().lower().replace(" ", "_") for o in raw.split(",") if o.strip()]
 
 
-def _scale_labels(raw: str) -> dict:
-    """'1=nothing done, 5=best day' → {"1": "nothing done", "5": "best day"}."""
-    labels = {}
-    for part in raw.split(","):
-        if "=" in part:
-            k, v = part.split("=", 1)
-            if k.strip():
-                labels[k.strip()] = v.strip()
-    return labels
-
-
 def _display(o: Observation, t: Tracker) -> str:
+    if o.tag is not None:
+        names = {tag_slug(x): x for x in t.tags or ()}
+        return f"#{names.get(o.tag, o.tag.replace('_', ' '))}"
     if t.type == "choice":
         return (o.value_text or "").replace("_", " ")
     if t.type == "check":
@@ -90,15 +107,17 @@ def trackers_page(
             .group_by(Observation.tracker_id)
         ).all()
     )
+    keys = {t.key for t in rows}
     return templates.TemplateResponse(
         request,
         "trackers.html",
         {
             "trackers": rows,
             "counts": counts,
-            "types": TYPES,
             "type_labels": TYPE_LABELS,
-            "polarities": POLARITIES,
+            "type_hints": list(TYPE_HINTS.items()),
+            "common_types": COMMON_TYPES,
+            "presets": [p for p in PRESETS if slugify(p["name"]) not in keys],
             "csrf": session.csrf_token,
             "error": error,
             "form": form or {},
@@ -112,18 +131,11 @@ def create_tracker(
     request: Request,
     csrf: str = Form(""),
     name: str = Form(""),
-    key: str = Form(""),
-    type: str = Form("count"),
+    type: str = Form("scale"),
     unit: str = Form(""),
-    scale_min: str = Form(""),
-    scale_max: str = Form(""),
-    scale_labels: str = Form(""),
     options: str = Form(""),
+    tags: str = Form(""),
     polarity: str = Form("neutral"),
-    category: str = Form(""),
-    in_review: str = Form(""),
-    always_logged: str = Form(""),
-    pinned: str = Form(""),
     session: WebSession | None = Depends(current_session),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -131,36 +143,25 @@ def create_tracker(
         return redirect
     if not _csrf_ok(session, csrf):
         return _forbidden()
-    form = dict(
-        name=name,
-        key=key,
-        type=type,
-        unit=unit,
-        scale_min=scale_min,
-        scale_max=scale_max,
-        scale_labels=scale_labels,
-        options=options,
-        polarity=polarity,
-        category=category,
-    )
+    form = dict(name=name, type=type, unit=unit, options=options, tags=tags)
     try:
         if polarity not in POLARITIES:
             raise TrackerInputError("unknown polarity")
+        # Assume what we can: the key comes from the name, every rating is 1–10, and a new
+        # metric shows up for one-tap logging and in the daily log. All of it changes later.
         tracker = capture.create_tracker(
             db,
-            key=(key.strip() or slugify(name)),
+            key=slugify(name),
             name=name.strip(),
             type=type,
-            unit=unit.strip() or None,
-            scale_min=_float(scale_min) if type == "scale" else None,
-            scale_max=_float(scale_max) if type == "scale" else None,
-            scale_labels=_scale_labels(scale_labels) if type == "scale" else {},
+            unit=(unit.strip() or None) if type in ("count", "quantity") else None,
+            scale_min=DEFAULT_SCALE[0] if type == "scale" else None,
+            scale_max=DEFAULT_SCALE[1] if type == "scale" else None,
             options=_options(options) if type == "choice" else [],
+            tags=parse_tags(tags),
             polarity=polarity,
-            category=category.strip() or None,
-            in_review=in_review == "on",
-            always_logged=always_logged == "on",
-            pinned=pinned == "on",
+            in_review=True,
+            pinned=True,
         )
     except TrackerInputError as exc:
         db.rollback()
@@ -216,6 +217,7 @@ def _render_detail(
             "new_token": new_token,
             "log_url": f"{base_url}/api/log/{key}",
             "successor": successor,
+            "tagged": capture.tags_for_day(db, _today()).get(tracker.id, set()),
             "polarities": POLARITIES,
             "type_labels": TYPE_LABELS,
             "csrf": session.csrf_token,
@@ -234,6 +236,7 @@ def edit_tracker(
     name: str = Form(""),
     category: str = Form(""),
     polarity: str = Form("neutral"),
+    tags: str = Form(""),
     in_review: str = Form(""),
     always_logged: str = Form(""),
     pinned: str = Form(""),
@@ -257,6 +260,7 @@ def edit_tracker(
             name=name.strip(),
             category=category.strip() or None,
             polarity=polarity,
+            tags=parse_tags(tags),
             in_review=in_review == "on",
             always_logged=always_logged == "on",
             pinned=pinned == "on",
@@ -340,7 +344,7 @@ def revoke_token(
         return _forbidden()
     auth.revoke_token(db, token_id)
     db.commit()
-    target = back if back.startswith("/") and not back.startswith("//") else "/trackers"
+    target = _back(back, "/trackers")
     return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -356,6 +360,17 @@ def _parse_local_time(day: dt.date, hhmm: str) -> dt.datetime | None:
     settings = get_settings()
     date = day + dt.timedelta(days=1) if clock < settings.day_boundary else day
     return dt.datetime.combine(date, clock, tzinfo=settings.zone)
+
+
+def _when(day: dt.date, hhmm: str) -> dt.datetime | None:
+    """The entry's time: as typed, else now for today and midday for an earlier day (so it lands on that day)."""
+    if hhmm.strip() or day >= _today():
+        return _parse_local_time(day, hhmm)
+    return _parse_local_time(day, "12:00")
+
+
+def _back(back: str, default: str = "/") -> str:
+    return back if back.startswith("/") and not back.startswith("//") else default
 
 
 @router.post("/log/{key}")
@@ -380,7 +395,7 @@ def quick_log(
     if tracker is None:
         return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
     settings = get_settings()
-    target = back if back.startswith("/") and not back.startswith("//") else "/"
+    target = _back(back)
     try:
         the_day = dt.date.fromisoformat(day) if day else _today()
         cid = uuid.UUID(client_id) if client_id else None
@@ -388,8 +403,50 @@ def quick_log(
             db,
             tracker,
             value if value != "" else None,
-            observed_at=_parse_local_time(the_day, at),
+            observed_at=_when(the_day, at),
             client_id=cid,
+            source="web",
+            zone=settings.zone,
+            boundary=settings.day_boundary,
+        )
+    except (TrackerInputError, ValueError) as exc:
+        db.rollback()
+        sep = "&" if "?" in target else "?"
+        return RedirectResponse(f"{target}{sep}error={str(exc)[:200]}", status_code=status.HTTP_303_SEE_OTHER)
+    db.commit()
+    return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/log/{key}/tag")
+def toggle_tag(
+    key: str,
+    csrf: str = Form(""),
+    tag: str = Form(""),
+    day: str = Form(""),
+    back: str = Form("/"),
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Tap a tag to pick it for the day; tap it again to unpick it."""
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    if not _csrf_ok(session, csrf):
+        return _forbidden()
+    tracker = _tracker_or_404(db, key)
+    if tracker is None:
+        return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
+    settings = get_settings()
+    target = _back(back)
+    try:
+        the_day = dt.date.fromisoformat(day) if day else _today()
+        if the_day > _today():
+            raise TrackerInputError("that day is in the future")
+        capture.toggle_tag(
+            db,
+            tracker,
+            tag,
+            the_day,
+            observed_at=_when(the_day, ""),
             source="web",
             zone=settings.zone,
             boundary=settings.day_boundary,
@@ -416,7 +473,7 @@ def delete_entry(
         return _forbidden()
     capture.delete(db, client_id, source="web")
     db.commit()
-    target = back if back.startswith("/") and not back.startswith("//") else "/"
+    target = _back(back)
     return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -441,7 +498,8 @@ def review_page(
     entries = capture.entries_for_day(db, the_day)
     by_tracker: dict[int, list] = {}
     for o, t in entries:
-        by_tracker.setdefault(t.id, []).append((o, _display(o, t), _local(o.observed_at)))
+        if o.tag is None:  # picked tags show as pressed chips instead
+            by_tracker.setdefault(t.id, []).append((o, _display(o, t), _local(o.observed_at)))
     rows = (
         db.execute(
             sa.select(Tracker).where(Tracker.archived.is_(False), Tracker.in_review.is_(True)).order_by(Tracker.name)
@@ -458,6 +516,7 @@ def review_page(
             "next": the_day + dt.timedelta(days=1) if the_day < today else None,
             "trackers": rows,
             "by_tracker": by_tracker,
+            "tagged": capture.tags_for_day(db, the_day),
             "reviewed": capture.is_reviewed(db, the_day),
             "csrf": session.csrf_token,
             "error": error,
@@ -498,5 +557,12 @@ def today_capture(db: Session, day: dt.date) -> dict:
         .scalars()
         .all()
     )
-    entries = [(o, t, _display(o, t), _local(o.observed_at)) for o, t in capture.entries_for_day(db, day)]
-    return {"pinned": pinned, "entries": entries, "new_id": lambda: str(uuid.uuid4())}
+    entries = [
+        (o, t, _display(o, t), _local(o.observed_at)) for o, t in capture.entries_for_day(db, day) if o.tag is None
+    ]
+    return {
+        "pinned": pinned,
+        "entries": entries,
+        "tagged": capture.tags_for_day(db, day),
+        "new_id": lambda: str(uuid.uuid4()),
+    }

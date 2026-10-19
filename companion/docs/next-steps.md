@@ -191,7 +191,10 @@ runs a refresh when it starts.
   in `web/static/`.
 - **Spans** (vacation, sick, travel): a table plus a 0/1 daily mask; the
   engine excludes span days by default.
-- **Starter packs** and the Apple Health *Log Health Sample* recipes doc.
+- The Apple Health *Log Health Sample* recipes doc. (Presets on the New
+  metric page are done.)
+- **Tags from the Shortcut and the API:** the web app toggles tags
+  (`POST /log/<key>/tag`); the API doesn't log tags yet.
 - **Minutes after waking** for time-of-day trackers, once sleep history is
   complete (§2.3).
 

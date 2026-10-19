@@ -81,8 +81,8 @@ The full rebuild takes a few seconds on ~6M HealthLog samples.
 ## Capture: trackers and the event log
 
 Trackers are rows (`trackers`). The set of *types* is code
-(`app/trackers.py`): count, scale, check, quantity, duration, time, choice and
-moment. The type decides validation and daily features, so a new tracker
+(`app/trackers.py`): count, scale, check, quantity, duration, time, choice,
+moment and tags. The type decides validation and daily features, so a new tracker
 needs no migration. A tracker's type, unit, scale range and options lock once
 it has data. Changing one creates a successor version, and the old tracker is
 archived with its history (R12).
@@ -106,10 +106,25 @@ family per tracker:
 | choice | one count per option |
 | moment | `.count`, `.max_intensity`, `.first_time` |
 | time | `.first_time` |
+| any tracker with tags | `.tag.<slug>` per tag (1 picked, 0 not picked) |
 
 Count, yes/no, choice and moment features are 0 only on reviewed days, or on
 every day since the first entry for an "always logged" tracker. They never
 zero-fill today. Scale and time features are never zero-filled.
+
+**Tags** (migration 0005) are quick picks attached to a tracker ("meeting
+heavy", "in-fighting"), or a whole tracker of type `tags`. `trackers.tags`
+holds their display text and stays editable. A picked tag is an observation
+with `tag` set to its slug and no value; tapping it again tombstones it. A tag
+is 1 on a day it was picked and 0 on a day the tracker was otherwise used or
+the day was reviewed (the tag was in front of you and not picked); unknown
+otherwise. Tags share their tracker's family, so "Work day" is never related
+to its own "meeting heavy" tag.
+
+New trackers assume what they can: the key comes from the name, every new
+rating is 1–10, and they're pinned and in the daily log. Older trackers keep
+their own scale. Logging an earlier day without a time records it at midday
+of that day.
 
 ## Days
 
