@@ -26,24 +26,24 @@ TYPE_LABELS = {
     "time": "Time of day",
     "choice": "Pick one",
     "moment": "Moment",
-    "tags": "Tags only",
+    "tags": "Day tags",
 }
-# One line each for the "What are you tracking?" choice on the New metric form, in display order;
+# One line each for the "What are you tracking?" choice on the New tracker form, in display order;
 # the first COMMON_TYPES are shown, the rest sit under "More kinds".
 TYPE_HINTS = {
-    "scale": "How good, bad or intense something was",
-    "count": "How many: snacks, cigarettes, pages",
+    "scale": "1 is low, 10 is high: energy, focus, pain",
+    "count": "How many: pages, cigarettes, meetings",
     "check": "Did it happen today",
     "moment": "Log each time it happens: a headache, an argument",
-    "tags": "Pick what applied today: meeting heavy, travel",
     "quantity": "A number with a unit: mg, km, $",
     "duration": "How long, in minutes",
     "choice": "One of a few options: home, takeout, skipped",
     "time": "When it first happened: first coffee, bedtime",
 }
-COMMON_TYPES = 5
+COMMON_TYPES = 4
 DEFAULT_SCALE = (1.0, 10.0)  # one scale for every rating: nothing to set up, and ratings compare
-MAX_TAGS = 24
+MAX_TAGS = 40
+DAY_TAGS_KEY = "day_tags"  # the one tags tracker: tags describe the day, not a measure
 MAX_TAG_LENGTH = 40
 KEY_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 MAX_FUTURE = dt.timedelta(minutes=5)  # risks.md B8: device clocks may be slightly ahead, not more
@@ -109,8 +109,6 @@ def validate_definition(spec: TrackerSpec) -> None:
             raise TrackerInputError("a choice needs at least two options")
         if any(not KEY_RE.match(o) for o in spec.options) or len(set(spec.options)) != len(spec.options):
             raise TrackerInputError("options must be distinct, lowercase words (a-z, 0-9, _)")
-    if spec.type == "tags" and not spec.tags:
-        raise TrackerInputError("add at least one tag, separated by commas")
     if len(spec.tags) > MAX_TAGS:
         raise TrackerInputError(f"at most {MAX_TAGS} tags")
     slugs = [tag_slug(t) for t in spec.tags]

@@ -222,8 +222,8 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--color-ac
 }
 .controls input.num { width: 7em; }
 
-/* A rating is coloured from low to high instead of labelled: a neutral ramp, or red → green when the
-   tracker says which way is better. Same ink text on every step, so each number stays readable. */
+/* A rating is one ramp from light (low) to dark (high), the same for every tracker: the data, not a
+   setting, says which way is better. */
 .controls:has(> .rating) { flex: 1 1 100%; }
 .rating { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); width: 100%; gap: 2px; }
 .rating form { display: flex; margin: 0; }
@@ -233,9 +233,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--color-ac
   background: color-mix(in oklab, var(--rate-hi) calc(var(--l) * 10%), var(--rate-lo));
 }
 .rating button:hover, .rating button:active { background: color-mix(in oklab, var(--rate-hi) calc(var(--l) * 10%), var(--rate-lo)); filter: brightness(0.92); }
-.rating.pol-neutral { --rate-lo: #ece6dc; --rate-hi: #9c8a74; }
-.rating.pol-good { --rate-lo: #f0b8a8; --rate-hi: #7fb38a; }
-.rating.pol-bad { --rate-lo: #7fb38a; --rate-hi: #f0b8a8; }
+.rating { --rate-lo: #f1ece4; --rate-hi: #8a6f52; }
 .lvl-0 { --l: 0; } .lvl-1 { --l: 1; } .lvl-2 { --l: 2; } .lvl-3 { --l: 3; } .lvl-4 { --l: 4; } .lvl-5 { --l: 5; }
 .lvl-6 { --l: 6; } .lvl-7 { --l: 7; } .lvl-8 { --l: 8; } .lvl-9 { --l: 9; } .lvl-10 { --l: 10; }
 
@@ -249,19 +247,30 @@ button.chip {
 button.chip:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); border-color: var(--color-text); }
 button.chip[aria-pressed="true"] { color: var(--color-bg); background: var(--color-text); border-color: var(--color-text); }
 
-/* Trackers page: your trackers with where they show, then a short form, then ideas that fill it in. */
-.tracker-list { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
+/* Trackers page: three bounded panels (what you track, day tags, new tracker). */
+.card.panel { margin-top: var(--space-4); padding: var(--space-4); border: 2px solid var(--color-rule); }
+.card.panel h2 { margin-top: 0; }
+.tracker-list { list-style: none; margin: 0; padding: 0; }
 .tracker-list li {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2);
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2);
   padding: var(--space-2) 0; border-bottom: 1px solid var(--color-divider);
 }
-.tracker-list li > div:first-child { flex: 1 1 200px; }
-.tracker-list .chips { flex: 0 0 auto; }
-.tracker-list.dim { opacity: 0.6; }
-.tag-group { margin: var(--space-3) 0 var(--space-1); font-weight: 600; }
+.tracker-list a { color: var(--color-text); text-decoration: none; }
+.tracker-list a strong { margin-right: var(--space-2); }
+.tracker-list a span { font-size: 14px; color: var(--color-muted); }
+.tracker-list a:hover strong { text-decoration: underline; }
+details.archived, details.manage { margin-top: var(--space-3); }
+details.archived .tracker-list { opacity: 0.6; }
+.add-tags { margin-top: var(--space-4); }
+.input-row { display: flex; gap: var(--space-2); }
+.input-row input { flex: 1; min-width: 0; }
+.input-row button { margin: 0; }
+.tag-ideas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--space-2); }
+.tag-ideas .kicker { width: 100%; margin: var(--space-2) 0 0; }
+button.chip.suggest { border-style: dashed; font-weight: 400; }
 .ideas { margin: var(--space-2) 0 0; }
 .ideas dt { margin-top: var(--space-3); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-muted); }
-.ideas dd { margin: var(--space-1) 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-2); }
+.ideas dd { margin: var(--space-1) 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-2); }
 a.idea { display: block; padding: var(--space-2) var(--space-3); color: var(--color-text); text-decoration: none; border: 2px solid var(--color-divider); }
 a.idea:hover { border-color: var(--color-text); }
 a.idea span { display: block; font-size: 12px; color: var(--color-muted); line-height: 1.35; }
@@ -338,6 +347,6 @@ code.token { display: block; padding: var(--space-2); background: var(--color-su
   .stats > div + div { padding-left: 0; }
   .pair { grid-template-columns: 1fr; gap: 0; }
 }
-.tracker-list button.chip { min-height: 32px; padding: 4px 10px; font-size: 13px; }
-.tracker-list button.chip[aria-pressed="true"]::before { content: "✓ "; }
-.ideas-h { margin-top: var(--space-6, 32px); }
+.ideas-h { margin-top: var(--space-6); }
+.rating-ends { display: flex; justify-content: space-between; width: 100%; font-size: 11px; color: var(--color-muted); }
+.rating button.lvl-8, .rating button.lvl-9, .rating button.lvl-10 { color: #fff; }

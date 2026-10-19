@@ -21,7 +21,16 @@ from sqlalchemy.orm import Session
 from .auth import now_utc
 from .models import DayReview, Event, Observation, Tracker
 from .timeutil import local_day
-from .trackers import TrackerInputError, TrackerSpec, check_time, parse_tag, parse_value, validate_definition
+from .trackers import (
+    DAY_TAGS_KEY,
+    TrackerInputError,
+    TrackerSpec,
+    check_time,
+    parse_tag,
+    parse_value,
+    tag_slug,
+    validate_definition,
+)
 
 LOCKED_FIELDS = ("type", "unit", "scale_min", "scale_max", "options")
 
@@ -77,6 +86,28 @@ def update_tracker(db: Session, tracker: Tracker, **fields) -> Tracker:
     validate_definition(spec_of(tracker))
     tracker.updated_at = now_utc()
     return tracker
+
+
+def day_tags(db: Session) -> Tracker | None:
+    """The tracker that holds the day's tags (created with the first tag)."""
+    return db.execute(sa.select(Tracker).where(Tracker.key == DAY_TAGS_KEY)).scalar_one_or_none()
+
+
+def add_day_tags(db: Session, names: list[str]) -> Tracker:
+    """Add tags to the day's list; ones already there are skipped. Tags describe the day, not a measure."""
+    tracker = day_tags(db)
+    if tracker is None:
+        tracker = create_tracker(db, key=DAY_TAGS_KEY, name="Day", type="tags", tags=[], in_review=True, pinned=True)
+    have = {tag_slug(t) for t in tracker.tags or ()}
+    new = [n for n in names if tag_slug(n) not in have]
+    return update_tracker(db, tracker, tags=[*(tracker.tags or ()), *new], archived=False)
+
+
+def remove_day_tag(db: Session, name: str) -> None:
+    """Take a tag off the list. Its past entries stay in the event log."""
+    tracker = day_tags(db)
+    if tracker is not None:
+        update_tracker(db, tracker, tags=[t for t in tracker.tags or () if tag_slug(t) != tag_slug(name)])
 
 
 def new_version(db: Session, tracker: Tracker, **changes) -> Tracker:

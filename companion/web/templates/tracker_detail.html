@@ -7,7 +7,7 @@
   <p class="kicker"><a href="/trackers">‹ Trackers</a></p>
   <p><span class="tag tag-accent">Logged</span> <span class="tag tag-quiet">{{ t.key }}</span></p>
   <h1>{{ t.name }}</h1>
-  <p class="muted">{% if t.type == "scale" %}Rating {{ "%g"|format(t.scale_min) }}–{{ "%g"|format(t.scale_max) }}{% else %}{{ type_labels[t.type] }}{% endif %}{% if t.unit %} · {{ t.unit }}{% endif %}{% if t.tags %} · tags: {{ t.tags|join(", ") }}{% endif %}{% if t.type == "choice" %} · {{ t.options|join(", ") }}{% endif %}</p>
+  <p class="muted">{% if t.type == "scale" %}Rating, {{ "%g"|format(t.scale_min) }} low to {{ "%g"|format(t.scale_max) }} high{% else %}{{ type_labels[t.type] }}{% endif %}{% if t.unit %} · {{ t.unit }}{% endif %}{% if t.tags %} · tags: {{ t.tags|join(", ") }}{% endif %}{% if t.type == "choice" %} · {{ t.options|join(", ") }}{% endif %}</p>
   {% if t.archived %}<p class="note">Archived{% if successor %}: continued as <a href="/trackers/{{ successor.key }}">{{ successor.name }}</a>{% endif %}. Its history stays in the analysis.</p>{% endif %}
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
   {% if not t.archived %}
@@ -54,15 +54,7 @@
   <form method="post" action="/trackers/{{ t.key }}/edit" class="settings">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <label for="name">Name</label><input id="name" name="name" value="{{ t.name }}" required maxlength="80">
-    <div class="pair">
-      <div><label for="polarity">Higher is</label>
-        <select id="polarity" name="polarity">{% for p in polarities %}<option value="{{ p }}"{% if t.polarity == p %} selected{% endif %}>{{ {"neutral": "neither", "good": "better", "bad": "worse"}[p] }}</option>{% endfor %}</select></div>
-      <div><label for="category">Category</label><input id="category" name="category" value="{{ t.category or '' }}"></div>
-    </div>
-    <label for="tags">Tags <span class="muted">(separated by commas; removing one keeps its history)</span></label>
-    <input id="tags" name="tags" value="{{ t.tags|join(', ') }}" placeholder="meeting heavy, in-fighting">
-    <label class="check"><input type="checkbox" name="pinned"{% if t.pinned %} checked{% endif %}> Show on Today</label>
-    <label class="check"><input type="checkbox" name="in_review"{% if t.in_review %} checked{% endif %}> Ask in the evening review</label>
+    <input type="hidden" name="category" value="{{ t.category or '' }}">
     <label class="check"><input type="checkbox" name="always_logged"{% if t.always_logged %} checked{% endif %}> I log this every time (an unlogged day counts as zero)</label>
     <label class="check"><input type="checkbox" name="archived"{% if t.archived %} checked{% endif %}> Archived (hidden from logging, kept in the analysis)</label>
     <button type="submit">Save</button>

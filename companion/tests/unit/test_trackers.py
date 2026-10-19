@@ -163,7 +163,6 @@ def test_tags_parse_and_slug():
 def test_tag_definitions_are_validated():
     validate_definition(DAY_TAGS)
     for bad in (
-        TrackerSpec("t", "T", "tags"),  # a tags-only tracker needs tags
         TrackerSpec("t", "T", "check", tags=("Late", "late")),  # same slug twice
         TrackerSpec("t", "T", "check", tags=("!!",)),
         TrackerSpec("t", "T", "check", tags=("x" * 41,)),

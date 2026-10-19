@@ -106,7 +106,8 @@ def test_pages_need_sign_in(client, coffee, path):
     [
         "/trackers",
         "/trackers/coffee/edit",
-        "/trackers/coffee/show",
+        "/day-tags",
+        "/day-tags/remove",
         "/trackers/coffee/token",
         "/log/coffee",
         "/log/coffee/tag",
@@ -137,63 +138,56 @@ def test_create_tracker_page_flow_and_escaping(signed_in, db):
     tracker = db.execute(select(Tracker).where(Tracker.key == key)).scalar_one()
     # Assumed, not asked: every rating is 1–10, and a new metric is in Quick add and the daily log.
     assert (tracker.scale_min, tracker.scale_max, tracker.pinned, tracker.in_review) == (1, 10, True, True)
-    assert 'class="lvl-0"' in html and 'class="lvl-10"' in html and "pol-good" in html
+    assert 'class="lvl-0"' in html and 'class="lvl-10"' in html and "10 high" in html and "pol-" not in html
 
 
-def test_new_metric_form_asks_only_what_it_needs(signed_in, db):
+def test_new_tracker_form_asks_only_what_it_needs(signed_in, db):
     html = signed_in.get("/trackers").text
-    for gone in ('name="key"', 'name="scale_min"', 'name="scale_labels"', 'name="category"'):
+    for gone in ('name="key"', 'name="scale_min"', 'name="scale_labels"', 'name="category"', 'name="polarity"'):
         assert gone not in html
-    assert 'name="tags"' in html and "What are you tracking?" in html
+    new_tracker = html.split('id="new"', 1)[1]
+    assert (
+        "What are you tracking?" in new_tracker
+        and 'name="tags"' not in new_tracker
+        and 'value="tags"' not in new_tracker
+    )
     # Ideas are suggestions, not one-tap creates; Apple Health already has coffee and alcohol.
     assert 'href="/trackers?idea=work_day#new"' in html and "idea=coffee" not in html
-    filled = signed_in.get("/trackers?idea=work_day").text
-    assert 'value="Work day"' in filled and 'value="meeting heavy, in-fighting' in filled
-    assert 'name="polarity" value="good"' in filled
+    filled = signed_in.get("/trackers?idea=reading").text
+    assert 'value="Reading"' in filled and 'value="pages"' in filled and 'value="count" checked' in filled
     assert db.execute(select(Tracker)).first() is None
+    csrf = _csrf(html)
     created = signed_in.post(
-        "/trackers",
-        data={"csrf": _csrf(html), "name": "Work day", "type": "scale", "polarity": "good", "tags": "deadline"},
-        follow_redirects=False,
+        "/trackers", data={"csrf": csrf, "name": "Work day", "type": "scale"}, follow_redirects=False
     )
     assert created.headers["location"] == "/trackers/work_day"
     assert "idea=work_day" not in signed_in.get("/trackers").text
+    refused = signed_in.post("/trackers", data={"csrf": csrf, "name": "Busy", "type": "tags"})
+    assert refused.status_code == 422 and "tags belong to the day" in refused.text
 
 
-def test_trackers_page_sets_where_each_shows_and_todays_tags(signed_in, db, coffee):
-    capture.create_tracker(db, key="day_tags", name="Day tags", type="tags", tags=["travel"], in_review=True)
+def test_day_tags_are_added_picked_and_removed(signed_in, db):
     html = signed_in.get("/trackers").text
-    assert "Today's tags" in html and 'aria-pressed="false">travel' in html
+    assert "Day tags" in html and "+ meeting heavy" in html and "Today was" not in signed_in.get("/").text
     csrf = _csrf(html)
-    signed_in.post("/log/day_tags/tag", data={"csrf": csrf, "tag": "travel", "back": "/trackers"})
-    assert 'aria-pressed="true">travel' in signed_in.get("/trackers").text
-    assert coffee.pinned
-    signed_in.post("/trackers/coffee/show", data={"csrf": csrf, "field": "pinned"})
-    db.refresh(coffee)
-    assert not coffee.pinned
-    assert signed_in.post("/trackers/coffee/show", data={"csrf": csrf, "field": "archived"}).status_code == 400
-
-
-def test_tags_toggle_from_the_daily_log(signed_in, db):
-    capture.create_tracker(
-        db,
-        key="work_day",
-        name="Work day",
-        type="scale",
-        scale_min=1,
-        scale_max=10,
-        tags=["Meeting heavy"],
-        pinned=True,
-    )
-    html = signed_in.get("/").text
-    assert 'aria-pressed="false">Meeting heavy' in html
-    csrf = _csrf(html)
-    signed_in.post("/log/work_day/tag", data={"csrf": csrf, "tag": "Meeting heavy", "back": "/"})
+    signed_in.post("/day-tags", data={"csrf": csrf, "tags": "Meeting heavy, travel, meeting  heavy"})
+    day = capture.day_tags(db)
+    assert day.tags == ["Meeting heavy", "travel"]
+    assert "+ meeting heavy" not in signed_in.get("/trackers").text
+    overview = signed_in.get("/").text
+    assert "Today was" in overview and 'aria-pressed="false">Meeting heavy' in overview
+    signed_in.post("/log/day_tags/tag", data={"csrf": csrf, "tag": "Meeting heavy", "back": "/"})
     assert 'aria-pressed="true">Meeting heavy' in signed_in.get("/").text
-    signed_in.post("/log/work_day/tag", data={"csrf": csrf, "tag": "Meeting heavy", "back": "/"})
+    assert 'aria-pressed="true">Meeting heavy' in signed_in.get("/review").text
+    signed_in.post("/log/day_tags/tag", data={"csrf": csrf, "tag": "Meeting heavy", "back": "/"})
     assert 'aria-pressed="false">Meeting heavy' in signed_in.get("/").text
-    bad = signed_in.post("/log/work_day/tag", data={"csrf": csrf, "tag": "nope", "back": "/"}, follow_redirects=False)
+    bad = signed_in.post("/log/day_tags/tag", data={"csrf": csrf, "tag": "nope", "back": "/"}, follow_redirects=False)
     assert "error=" in bad.headers["location"]
+    signed_in.post("/day-tags/remove", data={"csrf": csrf, "tag": "travel"})
+    db.refresh(day)
+    assert day.tags == ["Meeting heavy"]
+    too_long = signed_in.post("/day-tags", data={"csrf": csrf, "tags": "x" * 41}, follow_redirects=False)
+    assert "tag_error=" in too_long.headers["location"]
 
 
 def test_logging_an_earlier_day_lands_on_that_day(signed_in, db, coffee):

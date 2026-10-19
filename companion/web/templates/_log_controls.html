@@ -1,5 +1,5 @@
 {# One tracker's input widget, by type (design §2.1). Each form carries a fresh client id, so a double tap logs once.
-   A rating is coloured from low to high instead of labelled; tags are chips you tap on and off for the day. #}
+   A rating is one colour ramp from low to high, the high end always darkest; tags are chips you tap on and off. #}
 {% macro log_controls(t, csrf, back, new_id, day=None, with_time=False, tagged=()) %}
 {% set hidden %}
   <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -17,9 +17,10 @@
 {% elif t.type == "check" %}
   {% for label, v in (("Yes", "yes"), ("No", "no")) %}<form method="post" action="/log/{{ t.key }}" class="inline">{{ hidden }}<input type="hidden" name="value" value="{{ v }}"><button type="submit"{% if v == "no" %} class="secondary"{% endif %}>{{ label }}</button></form>{% endfor %}
 {% elif t.type == "scale" and (t.scale_max - t.scale_min) <= 10 and t.scale_min == t.scale_min|int %}
-  <div class="rating pol-{{ t.polarity }}">
-  {% for v in range(t.scale_min|int, t.scale_max|int + 1) %}<form method="post" action="/log/{{ t.key }}">{{ hidden }}<input type="hidden" name="value" value="{{ v }}"><button type="submit" class="lvl-{{ ((v - t.scale_min) / (t.scale_max - t.scale_min) * 10)|round|int }}" aria-label="{{ v }} of {{ t.scale_max|int }}" title="{{ t.scale_labels.get(v|string, '') }}">{{ v }}</button></form>{% endfor %}
+  <div class="rating">
+  {% for v in range(t.scale_min|int, t.scale_max|int + 1) %}<form method="post" action="/log/{{ t.key }}">{{ hidden }}<input type="hidden" name="value" value="{{ v }}"><button type="submit" class="lvl-{{ ((v - t.scale_min) / (t.scale_max - t.scale_min) * 10)|round|int }}" aria-label="{{ v }} of {{ t.scale_max|int }}">{{ v }}</button></form>{% endfor %}
   </div>
+  <div class="rating-ends" aria-hidden="true"><span>{{ t.scale_min|int }} low</span><span>{{ t.scale_max|int }} high</span></div>
 {% elif t.type == "choice" %}
   {% for o in t.options %}<form method="post" action="/log/{{ t.key }}" class="inline">{{ hidden }}<input type="hidden" name="value" value="{{ o }}"><button type="submit" class="secondary">{{ o.replace("_", " ") }}</button></form>{% endfor %}
 {% elif t.type == "tags" %}
