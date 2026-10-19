@@ -120,17 +120,16 @@ def seed_database(db: Session, day: dt.date) -> None:
         polarity="good",
         pinned=True,
     )
-    work = capture.create_tracker(
+    capture.create_tracker(
         db,
         key="work_day",
         name="Work day",
         type="scale",
         scale_min=1,
         scale_max=10,
-        polarity="good",
-        tags=["meeting heavy", "in-fighting", "deadline", "focused"],
         pinned=True,
     )
+    day_tags = capture.add_day_tags(db, ["meeting heavy", "in-fighting", "deadline", "travel", "late night"])
     capture.create_tracker(db, key="lunch", name="Lunch", type="choice", options=["home", "takeout", "skipped"])
     anger = capture.create_tracker(db, key="anger", name="Anger", type="moment", pinned=True)
     now = dt.datetime.now(settings.zone)
@@ -148,7 +147,7 @@ def seed_database(db: Session, day: dt.date) -> None:
         )
     for tag in ("meeting heavy", "deadline"):
         capture.toggle_tag(
-            db, work, tag, day, observed_at=None, source="web", zone=settings.zone, boundary=settings.day_boundary
+            db, day_tags, tag, day, observed_at=None, source="web", zone=settings.zone, boundary=settings.day_boundary
         )
     auth.set_password(db, PASSWORD)
     db.flush()

@@ -1,55 +1,82 @@
 {% extends "base.html" %}
 {% block title %}Trackers · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
-{% macro kind(t) %}{% if t.type == "scale" %}Rating {{ "%g"|format(t.scale_min) }}–{{ "%g"|format(t.scale_max) }}{% else %}{{ type_labels[t.type] }}{% endif %}{% if t.unit %} · {{ t.unit }}{% endif %}{% if t.tags %} + tags{% endif %}{% endmacro %}
-{% macro place(t, field, label) %}<form method="post" action="/trackers/{{ t.key }}/show" class="inline">
-  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="field" value="{{ field }}">
-  <button type="submit" class="chip" aria-pressed="{{ 'true' if t[field] else 'false' }}">{{ label }}</button></form>{% endmacro %}
+{# What a tracker measures, in plain words. #}
+{% macro measures(t) %}{% if t.type == "scale" %}{% if t.scale_min is not defined or (t.scale_min == 1 and t.scale_max == 10) %}Rating, 1 low to 10 high{% else %}Rating, {{ "%g"|format(t.scale_min) }} low to {{ "%g"|format(t.scale_max) }} high{% endif %}
+{%- elif t.type == "count" %}How many{% if t.unit %} {{ t.unit }}{% endif %}
+{%- elif t.type == "check" %}Yes or no, each day
+{%- elif t.type == "moment" %}Each time it happens
+{%- elif t.type == "quantity" %}Amount{% if t.unit %} in {{ t.unit }}{% endif %}
+{%- elif t.type == "duration" %}Minutes
+{%- elif t.type == "time" %}Time of day
+{%- elif t.type == "choice" %}One of: {{ t.options|join(", ")|replace("_", " ") }}
+{%- else %}{{ type_labels[t.type] }}{% endif %}{% endmacro %}
+{% macro days(t) %}{% set n = counts.get(t.id, 0) %}{{ n }} {{ "entry" if n == 1 else "entries" }}{% endmacro %}
 {% block content %}
-<section class="card" aria-labelledby="yours-h">
+<section class="card">
   <p class="kicker">Logged metrics</p>
-  <h1 id="yours-h">Trackers</h1>
-  <p class="muted">Things Apple Health doesn't measure. Each one is compared with everything else, so you can see what goes with what.</p>
+  <h1>Trackers</h1>
+  <p class="muted">What you measure yourself, and tags that describe your day. Everything is compared with everything else, Apple Health included, so you can see what goes with what.</p>
+</section>
+
+<section class="card panel" aria-labelledby="yours-h">
+  <h2 id="yours-h">What you track</h2>
   {% if trackers %}
   <ul class="tracker-list">
     {% for t in trackers %}
-    <li>
-      <div><a href="/trackers/{{ t.key }}">{{ t.name }}</a> <span class="muted small">{{ kind(t) }} · {% set n = counts.get(t.id, 0) %}{{ n }} {{ "entry" if n == 1 else "entries" }}</span></div>
-      <div class="chips" role="group" aria-label="Where {{ t.name }} shows">{{ place(t, "pinned", "Quick add") }}{{ place(t, "in_review", "Daily log") }}</div>
-    </li>
+    <li><a href="/trackers/{{ t.key }}"><strong>{{ t.name }}</strong><span>{{ measures(t) }}</span></a><span class="muted small">{{ days(t) }}</span></li>
     {% endfor %}
   </ul>
-  <p class="muted small">Tap to choose where each one shows. Open a tracker to rename it, set whether higher is better, or archive it.</p>
-  {% else %}<p>Nothing yet. Make your first one below.</p>{% endif %}
+  <p class="muted small">Log them from Overview or the daily log. Open one to rename it, connect a Shortcut, or archive it.</p>
+  {% else %}<p class="muted">Nothing yet. Add your first one below.</p>{% endif %}
   {% if archived %}
-  <details><summary class="small">Archived ({{ archived|length }})</summary>
-    <ul class="tracker-list dim">{% for t in archived %}<li><a href="/trackers/{{ t.key }}">{{ t.name }}</a> <span class="muted small">{{ kind(t) }} · {% set n = counts.get(t.id, 0) %}{{ n }} {{ "entry" if n == 1 else "entries" }}</span></li>{% endfor %}</ul>
+  <details class="archived"><summary class="small">Archived ({{ archived|length }})</summary>
+    <ul class="tracker-list">{% for t in archived %}<li><a href="/trackers/{{ t.key }}"><strong>{{ t.name }}</strong><span>{{ measures(t) }}</span></a><span class="muted small">{{ days(t) }}</span></li>{% endfor %}</ul>
   </details>
   {% endif %}
 </section>
 
-{% if tag_trackers %}
-<section class="card" aria-labelledby="tags-h">
-  <h2 id="tags-h">Today's tags</h2>
-  {% for t in tag_trackers %}{% set on_ = tagged.get(t.id, ()) %}
-  <p class="small tag-group">{{ t.name }}</p>
-  <div class="chips" role="group" aria-label="{{ t.name }} tags">
-    {% for tag in t.tags %}<form method="post" action="/log/{{ t.key }}/tag" class="inline">
-      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/trackers">
-      <input type="hidden" name="tag" value="{{ tag }}"><button type="submit" class="chip" aria-pressed="{{ 'true' if tag|tag_slug in on_ else 'false' }}">{{ tag }}</button></form>{% endfor %}
+<section class="card panel" aria-labelledby="tags-h" id="tags">
+  <h2 id="tags-h">Day tags</h2>
+  <p class="muted">Words for what kind of day it was: meeting heavy, travel, sick. Tap the ones that fit today. Each tag is compared with everything else, so you might find that meeting-heavy days go with fewer steps.</p>
+  {% if day and day.tags %}
+  <p class="kicker">Today</p>
+  <div class="chips" role="group" aria-label="Today's tags">
+    {% for tag in day.tags %}<form method="post" action="/log/{{ day.key }}/tag" class="inline">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/trackers#tags">
+      <input type="hidden" name="tag" value="{{ tag }}"><button type="submit" class="chip" aria-pressed="{{ 'true' if tag|tag_slug in tagged else 'false' }}">{{ tag }}</button></form>{% endfor %}
+  </div>
+  {% endif %}
+  {% if tag_error %}<p class="error" role="alert">{{ tag_error }}</p>{% endif %}
+  <form method="post" action="/day-tags" class="add-tags">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="new-tags">Add tags <span class="muted">(separated by commas)</span></label>
+    <div class="input-row"><input id="new-tags" name="tags" required maxlength="400" placeholder="meeting heavy, in-fighting"><button type="submit">Add</button></div>
+  </form>
+  {% set any_tag_ideas = tag_ideas|selectattr(1)|list %}
+  {% if any_tag_ideas %}
+  <p class="muted small">Or tap a suggestion to add it:</p>
+  {% for who, tags in any_tag_ideas %}
+  <div class="tag-ideas"><span class="kicker">{{ who }}</span>
+    {% for tag in tags %}<form method="post" action="/day-tags" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tags" value="{{ tag }}"><button type="submit" class="chip suggest">+ {{ tag }}</button></form>{% endfor %}
   </div>
   {% endfor %}
+  {% endif %}
+  {% if day and day.tags %}
+  <details class="manage"><summary class="small">Remove a tag</summary>
+    <div class="chips">{% for tag in day.tags %}<form method="post" action="/day-tags/remove" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tag" value="{{ tag }}"><button type="submit" class="chip" aria-label="Remove {{ tag }}">{{ tag }} ×</button></form>{% endfor %}</div>
+    <p class="muted small">Days you already tagged keep their history.</p>
+  </details>
+  {% endif %}
 </section>
-{% endif %}
 
-<section class="card" aria-labelledby="new-h" id="new">
+<section class="card panel" aria-labelledby="new-h" id="new">
   <h2 id="new-h">New tracker</h2>
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
   <form method="post" action="/trackers" class="settings new-metric">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    <input type="hidden" name="polarity" value="{{ form.get('polarity', 'neutral') }}">
     <label for="name">Name</label>
-    <input id="name" name="name" required maxlength="80" value="{{ form.get('name', '') }}" placeholder="Work politics, Sugar cravings, Back pain…">
+    <input id="name" name="name" required maxlength="80" value="{{ form.get('name', '') }}" placeholder="Work day, Back pain, Crochet…">
     <fieldset class="kinds">
       <legend>What are you tracking?</legend>
       {% set chosen = form.get('type', 'scale') %}
@@ -65,25 +92,22 @@
         </div>
       </details>
     </fieldset>
-    <div class="detail for-unit"><label for="unit">Unit</label><input id="unit" name="unit" value="{{ form.get('unit', '') }}" placeholder="pages, km, $"></div>
+    <div class="detail for-unit"><label for="unit">Counted in</label><input id="unit" name="unit" value="{{ form.get('unit', '') }}" placeholder="pages, meetings, km"></div>
     <div class="detail for-options"><label for="options">Options, separated by commas</label><input id="options" name="options" value="{{ form.get('options', '') }}" placeholder="home, takeout, skipped"></div>
-    <label for="tags">Tags <span class="muted">(optional, separated by commas)</span></label>
-    <input id="tags" name="tags" value="{{ form.get('tags', '') }}" placeholder="meeting heavy, in-fighting, deadline">
-    <p class="muted small">Tags are quick picks you tap each day, so you can see what goes with a low day or fewer steps.</p>
     <button type="submit">Create</button>
   </form>
 
   {% set any_ideas = ideas|selectattr(1)|list %}
   {% if any_ideas %}
   <h3 class="ideas-h">Need ideas?</h3>
-  <p class="muted small">Tap one to fill in the form above, then change anything before you create it.</p>
+  <p class="muted small">Tap one to fill in the form, then change anything before you create it.</p>
   <dl class="ideas">
     {% for who, list_ in any_ideas %}
     <dt>{{ who }}</dt>
-    <dd>{% for slug, i in list_ %}<a class="idea" href="/trackers?idea={{ slug }}#new"><strong>{{ i.name }}</strong> <span>{% if i.type == "scale" %}Rating 1–10{% else %}{{ type_labels[i.type] }}{% endif %}{% if i.tags %}: {{ i.tags }}{% endif %}</span></a>{% endfor %}</dd>
+    <dd>{% for slug, i in list_ %}<a class="idea" href="/trackers?idea={{ slug }}#new"><strong>{{ i.name }}</strong> <span>{{ measures(i) }}</span></a>{% endfor %}</dd>
     {% endfor %}
   </dl>
   {% endif %}
-  <p class="muted small">Coffee, alcohol, water and mindful minutes already live in Apple Health. Log them there and they arrive here on their own.</p>
+  <p class="muted small">Coffee, alcohol, water and mood already live in Apple Health. Log them there and they show up here on their own.</p>
 </section>
 {% endblock %}

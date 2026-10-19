@@ -40,10 +40,17 @@
   </ul>
 </section>
 
-{% if capture.pinned %}
+{% if capture.day_tags and capture.day_tags.tags %}
+<section class="card">
+  <div class="row"><h2>Today was…</h2><a class="small" href="/trackers#tags">Edit tags ›</a></div>
+  {{ log_controls(capture.day_tags, csrf, "/", capture.new_id, tagged=capture.tagged.get(capture.day_tags.id, ())) }}
+</section>
+{% endif %}
+
+{% if capture.trackers %}
 <section class="card">
   <div class="row"><h2>Quick add</h2><a class="small" href="/review">Full log ›</a></div>
-  {% for t in capture.pinned %}
+  {% for t in capture.trackers %}
   <div class="tracker-row">
     <span class="tracker-name">{{ t.name }}</span>
     {{ log_controls(t, csrf, "/", capture.new_id, tagged=capture.tagged.get(t.id, ())) }}

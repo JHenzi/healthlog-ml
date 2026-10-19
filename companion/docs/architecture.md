@@ -112,17 +112,23 @@ Count, yes/no, choice and moment features are 0 only on reviewed days, or on
 every day since the first entry for an "always logged" tracker. They never
 zero-fill today. Scale and time features are never zero-filled.
 
-**Tags** (migration 0005) are quick picks attached to a tracker ("meeting
-heavy", "in-fighting"), or a whole tracker of type `tags`. `trackers.tags`
-holds their display text and stays editable. A picked tag is an observation
+**Day tags** (migration 0005) describe the day, not a measure ("meeting
+heavy", "travel"). They live on one reserved tracker of type `tags`, key
+`day_tags` (name "Day", so features read "Day: meeting heavy"), created with
+the first tag. `trackers.tags` holds their display text; removing a tag
+keeps its past entries in the event log. The web app no longer offers tags
+on other trackers (the model still allows them). A picked tag is an observation
 with `tag` set to its slug and no value; tapping it again tombstones it. A tag
 is 1 on a day it was picked and 0 on a day the tracker was otherwise used or
 the day was reviewed (the tag was in front of you and not picked); unknown
 otherwise. Tags share their tracker's family, so "Work day" is never related
 to its own "meeting heavy" tag.
 
-New trackers assume what they can: the key comes from the name, every new
-rating is 1–10, and they're pinned and in the daily log. Older trackers keep
+New trackers assume what they can: the key comes from the name and every
+new rating is 1–10, 10 high. Every active tracker shows in Quick add and the
+daily log (`pinned` and `in_review` are no longer read by the web app). No
+tracker says which way is better: the analysis finds the direction, and
+ratings use one light-to-dark ramp. Older trackers keep
 their own scale. Logging an earlier day without a time records it at midday
 of that day.
 

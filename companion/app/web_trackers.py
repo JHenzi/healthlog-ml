@@ -16,6 +16,7 @@ from .db import get_db
 from .models import ApiToken, Observation, Tracker, WebSession
 from .trackers import (
     COMMON_TYPES,
+    DAY_TAGS_KEY,
     DEFAULT_SCALE,
     TYPE_HINTS,
     TYPE_LABELS,
@@ -28,54 +29,58 @@ from .web import _signed_in, _today, current_session, templates
 
 router = APIRouter()
 
-POLARITIES = ("neutral", "good", "bad")
-
 # Ideas for a new tracker, by the kind of life they fit. Choosing one fills in the form; nothing is created
-# until you tap Create. Caffeine, alcohol and water are left out: Apple Health already records them.
+# until you tap Create. Caffeine, alcohol, water and mood are left out: Apple Health already records them.
 IDEAS = (
     (
         "At work",
         (
-            {
-                "name": "Work day",
-                "type": "scale",
-                "polarity": "good",
-                "tags": "meeting heavy, in-fighting, deadline, focused, good teamwork",
-            },
-            {"name": "Focus", "type": "scale", "polarity": "good"},
+            {"name": "Work day", "type": "scale"},
+            {"name": "Focus", "type": "scale"},
+            {"name": "Meetings", "type": "count", "unit": "meetings"},
+            {"name": "Deep work", "type": "duration"},
         ),
     ),
     (
         "Training",
         (
-            {"name": "Soreness", "type": "scale", "polarity": "bad"},
-            {"name": "Motivation", "type": "scale", "polarity": "good"},
+            {"name": "Soreness", "type": "scale"},
+            {"name": "Motivation", "type": "scale"},
+            {"name": "Stretched", "type": "check"},
         ),
     ),
     (
-        "Living with pain or a condition",
+        "Pain",
         (
             {"name": "Headache", "type": "moment"},
-            {"name": "Pain", "type": "scale", "polarity": "bad", "tags": "back, joints, stomach, head"},
+            {"name": "Pain", "type": "scale"},
+            {"name": "Back pain", "type": "scale"},
         ),
     ),
     (
-        "Home life",
+        "Hobbies",
         (
-            {"name": "Day tags", "type": "tags", "tags": "travel, sick, social, late night, family time"},
-            {"name": "Screens after 10pm", "type": "check"},
+            {"name": "Crochet", "type": "duration"},
+            {"name": "Reading", "type": "count", "unit": "pages"},
+            {"name": "Articles proofread", "type": "count", "unit": "articles"},
         ),
     ),
     (
         "Anyone",
         (
-            {"name": "Energy", "type": "scale", "polarity": "good"},
-            {"name": "Productivity", "type": "scale", "polarity": "good"},
+            {"name": "Energy", "type": "scale"},
+            {"name": "Productivity", "type": "scale"},
+            {"name": "Screens after 10pm", "type": "check"},
         ),
     ),
 )
 IDEAS_BY_SLUG = {slugify(i["name"]): i for _, ideas in IDEAS for i in ideas}
-TOGGLES = ("pinned", "in_review")
+# Tags describe the day ("meeting heavy", "travel"); each one is its own yes/no series in the analysis.
+TAG_IDEAS = (
+    ("Work", ("meeting heavy", "in-fighting", "deadline", "focused", "good teamwork", "worked from home", "on call")),
+    ("Body", ("headache", "back pain", "sick", "allergies", "hungover")),
+    ("Life", ("travel", "social", "late night", "family time", "hosting", "kids up at night", "alone time")),
+)
 
 
 def _csrf_ok(session: WebSession, csrf: str) -> bool:
@@ -128,6 +133,7 @@ def trackers_page(
     error: str = "",
     form: dict | None = None,
     idea: str = "",
+    tag_error: str = "",
 ) -> Response:
     if (redirect := _signed_in(session)) is not None:
         return redirect
@@ -142,15 +148,17 @@ def trackers_page(
     keys = {t.key for t in rows}
     if form is None and (picked := IDEAS_BY_SLUG.get(idea)) is not None:
         form = dict(picked)
-    tagged = capture.tags_for_day(db, _today())
+    day = capture.day_tags(db)
+    have = {tag_slug(t) for t in day.tags} if day else set()
     return templates.TemplateResponse(
         request,
         "trackers.html",
         {
-            "trackers": [t for t in rows if not t.archived],
-            "archived": [t for t in rows if t.archived],
-            "tag_trackers": [t for t in rows if t.tags and not t.archived],
-            "tagged": tagged,
+            "trackers": [t for t in rows if not t.archived and t.key != DAY_TAGS_KEY],
+            "archived": [t for t in rows if t.archived and t.key != DAY_TAGS_KEY],
+            "day": day,
+            "tagged": capture.tags_for_day(db, _today()).get(day.id, set()) if day else set(),
+            "tag_ideas": [(who, [x for x in tags if tag_slug(x) not in have]) for who, tags in TAG_IDEAS],
             "counts": counts,
             "type_labels": TYPE_LABELS,
             "type_hints": list(TYPE_HINTS.items()),
@@ -161,6 +169,7 @@ def trackers_page(
             ],
             "csrf": session.csrf_token,
             "error": error,
+            "tag_error": tag_error,
             "form": form or {},
         },
         status_code=422 if error else 200,
@@ -175,8 +184,6 @@ def create_tracker(
     type: str = Form("scale"),
     unit: str = Form(""),
     options: str = Form(""),
-    tags: str = Form(""),
-    polarity: str = Form("neutral"),
     session: WebSession | None = Depends(current_session),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -184,12 +191,12 @@ def create_tracker(
         return redirect
     if not _csrf_ok(session, csrf):
         return _forbidden()
-    form = dict(name=name, type=type, unit=unit, options=options, tags=tags, polarity=polarity)
+    form = dict(name=name, type=type, unit=unit, options=options)
     try:
-        if polarity not in POLARITIES:
-            raise TrackerInputError("unknown polarity")
-        # Assume what we can: the key comes from the name, every rating is 1–10, and a new
-        # metric shows up for one-tap logging and in the daily log. All of it changes later.
+        # Assume what we can: the key comes from the name, every rating is 1–10 with 10 high, and a new
+        # tracker shows up in Quick add and the daily log. Which way is "better" is left to the data.
+        if type == "tags" or slugify(name) == DAY_TAGS_KEY:
+            raise TrackerInputError("tags belong to the day: add them under Day tags")
         tracker = capture.create_tracker(
             db,
             key=slugify(name),
@@ -199,14 +206,12 @@ def create_tracker(
             scale_min=DEFAULT_SCALE[0] if type == "scale" else None,
             scale_max=DEFAULT_SCALE[1] if type == "scale" else None,
             options=_options(options) if type == "choice" else [],
-            tags=parse_tags(tags),
-            polarity=polarity,
             in_review=True,
             pinned=True,
         )
     except TrackerInputError as exc:
         db.rollback()
-        return trackers_page(request, session, db, error=str(exc), form=form, idea="")
+        return trackers_page(request, session, db, error=str(exc), form=form, idea="", tag_error="")
     db.commit()
     return RedirectResponse(f"/trackers/{tracker.key}", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -259,7 +264,6 @@ def _render_detail(
             "log_url": f"{base_url}/api/log/{key}",
             "successor": successor,
             "tagged": capture.tags_for_day(db, _today()).get(tracker.id, set()),
-            "polarities": POLARITIES,
             "type_labels": TYPE_LABELS,
             "csrf": session.csrf_token,
             "error": error,
@@ -276,11 +280,7 @@ def edit_tracker(
     csrf: str = Form(""),
     name: str = Form(""),
     category: str = Form(""),
-    polarity: str = Form("neutral"),
-    tags: str = Form(""),
-    in_review: str = Form(""),
     always_logged: str = Form(""),
-    pinned: str = Form(""),
     archived: str = Form(""),
     session: WebSession | None = Depends(current_session),
     db: Session = Depends(get_db),
@@ -293,18 +293,12 @@ def edit_tracker(
     if tracker is None:
         return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
     try:
-        if polarity not in POLARITIES:
-            raise TrackerInputError("unknown polarity")
         capture.update_tracker(
             db,
             tracker,
             name=name.strip(),
             category=category.strip() or None,
-            polarity=polarity,
-            tags=parse_tags(tags),
-            in_review=in_review == "on",
             always_logged=always_logged == "on",
-            pinned=pinned == "on",
             archived=archived == "on",
         )
     except TrackerInputError as exc:
@@ -314,27 +308,41 @@ def edit_tracker(
     return RedirectResponse(f"/trackers/{key}", status_code=status.HTTP_303_SEE_OTHER)
 
 
-@router.post("/trackers/{key}/show")
-def toggle_tracker_place(
-    key: str,
+@router.post("/day-tags")
+def add_day_tags(
     csrf: str = Form(""),
-    field: str = Form(""),
+    tags: str = Form(""),
     session: WebSession | None = Depends(current_session),
     db: Session = Depends(get_db),
 ) -> Response:
-    """Switch a tracker in or out of Quick add (``pinned``) or the daily log (``in_review``)."""
+    """Add one or more tags (separated by commas) to the day's list."""
     if (redirect := _signed_in(session)) is not None:
         return redirect
     if not _csrf_ok(session, csrf):
         return _forbidden()
-    tracker = _tracker_or_404(db, key)
-    if tracker is None:
-        return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
-    if field not in TOGGLES:
-        return Response("Unknown setting", status_code=status.HTTP_400_BAD_REQUEST)
-    capture.update_tracker(db, tracker, **{field: not getattr(tracker, field)})
+    try:
+        capture.add_day_tags(db, parse_tags(tags))
+    except TrackerInputError as exc:
+        db.rollback()
+        return RedirectResponse(f"/trackers?tag_error={str(exc)[:200]}#tags", status_code=status.HTTP_303_SEE_OTHER)
     db.commit()
-    return RedirectResponse("/trackers", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse("/trackers#tags", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/day-tags/remove")
+def remove_day_tag(
+    csrf: str = Form(""),
+    tag: str = Form(""),
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    if not _csrf_ok(session, csrf):
+        return _forbidden()
+    capture.remove_day_tag(db, tag)
+    db.commit()
+    return RedirectResponse("/trackers#tags", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/trackers/{key}/version")
@@ -564,21 +572,16 @@ def review_page(
     for o, t in entries:
         if o.tag is None:  # picked tags show as pressed chips instead
             by_tracker.setdefault(t.id, []).append((o, _display(o, t), _local(o.observed_at)))
-    rows = (
-        db.execute(
-            sa.select(Tracker).where(Tracker.archived.is_(False), Tracker.in_review.is_(True)).order_by(Tracker.name)
-        )
-        .scalars()
-        .all()
-    )
+    rows = _active(db)
     return templates.TemplateResponse(
         request,
         "review.html",
         {
+            "day_tags": capture.day_tags(db),
             "day": the_day,
             "prev": the_day - dt.timedelta(days=1),
             "next": the_day + dt.timedelta(days=1) if the_day < today else None,
-            "trackers": rows,
+            "trackers": [t for t in rows if t.key != DAY_TAGS_KEY],
             "by_tracker": by_tracker,
             "tagged": capture.tags_for_day(db, the_day),
             "reviewed": capture.is_reviewed(db, the_day),
@@ -612,20 +615,20 @@ def submit_review(
     return RedirectResponse(f"/review?day={the_day.isoformat()}", status_code=status.HTTP_303_SEE_OTHER)
 
 
+def _active(db: Session) -> list[Tracker]:
+    """Every tracker that isn't archived: all of them show in Quick add and the daily log."""
+    return list(db.execute(sa.select(Tracker).where(Tracker.archived.is_(False)).order_by(Tracker.name)).scalars())
+
+
 def today_capture(db: Session, day: dt.date) -> dict:
-    """Pinned trackers and today's entries, for the Today page."""
-    pinned = (
-        db.execute(
-            sa.select(Tracker).where(Tracker.archived.is_(False), Tracker.pinned.is_(True)).order_by(Tracker.name)
-        )
-        .scalars()
-        .all()
-    )
+    """Trackers, the day's tags and today's entries, for the Overview page."""
+    rows = _active(db)
     entries = [
         (o, t, _display(o, t), _local(o.observed_at)) for o, t in capture.entries_for_day(db, day) if o.tag is None
     ]
     return {
-        "pinned": pinned,
+        "trackers": [t for t in rows if t.key != DAY_TAGS_KEY],
+        "day_tags": next((t for t in rows if t.key == DAY_TAGS_KEY), None),
         "entries": entries,
         "tagged": capture.tags_for_day(db, day),
         "new_id": lambda: str(uuid.uuid4()),
