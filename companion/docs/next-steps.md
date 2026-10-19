@@ -85,7 +85,7 @@ cd companion && python3 -m venv .venv && . .venv/bin/activate && pip install -r 
 companion/scripts/test.sh                     # ruff + all suites, ~35 s
 companion/scripts/test.sh tests/unit -x       # extra args go to pytest
 STATS_SEEDS=200 companion/scripts/test.sh tests/stats   # the engine's validation suite at full strength
-sh companion/scripts/check_paths.sh upstream/main      # R1: only our paths changed
+sh companion/scripts/check_paths.sh upstream/dev       # R1: only our paths changed
 ```
 
 `test.sh` starts or reuses a throwaway TimescaleDB, `healthlog-testdb` on

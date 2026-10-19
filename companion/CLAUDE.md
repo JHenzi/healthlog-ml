@@ -100,6 +100,6 @@ Handoff, setup and the work queue: [`docs/next-steps.md`](docs/next-steps.md).
   `COMPANION_TEST_ADMIN_URL=postgresql+psycopg://healthlog:healthlog@127.0.0.1:55432/companion_test python -m pytest -q`.
   The database name must end in `_test`: the suite resets schemas. Never
   point it at the live database.
-- Path allowlist (R1): `sh companion/scripts/check_paths.sh upstream/main`
+- Path allowlist (R1): `sh companion/scripts/check_paths.sh upstream/dev`
 - Upstream contract (live): `docker exec healthlog-companion companion check-upstream`
 - Rebuild features and insights (live): `docker exec healthlog-companion companion refresh`

@@ -4,6 +4,7 @@
 #   companion/scripts/upgrade_rehearsal.sh <healthlog-tag> [dump]     # e.g. v0.6.2, dev
 #   KEEP=1 companion/scripts/upgrade_rehearsal.sh dev                  # leave the copy running to look around
 #   RUN="rederive-state-of-mind rederive-sleep" companion/scripts/upgrade_rehearsal.sh dev   # post-upgrade steps
+#   HEALTHLOG_IMAGE=healthlog-local companion/scripts/upgrade_rehearsal.sh <sha>       # an image built from this checkout
 #
 # 1. Restores the newest nightly backup (or [dump]) into a throwaway TimescaleDB of the live engine version.
 #    That is also the restore test: if this step fails, the backups don't restore.
@@ -24,6 +25,7 @@ roles=$(ls -1t "$backup_dir"/db/roles-*.sql | head -1)
 db_image=$(docker inspect healthlog-db --format '{{.Config.Image}}')
 net=healthlog-rehearsal
 db=healthlog-rehearsal-db
+image=${HEALTHLOG_IMAGE:-ghcr.io/anym001/healthlog}:$target
 app=healthlog-rehearsal-app
 
 env_value() { grep -E "^$1=" "$repo/.env" | tail -1 | cut -d= -f2-; }
@@ -68,12 +70,12 @@ sql "select timescaledb_post_restore()" >/dev/null
 echo "schema before: $(sql 'select version_num from alembic_version')"
 counts
 
-echo "== HealthLog $target (migrations run on start)"
-docker pull -q "ghcr.io/anym001/healthlog:$target" >/dev/null
+echo "== HealthLog $image (migrations run on start)"
+docker image inspect "$image" >/dev/null 2>&1 || docker pull -q "$image" >/dev/null
 docker run -d --name "$app" --network "$net" \
     -e DATABASE_URL="postgresql+psycopg://healthlog:$pg_password@$db:5432/healthlog" \
     -e INGEST_SECRET=rehearsal-only -e TZ="$tz" -e NOTIFY_TOKEN= -e PUID="$(id -u)" -e PGID="$(id -g)" \
-    -v "$cfg:/config" "ghcr.io/anym001/healthlog:$target" >/dev/null
+    -v "$cfg:/config" "$image" >/dev/null
 i=0
 until docker exec "$app" python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')" \
     >/dev/null 2>&1; do

@@ -18,8 +18,8 @@ jobs:
         with:
           fetch-depth: 0
       - name: Fetch upstream
-        run: git remote add upstream https://github.com/anym001/healthlog.git && git fetch --quiet upstream main
-      - run: sh companion/scripts/check_paths.sh upstream/main
+        run: git remote add upstream https://github.com/anym001/healthlog.git && git fetch --quiet upstream dev
+      - run: sh companion/scripts/check_paths.sh upstream/dev
 
   test:
     runs-on: ubuntu-latest
