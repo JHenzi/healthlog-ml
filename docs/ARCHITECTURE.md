@@ -756,8 +756,14 @@ Dependabot PRs pass the same `test.yml` gate as any other PR.
   become relevant.
 - **Optional / on the server, not built in:** interactive Jupyter exploration only
   covers the ad-hoc case that pipeline + Grafana already cover.
-- **Out of scope (addable on demand):** an arm64 image (currently `linux/amd64` only),
-  a dedicated web app.
+- **Out of scope for now (HealthLog itself may add it later):** an arm64 image
+  (currently `linux/amd64` only).
+- **Out of scope, by design:** a dedicated web app, editable user data (trackers,
+  diary) and write APIs beyond the HAE ingest. The core stays a single-user data
+  pipeline + analysis with no outbound calls. Apps built on top of HealthLog are
+  welcome as **independent projects** in their own repositories, reading through a
+  versioned read-only API rather than the database; they own their storage, their
+  security and any external services they use.
 
 ## 11. Methodological pitfalls
 
