@@ -103,7 +103,15 @@ def test_pages_need_sign_in(client, coffee, path):
 
 @pytest.mark.parametrize(
     "path",
-    ["/trackers", "/trackers/coffee/edit", "/trackers/coffee/token", "/log/coffee", "/log/coffee/tag", "/review"],
+    [
+        "/trackers",
+        "/trackers/coffee/edit",
+        "/trackers/coffee/show",
+        "/trackers/coffee/token",
+        "/log/coffee",
+        "/log/coffee/tag",
+        "/review",
+    ],
 )
 def test_writes_need_csrf(signed_in, coffee, path):
     assert signed_in.post(path, data={"csrf": "forged", "name": "x", "day": "2026-10-10"}).status_code == 403
@@ -136,15 +144,34 @@ def test_new_metric_form_asks_only_what_it_needs(signed_in, db):
     html = signed_in.get("/trackers").text
     for gone in ('name="key"', 'name="scale_min"', 'name="scale_labels"', 'name="category"'):
         assert gone not in html
-    assert 'name="tags"' in html and "What are you tracking?" in html and "Work day" in html
-    csrf = _csrf(html)
-    preset = signed_in.post(
+    assert 'name="tags"' in html and "What are you tracking?" in html
+    # Ideas are suggestions, not one-tap creates; Apple Health already has coffee and alcohol.
+    assert 'href="/trackers?idea=work_day#new"' in html and "idea=coffee" not in html
+    filled = signed_in.get("/trackers?idea=work_day").text
+    assert 'value="Work day"' in filled and 'value="meeting heavy, in-fighting' in filled
+    assert 'name="polarity" value="good"' in filled
+    assert db.execute(select(Tracker)).first() is None
+    created = signed_in.post(
         "/trackers",
-        data={"csrf": csrf, "name": "Work day", "type": "scale", "tags": "meeting heavy, in-fighting"},
+        data={"csrf": _csrf(html), "name": "Work day", "type": "scale", "polarity": "good", "tags": "deadline"},
         follow_redirects=False,
     )
-    assert preset.headers["location"] == "/trackers/work_day"
-    assert "Work day" not in signed_in.get("/trackers").text.split("New metric", 1)[1].split("Or make", 1)[0]
+    assert created.headers["location"] == "/trackers/work_day"
+    assert "idea=work_day" not in signed_in.get("/trackers").text
+
+
+def test_trackers_page_sets_where_each_shows_and_todays_tags(signed_in, db, coffee):
+    capture.create_tracker(db, key="day_tags", name="Day tags", type="tags", tags=["travel"], in_review=True)
+    html = signed_in.get("/trackers").text
+    assert "Today's tags" in html and 'aria-pressed="false">travel' in html
+    csrf = _csrf(html)
+    signed_in.post("/log/day_tags/tag", data={"csrf": csrf, "tag": "travel", "back": "/trackers"})
+    assert 'aria-pressed="true">travel' in signed_in.get("/trackers").text
+    assert coffee.pinned
+    signed_in.post("/trackers/coffee/show", data={"csrf": csrf, "field": "pinned"})
+    db.refresh(coffee)
+    assert not coffee.pinned
+    assert signed_in.post("/trackers/coffee/show", data={"csrf": csrf, "field": "archived"}).status_code == 400
 
 
 def test_tags_toggle_from_the_daily_log(signed_in, db):
