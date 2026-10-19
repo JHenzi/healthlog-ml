@@ -68,7 +68,9 @@ and `TZ` set in `.env` (the Companion refuses to start without it).
    ```
 
    `companion-web` applies the Companion's migrations on start and serves on
-   port `8020` (`COMPANION_PORT`). `companion-jobs` runs scheduled work.
+   `127.0.0.1:8020` (`COMPANION_BIND`, `COMPANION_PORT`): this machine only,
+   so reach it through Tailscale Serve or a reverse proxy. `companion-jobs`
+   runs scheduled work.
 
 3. **Set your password:**
 
@@ -90,6 +92,7 @@ and `TZ` set in `.env` (the Companion refuses to start without it).
 | `TZ` | *(required)* | your IANA time zone, e.g. `America/New_York` |
 | `DAY_BOUNDARY` | `04:00` | local time at which one day ends and the next begins, so late nights count as the evening before |
 | `COMPANION_PORT` | `8020` | host port for the web app |
+| `COMPANION_BIND` | `127.0.0.1` | host address the port is published on. Keep it on localhost; set it to another address only if a reverse proxy on a different machine must reach it directly |
 | `COMPANION_COOKIE_SECURE` | `true` | send the session cookie over HTTPS only; leave on in production |
 | `TRUSTED_PROXIES` | private ranges | same meaning as HealthLog's: which peers may set `X-Forwarded-For` |
 

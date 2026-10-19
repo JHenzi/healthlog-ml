@@ -13,7 +13,8 @@ services:
       healthlog-db:
         condition: service_healthy
     ports:
-      - "${COMPANION_PORT:-8020}:8000"
+      # Localhost only: reach it through Tailscale Serve or a reverse proxy on this host.
+      - "${COMPANION_BIND:-127.0.0.1}:${COMPANION_PORT:-8020}:8000"
     environment: &companion-env
       # The `companion` role: owns schema companion, SELECT-only on HealthLog's tables.
       DATABASE_URL: postgresql+psycopg://companion:${COMPANION_DB_PASSWORD:?set COMPANION_DB_PASSWORD in .env}@healthlog-db:5432/healthlog
