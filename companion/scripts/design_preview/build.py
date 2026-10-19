@@ -73,7 +73,10 @@ SCREENS = [  # file, wireframe screen, title, caption
 def main(root: str) -> None:
     css = open(f"{root}/preview/screens/style.css").read()
     css = re.sub(r"@font-face \{.*?\}\s*", "", css, flags=re.S)
-    css = "@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap');\n" + css
+    fonts = "family=Archivo:wght@400;600;800"
+    if '"Fraunces"' in css:
+        fonts += "&family=Fraunces:wght@400;600;700&family=Nunito:wght@400;600;700;800"
+    css = f"@import url('https://fonts.googleapis.com/css2?{fonts}&display=swap');\n" + css
 
     def screen(name: str) -> str:
         page = open(f"{root}/preview/screens/{name}.html").read()

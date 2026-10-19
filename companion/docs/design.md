@@ -44,6 +44,23 @@ touch templates or structure. The structural decisions above (missing days
 hatched, provenance and Preliminary tags, discoveries above baselines,
 five sections) hold whichever skin is chosen.
 
+## Warm candidate (2026-10-19)
+
+`web/static/warm.css` is a second look that loads after `style.css` and only
+overrides it. It uses paper and soil colours, moss green for actions and
+switched-on tags, rounded tiles instead of 2px rules, and sentence-case
+labels. Headings use Fraunces and body text uses Nunito (both SIL OFL, self-hosted, see
+`fonts/OFL-warm.txt`). It has its own warm dark mode. The structural rules above
+are unchanged. Nothing links it yet: switching means adding one `<link>` to
+`base.html`. `SKIN=warm scripts/design_preview/run.sh <dir>` renders the
+review page in it. That page is published privately at
+https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7pG.
+
+The Claude Design project export (2026-10-19) holds the same
+`Wireframes.dc.html` this look was built from and the Modernist design
+system. It also has an unused top-level stylesheet from a different system
+("Industry": Barlow, slate blue) that the wireframes never load.
+
 ## Owner feedback (2026-10-18)
 
 - The metric builder was "a nightmare": too many choices. Make assumptions

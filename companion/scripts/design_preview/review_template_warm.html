@@ -1,0 +1,115 @@
+<title>Companion Warm Look</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: a soft column of reasoning on paper, then the real screens in rounded phone frames. */
+:root {
+  --bg: #f6f1e7; --surface: #fbf8f2; --ink: #33271c; --muted: #6e5f4e;
+  --accent: #4f7a4a; --accent-text: #3b5f37; --rule: #d8cbb4; --frame-bg: #f6f1e7;
+  --divider: color-mix(in srgb, #33271c 14%, transparent);
+  --font: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1d1813; --surface: #251f18; --ink: #f1e8da; --muted: #b5a690;
+  --accent: #8fbf86; --accent-text: #a9d39f; --rule: #4a3f33;
+  --divider: color-mix(in srgb, #f1e8da 16%, transparent); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #1d1813; --surface: #251f18; --ink: #f1e8da; --muted: #b5a690;
+  --accent: #8fbf86; --accent-text: #a9d39f; --rule: #4a3f33;
+  --divider: color-mix(in srgb, #f1e8da 16%, transparent); color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--font); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 12px; max-width: 860px; padding-bottom: 24px; }
+.kicker { margin: 0; font-size: 14px; font-weight: 700; color: var(--muted); }
+h1 { margin: 0; font-family: var(--font-display); font-size: clamp(34px, 5vw, 52px); font-weight: 600; line-height: 1.05; letter-spacing: -.01em; text-wrap: balance; }
+h2 { margin: 0 0 12px; font-family: var(--font-display); font-size: 24px; font-weight: 600; text-wrap: balance; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent-text); text-underline-offset: 3px; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; background: var(--accent); }
+.sw.red { background: var(--ink); }
+.sw.hatch { background: repeating-linear-gradient(135deg, var(--divider) 0 2px, transparent 2px 5px); outline: 1px solid var(--divider); }
+section { padding-top: 28px; margin-top: 28px; border-top: 1px solid var(--rule); }
+header + section { border-top: 0; margin-top: 0; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.cols > div { padding: 16px 18px; background: var(--surface); border: 1px solid var(--divider); border-radius: 16px; min-width: 0; }
+.cols h3 { margin: 0 0 6px; font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.cols p { font-size: 14px; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 32px 24px; }
+.phone { margin: 0; display: grid; gap: 10px; min-width: 0; }
+.screen { width: 100%; max-width: 360px; aspect-ratio: 9 / 18; border: 1px solid var(--rule); border-radius: 28px; background: var(--bg); overflow: hidden; }
+.screen iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--frame-bg); }
+figcaption { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 14px; max-width: 360px; }
+.ref { grid-row: span 2; align-self: start; font-weight: 800; color: var(--accent-text); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 8px; font-size: 12px; }
+.cap { grid-column: 2; color: var(--muted); font-size: 13px; }
+.desktop { border: 1px solid var(--rule); border-radius: 18px; aspect-ratio: 16 / 10; max-width: 100%; overflow: hidden; }
+.desktop iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--frame-bg); }
+ul.plain { margin: 0; padding: 0; list-style: none; max-width: 860px; }
+ul.plain li { padding: 10px 0; border-bottom: 1px solid var(--divider); }
+ul.plain strong { font-weight: 800; }
+ol.q { margin: 0; padding-left: 22px; max-width: 860px; display: grid; gap: 8px; }
+.note { font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="kicker">HealthLog Companion · design review · October 2026</p>
+  <h1>A warmer, friendlier look for the Companion</h1>
+  <p>The same app and the same screens as the Modernist review, in a second look to compare: paper and soil instead of ink and red, moss green for actions, rounded tiles, a soft serif for headings. It's one extra stylesheet on top of the current one, so either can ship.</p>
+  <div class="legend" aria-label="Legend">
+    <span><span class="sw"></span>Recorded day</span>
+    <span><span class="sw hatch"></span>Not recorded (never zero)</span>
+    <span><span class="sw red"></span>Moss green: actions and what's switched on</span>
+  </div>
+</header>
+
+<section aria-labelledby="principles">
+  <h2 id="principles">What changes from the Modernist look</h2>
+  <div class="cols">
+    <div><h3>Two friendly typefaces</h3><p>Fraunces, a soft serif, for headings and numbers; Nunito, a rounded sans, for everything else. Both self-hosted, both open-licensed.</p></div>
+    <div><h3>Tiles instead of rules</h3><p>Sections sit on light tiles with rounded corners. Buttons and tags are rounded too. The hard 2px ink rules are gone.</p></div>
+    <div><h3>Earth colours</h3><p>Paper and oat grounds, soil-brown text, moss green for the main action and for tags that are switched on. No red.</p></div>
+    <div><h3>Labels in plain case</h3><p>Small labels read as normal sentence case instead of tracked capitals, so the page talks rather than announces.</p></div>
+    <div><h3>Same structure</h3><p>Missing days stay hatched, Preliminary and strength tags stay, ratings stay one ramp with 10 darkest. Only the skin changes.</p></div>
+    <div><h3>Dark mode included</h3><p>A warm dark palette: dark soil ground, cream text, a lighter moss for actions.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="screens">
+  <h2 id="screens">Screens at phone width</h2>
+  <p class="note" style="margin-bottom:20px">Live HTML from the app's own templates, scrollable inside each frame. Codes refer to the wireframe screens. Buttons and links are inert here. All values are synthetic: 90 days with three planted relationships. The insight sentences are the engine's real output on that data.</p>
+  <div class="grid">
+{{FRAMES}}
+  </div>
+</section>
+
+<section aria-labelledby="desktop">
+  <h2 id="desktop">Overview at desktop width</h2>
+  <p class="note" style="margin-bottom:16px">Above 720px the section tabs move from the bottom bar into the header.</p>
+  <div class="desktop">{{DESKTOP}}</div>
+</section>
+
+<section aria-labelledby="notyet">
+  <h2 id="notyet">From the wireframes, not built yet</h2>
+  <ul class="plain">
+    <li><strong>Evidence intervals (1b, 1c).</strong> The likely-range bar needs confidence intervals from the engine. Today it reports effect, days and adjusted p.</li>
+    <li><strong>Explore (3a).</strong> Aligned timelines, scatter and calendar views with a lag setting.</li>
+    <li><strong>Experiments (4a).</strong> n-of-1 observation periods with their own evidence summary.</li>
+    <li><strong>Settings and data (4b).</strong> Source health, day boundary and export, plus findings from notes once the diary exists.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="questions">
+  <h2 id="questions">Questions for review</h2>
+  <ol class="q">
+    <li>Does the coverage strip make "not enough data yet" clear without feeling like a scold?</li>
+    <li>Are Preliminary tags at under 30 days the right threshold, or should they follow the engine's own minimum of 21?</li>
+    <li>Would any of this look carry over to HealthLog's Grafana dashboards, or should the two stay visually separate?</li>
+  </ol>
+</section>
+</div>
