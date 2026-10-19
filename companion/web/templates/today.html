@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_log_controls.html" import log_controls %}
+{% from "_day_tags.html" import day_tags_block %}
 {% block title %}Overview · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
@@ -40,12 +41,10 @@
   </ul>
 </section>
 
-{% if capture.day_tags and capture.day_tags.tags %}
 <section class="card">
-  <div class="row"><h2>Today was…</h2><a class="small" href="/trackers#tags">Edit tags ›</a></div>
-  {{ log_controls(capture.day_tags, csrf, "/", capture.new_id, tagged=capture.tagged.get(capture.day_tags.id, ())) }}
+  <div class="row"><h2>Today was…</h2></div>
+  {{ day_tags_block(capture.day_tags, capture.tagged.get(capture.day_tags.id, ()) if capture.day_tags else (), csrf, "/") }}
 </section>
-{% endif %}
 
 {% if capture.trackers %}
 <section class="card">
@@ -53,24 +52,9 @@
   {% for t in capture.trackers %}
   <div class="tracker-row">
     <span class="tracker-name">{{ t.name }}</span>
-    {{ log_controls(t, csrf, "/", capture.new_id, tagged=capture.tagged.get(t.id, ())) }}
+    {{ log_controls(t, csrf, "/", capture.new_id, state=capture.state.get(t.id), tagged=capture.tagged.get(t.id, ())) }}
   </div>
   {% endfor %}
-</section>
-{% endif %}
-
-{% if capture.entries %}
-<section class="card">
-  <h2>Logged today</h2>
-  <ul class="entries">
-    {% for o, t, shown, local in capture.entries %}
-    <li><span>{{ local.strftime("%H:%M") }} · {{ t.name }}{% if shown %} · {{ shown }}{% endif %}</span>
-      <form method="post" action="/entries/{{ o.client_id }}/delete" class="inline">
-        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/">
-        <button type="submit" class="link small">delete</button>
-      </form></li>
-    {% endfor %}
-  </ul>
 </section>
 {% endif %}
 

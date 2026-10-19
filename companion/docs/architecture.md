@@ -132,6 +132,15 @@ ratings use one light-to-dark ramp. Older trackers keep
 their own scale. Logging an earlier day without a time records it at midday
 of that day.
 
+**What logging shows is the day's number, not the entries.** Counts, amounts
+and minutes show the day's total with − (tombstone the latest entry) and +.
+A rating, yes/no or pick-one has one value a day: a new tap replaces it and
+tapping the same value clears it (`capture.set_day_value`); the replaced
+entries are tombstoned, so the event log keeps the full history. A tracker's
+page keeps that history folded away, and logging from a Shortcut or another
+app (URL, log-only tokens) is its own page, `/trackers/<key>/connect`. The
+web forms no longer take a time; the API still does.
+
 ## Days
 
 A Companion day runs from `DAY_BOUNDARY` (default 04:00) local time to the

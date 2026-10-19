@@ -166,28 +166,40 @@ def test_new_tracker_form_asks_only_what_it_needs(signed_in, db):
     assert refused.status_code == 422 and "tags belong to the day" in refused.text
 
 
-def test_day_tags_are_added_picked_and_removed(signed_in, db):
+def test_day_tags_start_empty_typing_one_adds_and_picks_it(signed_in, db):
     html = signed_in.get("/trackers").text
-    assert "Day tags" in html and "+ meeting heavy" in html and "Today was" not in signed_in.get("/").text
+    assert "Add your first tag" in html and "meeting heavy" not in html  # no suggestions, no categories
     csrf = _csrf(html)
-    signed_in.post("/day-tags", data={"csrf": csrf, "tags": "Meeting heavy, travel, meeting  heavy"})
+    signed_in.post("/day-tags", data={"csrf": csrf, "tags": "Meeting heavy, travel, meeting  heavy", "back": "/"})
     day = capture.day_tags(db)
     assert day.tags == ["Meeting heavy", "travel"]
-    assert "+ meeting heavy" not in signed_in.get("/trackers").text
     overview = signed_in.get("/").text
-    assert "Today was" in overview and 'aria-pressed="false">Meeting heavy' in overview
-    signed_in.post("/log/day_tags/tag", data={"csrf": csrf, "tag": "Meeting heavy", "back": "/"})
-    assert 'aria-pressed="true">Meeting heavy' in signed_in.get("/").text
-    assert 'aria-pressed="true">Meeting heavy' in signed_in.get("/review").text
+    assert 'aria-pressed="true">Meeting heavy' in overview and 'aria-pressed="true">travel' in overview
+    assert '<option value="travel">' in overview  # the browser suggests existing tags as you type
+    # Typing an existing tag picks it again rather than adding a duplicate.
+    signed_in.post("/log/day_tags/tag", data={"csrf": csrf, "tag": "travel", "back": "/"})
+    signed_in.post("/day-tags", data={"csrf": csrf, "tags": "TRAVEL", "back": "/"})
+    db.refresh(day)
+    assert day.tags == ["Meeting heavy", "travel"]
+    assert 'aria-pressed="true">travel' in signed_in.get("/").text
+    # Tap to turn off for the day; the tag stays on the list.
     signed_in.post("/log/day_tags/tag", data={"csrf": csrf, "tag": "Meeting heavy", "back": "/"})
     assert 'aria-pressed="false">Meeting heavy' in signed_in.get("/").text
+    review = signed_in.get("/review").text
+    earlier = dt.date.fromisoformat(re.search(r'name="day" value="([0-9-]+)"', review).group(1)) - dt.timedelta(days=2)
+    signed_in.post("/day-tags", data={"csrf": csrf, "tags": "sick", "day": earlier.isoformat(), "back": "/review"})
+    assert 'aria-pressed="true">sick' in signed_in.get(f"/review?day={earlier.isoformat()}").text
+    assert 'aria-pressed="false">sick' in signed_in.get("/").text
     bad = signed_in.post("/log/day_tags/tag", data={"csrf": csrf, "tag": "nope", "back": "/"}, follow_redirects=False)
     assert "error=" in bad.headers["location"]
+    # Remove takes it off the list for good.
     signed_in.post("/day-tags/remove", data={"csrf": csrf, "tag": "travel"})
     db.refresh(day)
-    assert day.tags == ["Meeting heavy"]
+    assert day.tags == ["Meeting heavy", "sick"]
     too_long = signed_in.post("/day-tags", data={"csrf": csrf, "tags": "x" * 41}, follow_redirects=False)
     assert "tag_error=" in too_long.headers["location"]
+    empty = signed_in.post("/day-tags", data={"csrf": csrf, "tags": " , ", "back": "/"}, follow_redirects=False)
+    assert "error=" in empty.headers["location"]
 
 
 def test_logging_an_earlier_day_lands_on_that_day(signed_in, db, coffee):
@@ -205,22 +217,56 @@ def test_bad_definition_shows_an_error(signed_in):
     assert page.status_code == 422 and "at least two options" in page.text
 
 
-def test_quick_log_review_and_delete_from_pages(signed_in, db, coffee):
-    today = signed_in.get("/").text
-    assert "Quick add" in today and "+1" in today
-    csrf = _csrf(today)
-    signed_in.post("/log/coffee", data={"csrf": csrf, "client_id": str(uuid.uuid4()), "back": "/"})
-    entry = db.execute(select(Observation)).scalar_one()
-    assert "Logged today" in signed_in.get("/").text
+def _day_num(html: str) -> str:
+    return re.search(r'class="day-num"><strong>([^<]+)</strong>', html).group(1)
 
+
+def test_quick_add_shows_the_days_number_not_entries(signed_in, db, coffee):
+    today = signed_in.get("/").text
+    assert "Quick add" in today and _day_num(today) == "0" and 'type="time"' not in today
+    csrf = _csrf(today)
+    for _ in range(2):
+        signed_in.post("/log/coffee", data={"csrf": csrf, "client_id": str(uuid.uuid4()), "back": "/"})
+    overview = signed_in.get("/").text
+    assert _day_num(overview) == "2" and "Logged today" not in overview
+    signed_in.post("/log/coffee/undo", data={"csrf": csrf, "back": "/"})
+    assert _day_num(signed_in.get("/").text) == "1"
+    # The minus button tombstones; the history keeps every entry.
+    assert [o.deleted for o in db.execute(select(Observation).order_by(Observation.observed_at)).scalars()] == [
+        False,
+        True,
+    ]
+    entry = db.execute(select(Observation).where(Observation.deleted.is_(False))).scalar_one()
     review = signed_in.get(f"/review?day={entry.day.isoformat()}")
-    assert review.status_code == 200 and "Coffee" in review.text
+    assert review.status_code == 200 and _day_num(review.text) == "1"
     signed_in.post("/review", data={"csrf": csrf, "day": entry.day.isoformat(), "reviewed": "on"})
     assert capture.is_reviewed(db, entry.day)
-
     signed_in.post(f"/entries/{entry.client_id}/delete", data={"csrf": csrf, "back": "/"})
     db.refresh(entry)
     assert entry.deleted
+
+
+def test_a_rating_has_one_value_a_day(signed_in, db):
+    capture.create_tracker(db, key="focus", name="Focus", type="scale", scale_min=1, scale_max=10)
+    csrf = _csrf(signed_in.get("/").text)
+    for v in ("4", "7"):
+        signed_in.post("/log/focus", data={"csrf": csrf, "value": v, "client_id": str(uuid.uuid4()), "back": "/"})
+    html = signed_in.get("/").text
+    assert 'aria-pressed="true" aria-label="7 of 10"' in html and 'aria-pressed="true" aria-label="4' not in html
+    assert [o.value_num for o in db.execute(select(Observation).where(Observation.deleted.is_(False))).scalars()] == [7]
+    cid = str(uuid.uuid4())
+    signed_in.post("/log/focus", data={"csrf": csrf, "value": "7", "client_id": cid, "back": "/"})  # tap again: clear
+    assert db.execute(select(Observation).where(Observation.deleted.is_(False))).first() is None
+    signed_in.post("/log/focus", data={"csrf": csrf, "value": "5", "client_id": cid, "back": "/"})
+    signed_in.post("/log/focus", data={"csrf": csrf, "value": "5", "client_id": cid, "back": "/"})  # double tap
+    assert [o.value_num for o in db.execute(select(Observation).where(Observation.deleted.is_(False))).scalars()] == [5]
+
+
+def test_connecting_another_app_is_its_own_page(signed_in, coffee):
+    detail = signed_in.get("/trackers/coffee").text
+    assert "Bearer" not in detail and "/trackers/coffee/connect" in detail and "<summary><strong>History" in detail
+    connect = signed_in.get("/trackers/coffee/connect").text
+    assert "Bearer" in connect and "Create a log-only token" in connect
 
 
 def test_log_only_token_is_shown_once_and_never_from_the_url(signed_in, db, coffee):

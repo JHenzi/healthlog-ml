@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_log_controls.html" import log_controls %}
+{% from "_day_tags.html" import day_tags_block %}
 {% block title %}Review · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
@@ -13,30 +14,18 @@
   <p class="muted">Tap what applies, then mark the day reviewed. Once it's reviewed, anything you left empty counts as "none"; until then it stays unknown, so a forgotten entry never looks like zero.</p>
   {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
 </section>
-{% if day_tags and day_tags.tags %}
 <section class="card">
-  <div class="row"><h2>{{ day.strftime("%A") }} was…</h2><a class="small" href="/trackers#tags">Edit tags ›</a></div>
-  {{ log_controls(day_tags, csrf, "/review?day=" ~ day.isoformat(), new_id, day=day, tagged=tagged.get(day_tags.id, ())) }}
-  {% if reviewed %}<p class="muted small">Tags you didn't pick count as "no" for this day.</p>{% endif %}
+  <div class="row"><h2>{{ day.strftime("%A") }} was…</h2></div>
+  {{ day_tags_block(day_tags, tagged.get(day_tags.id, ()) if day_tags else (), csrf, "/review?day=" ~ day.isoformat(), day=day) }}
+  {% if reviewed and day_tags and day_tags.tags %}<p class="muted small">Tags you didn't turn on count as "no" for this day.</p>{% endif %}
 </section>
-{% endif %}
 {% for t in trackers %}
 <section class="card">
   <div class="tracker-row">
     <span class="tracker-name"><a href="/trackers/{{ t.key }}">{{ t.name }}</a></span>
-    {{ log_controls(t, csrf, "/review?day=" ~ day.isoformat(), new_id, day=day, with_time=t.type != "tags", tagged=tagged.get(t.id, ())) }}
+    {{ log_controls(t, csrf, "/review?day=" ~ day.isoformat(), new_id, day=day, state=state.get(t.id), tagged=tagged.get(t.id, ())) }}
   </div>
-  {% set logged = by_tracker.get(t.id, []) %}
-  {% if logged %}
-  <ul class="entries">
-    {% for o, shown, local in logged %}
-    <li><span>{{ local.strftime("%H:%M") }}{% if shown %} · {{ shown }}{% endif %}</span>
-      <form method="post" action="/entries/{{ o.client_id }}/delete" class="inline">
-        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/review?day={{ day.isoformat() }}">
-        <button type="submit" class="link small">delete</button></form></li>
-    {% endfor %}
-  </ul>
-  {% else %}<p class="muted small">Nothing logged{% if reviewed and (t.tags or t.type in ("count", "check", "moment", "choice", "quantity", "duration")) %}: counts as zero{% endif %}.</p>{% endif %}
+  {% if reviewed and not state.get(t.id) and t.type in ("count", "check", "moment", "choice", "quantity", "duration") %}<p class="muted small">Nothing logged: counts as zero.</p>{% endif %}
 </section>
 {% else %}
 <section class="card"><p>No trackers yet. <a href="/trackers#new">Create one</a>.</p></section>

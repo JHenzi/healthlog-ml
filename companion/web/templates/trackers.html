@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Trackers · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
+{% from "_day_tags.html" import day_tags_block %}
 {# What a tracker measures, in plain words. #}
 {% macro measures(t) %}{% if t.type == "scale" %}{% if t.scale_min is not defined or (t.scale_min == 1 and t.scale_max == 10) %}Rating, 1 low to 10 high{% else %}Rating, {{ "%g"|format(t.scale_min) }} low to {{ "%g"|format(t.scale_max) }} high{% endif %}
 {%- elif t.type == "count" %}How many{% if t.unit %} {{ t.unit }}{% endif %}
@@ -11,7 +12,6 @@
 {%- elif t.type == "time" %}Time of day
 {%- elif t.type == "choice" %}One of: {{ t.options|join(", ")|replace("_", " ") }}
 {%- else %}{{ type_labels[t.type] }}{% endif %}{% endmacro %}
-{% macro days(t) %}{% set n = counts.get(t.id, 0) %}{{ n }} {{ "entry" if n == 1 else "entries" }}{% endmacro %}
 {% block content %}
 <section class="card">
   <p class="kicker">Logged metrics</p>
@@ -24,50 +24,23 @@
   {% if trackers %}
   <ul class="tracker-list">
     {% for t in trackers %}
-    <li><a href="/trackers/{{ t.key }}"><strong>{{ t.name }}</strong><span>{{ measures(t) }}</span></a><span class="muted small">{{ days(t) }}</span></li>
+    <li><a href="/trackers/{{ t.key }}"><strong>{{ t.name }}</strong><span>{{ measures(t) }}</span></a></li>
     {% endfor %}
   </ul>
   <p class="muted small">Log them from Overview or the daily log. Open one to rename it, connect a Shortcut, or archive it.</p>
   {% else %}<p class="muted">Nothing yet. Add your first one below.</p>{% endif %}
   {% if archived %}
   <details class="archived"><summary class="small">Archived ({{ archived|length }})</summary>
-    <ul class="tracker-list">{% for t in archived %}<li><a href="/trackers/{{ t.key }}"><strong>{{ t.name }}</strong><span>{{ measures(t) }}</span></a><span class="muted small">{{ days(t) }}</span></li>{% endfor %}</ul>
+    <ul class="tracker-list">{% for t in archived %}<li><a href="/trackers/{{ t.key }}"><strong>{{ t.name }}</strong><span>{{ measures(t) }}</span></a></li>{% endfor %}</ul>
   </details>
   {% endif %}
 </section>
 
 <section class="card panel" aria-labelledby="tags-h" id="tags">
   <h2 id="tags-h">Day tags</h2>
-  <p class="muted">Words for what kind of day it was: meeting heavy, travel, sick. Tap the ones that fit today. Each tag is compared with everything else, so you might find that meeting-heavy days go with fewer steps.</p>
-  {% if day and day.tags %}
-  <p class="kicker">Today</p>
-  <div class="chips" role="group" aria-label="Today's tags">
-    {% for tag in day.tags %}<form method="post" action="/log/{{ day.key }}/tag" class="inline">
-      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/trackers#tags">
-      <input type="hidden" name="tag" value="{{ tag }}"><button type="submit" class="chip" aria-pressed="{{ 'true' if tag|tag_slug in tagged else 'false' }}">{{ tag }}</button></form>{% endfor %}
-  </div>
-  {% endif %}
+  <p class="muted">Your own words for what kind of day it was. Tap a tag to turn it on for today (dark is on); tap again to turn it off. Each tag is compared with everything else.</p>
   {% if tag_error %}<p class="error" role="alert">{{ tag_error }}</p>{% endif %}
-  <form method="post" action="/day-tags" class="add-tags">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <label for="new-tags">Add tags <span class="muted">(separated by commas)</span></label>
-    <div class="input-row"><input id="new-tags" name="tags" required maxlength="400" placeholder="meeting heavy, in-fighting"><button type="submit">Add</button></div>
-  </form>
-  {% set any_tag_ideas = tag_ideas|selectattr(1)|list %}
-  {% if any_tag_ideas %}
-  <p class="muted small">Or tap a suggestion to add it:</p>
-  {% for who, tags in any_tag_ideas %}
-  <div class="tag-ideas"><span class="kicker">{{ who }}</span>
-    {% for tag in tags %}<form method="post" action="/day-tags" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tags" value="{{ tag }}"><button type="submit" class="chip suggest">+ {{ tag }}</button></form>{% endfor %}
-  </div>
-  {% endfor %}
-  {% endif %}
-  {% if day and day.tags %}
-  <details class="manage"><summary class="small">Remove a tag</summary>
-    <div class="chips">{% for tag in day.tags %}<form method="post" action="/day-tags/remove" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tag" value="{{ tag }}"><button type="submit" class="chip" aria-label="Remove {{ tag }}">{{ tag }} ×</button></form>{% endfor %}</div>
-    <p class="muted small">Days you already tagged keep their history.</p>
-  </details>
-  {% endif %}
+  {{ day_tags_block(day, tagged, csrf, "/trackers#tags", manage=True) }}
 </section>
 
 <section class="card panel" aria-labelledby="new-h" id="new">

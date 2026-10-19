@@ -194,6 +194,7 @@ def main(out: str) -> None:
             "metric": "/metrics/tracker.productivity.mean",
             "trackers": "/trackers",
             "tracker": "/trackers/coffee",
+            "connect": "/trackers/coffee/connect",
         }
         links = {path: f"{name}.html" for name, path in routes.items()}
         for name, path in routes.items():
