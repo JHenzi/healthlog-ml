@@ -218,3 +218,24 @@ class DayReview(Base):
 
     day: Mapped[dt.date] = mapped_column(Date, primary_key=True)
     completed_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+
+
+class WeatherHourRow(Base):
+    """One UTC hour of weather and air quality for the home area, loaded from the collector's file (M3)."""
+
+    __tablename__ = "weather_hours"
+
+    time: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    temperature_c: Mapped[float | None] = mapped_column(Float, nullable=True)
+    humidity_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dew_point_c: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pressure_hpa: Mapped[float | None] = mapped_column(Float, nullable=True)
+    precipitation_mm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cloud_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    wind_kmh: Mapped[float | None] = mapped_column(Float, nullable=True)
+    uv_index: Mapped[float | None] = mapped_column(Float, nullable=True)
+    radiation_wm2: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pm25: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pm10: Mapped[float | None] = mapped_column(Float, nullable=True)
+    us_aqi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    loaded_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -29,14 +29,26 @@ WEEKDAY_ETA2_FLOOR = 0.06  # Kruskal-Wallis effect size (~"medium")
 
 # Distributed lags: an exposure's link to an outcome spread over days 0..DLM_MAX_LAG, as one smooth curve
 # (Almon polynomial of DLM_DEGREE) and one test per exposure-outcome pair. Exposures are things you do or get
-# (trackers, sleep, caffeine, daylight); outcomes are everything else. Only curves that peak at DLM_MIN_PEAK days
-# or later are reported: same-day and next-day links are the day-level tests' job.
+# (trackers, sleep, caffeine, daylight, weather); outcomes are everything else. Only curves that peak at
+# DLM_MIN_PEAK days or later are reported: same-day and next-day links are the day-level tests' job.
 DLM_MAX_LAG = 7
 DLM_DEGREE = 2
 DLM_MIN_DAYS = 56
 DLM_MIN_PEAK = 2
 DLM_EXPOSURE_FAMILY_PREFIXES = ("tracker:",)
-DLM_EXPOSURES = ("sleep.total_h", "hl.caffeine", "hl.time_in_daylight")
+DLM_EXPOSURES = (
+    "sleep.total_h",
+    "hl.caffeine",
+    "hl.time_in_daylight",
+    "weather.temp_mean",
+    "weather.pressure_change",
+    "weather.pm25_mean",
+)
+
+# Outside data (weather): it can go with what follows it, never the other way round. So an outside feature is
+# only ever the earlier or same-day side of a relationship, never an outcome, and its own week/month changes and
+# weekday rhythm aren't tested (the season isn't news, and those tests would only dilute the FDR family).
+EXOGENOUS_FAMILIES = ("weather",)
 
 # Adjusted re-check of reported relationships: does the link survive once these everyday drivers are allowed
 # for? A finding is re-checked against each one that isn't in either side's family. Not new tests (no p-values

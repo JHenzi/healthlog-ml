@@ -25,7 +25,8 @@ def test_repo_holds_no_exports_dumps_or_env_files():
 
 
 def test_app_code_has_no_http_clients():
-    """R5: no outbound HTTP in M1. Opt-in fetchers (M3) will be the only allowlisted exception."""
+    """R5: the Companion never fetches. Weather comes from the separate collector container (collector/), which
+    is tested in tests/unit/test_collector.py."""
     pattern = re.compile(r"^\s*(import|from)\s+(httpx|requests|urllib\.request|urllib3|aiohttp|http\.client)\b", re.M)
     offenders = [p.name for p in (COMPANION_DIR / "app").rglob("*.py") if pattern.search(p.read_text())]
     assert offenders == []

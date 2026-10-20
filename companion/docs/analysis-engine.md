@@ -113,6 +113,19 @@ It adds no p-values to the FDR family: it reads findings that already
 cleared the bar, so it can't create a discovery, only qualify one. Stored as
 `insights.details.adjusted`; shown on Discoveries and the evidence page.
 
+## Outside data (weather)
+
+Weather can go with what follows it, but nothing you do changes it. So a
+feature of an outside family (`EXOGENOUS_FAMILIES`, today `weather`) is only
+ever the earlier or same-day side of a relationship: same day, and weather
+today against the outcome tomorrow, never the reverse. It never gets its own
+week/month change or weekday test (a colder month is the season, not news),
+and weather is never paired with weather. Three weather features are
+distributed-lag exposures (`DLM_EXPOSURES`: temperature, pressure change,
+PM2.5). Of the 15 daily weather features, 7 are analysed; the rest are shown
+but not tested, so near-duplicates (high, low and mean temperature) don't
+dilute the FDR family. Feature definitions: `app/outside.py`.
+
 ## Validation (tests/stats)
 
 Seeded synthetic data, 100 days. The suite runs 20 seeds per check on every
@@ -139,6 +152,9 @@ push and 200 nightly (`STATS_SEEDS`).
 | a link planted only through sleep reads "largely accounted for" (two measures) | ≥ 85% of the datasets that report it |
 | a direct link with independent sleep "still holds" | ≥ 85% |
 | a yes/no link planted through sleep reads "holds" | ≤ 15% |
+| planted weather → next-night sleep link, found with weather first | ≥ 80% (measured: 100% of 200) |
+| a series that the weather merely follows is never reported as its cause; weather never gets a change or weekday finding, even with a season and a weekend pattern | never |
+| unrelated weather with a season: datasets reporting any relationship | ≤ 15% (measured: 8.5% of 200) |
 
 **What the suite caught (2026-10-17).** The first version flagged
 relationships in **35%** of pure-noise datasets. Measuring each test on null
@@ -167,5 +183,6 @@ numbers so an empty list explains itself.
 
 ## Not yet
 
+- **Day length and public holidays** as outside features (computed locally).
 - **Within-day** event-locked responses: M6.
 - **ML models**: M7.

@@ -41,16 +41,26 @@ In order of how much they unblock:
    docker exec healthlog-healthlog-1 healthlog backfill /config/import/<file>.json
    docker exec healthlog-companion companion refresh
    ```
-4. **Add two HAE automations** (REST API, same URL and secret as the Health
+4. **Turn on weather.** Add your area to `.env` (it's rounded to ~10 km
+   before anything is sent; `WEATHER_SINCE` is your first HealthLog day):
+   ```bash
+   WEATHER_LATITUDE=40.7
+   WEATHER_LONGITUDE=-74.0
+   WEATHER_SINCE=2026-07-15
+   ```
+   Then `companion/scripts/deploy.sh companion`. The collector backfills on
+   its first start; `docker exec healthlog-companion-collector collector
+   backfill --since 2026-07-15` repeats it by hand.
+5. **Add two HAE automations** (REST API, same URL and secret as the Health
    Metrics one):
    - **Workouts**: HealthLog has 0 today.
    - **State of Mind**: today mood only arrives with manual exports. The
      last one landed on Oct 16.
-5. **Create a few trackers** at `/trackers` (coffee, a 1–5 productivity scale,
+6. **Create a few trackers** at `/trackers` (coffee, a 1–5 productivity scale,
    whatever you're curious about), pin them for one-tap logging, and do the
    evening review at `/review`. Self-tracked data only starts counting once
    it exists.
-6. **Optional, HealthLog recompute after the time-zone change** (plan M0,
+7. **Optional, HealthLog recompute after the time-zone change** (plan M0,
    unverified):
    ```bash
    docker exec healthlog-healthlog-1 healthlog analyze
@@ -134,29 +144,13 @@ need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
 - **Medications:** his #116 keys doses on `(medication, dose_time)`. Nothing
   to do until we log any.
 
-### 4.2 M3: weather (next build; it backfills, so findings come quickly)
+### 4.2 M3: weather (built 2026-10-20; waits on your location, §2)
 
-- **Settings:** opt-in config with a coarse home location rounded to ~10 km
-  (ENV or a `settings` row; never commit it).
-- **Collector sidecar (design 2026-10-19):** the Companion itself makes no
-  outbound calls. A separate `companion-collector` container fetches from
-  Open-Meteo (daily and hourly temperature, humidity, pressure and its 24 h
-  change, precipitation, cloud, wind, UV, air quality): a historical backfill
-  since 2026-07-15, then a nightly increment. It has network access but no
-  database credentials and no health data. It validates every value against
-  a strict numeric schema and writes CSV files to a shared volume (read-only
-  for the Companion). `httpx` goes in the collector's requirements only.
-- **Network rule:** the Companion's egress tests stay as they are (no HTTP
-  client, works offline). New tests: the collector's request carries only
-  the rounded coordinates and dates, and a file that fails the schema is
-  rejected, not partly read (R5, risks.md E2/E3).
-- **Computed locally:** daylight (`astral`) and public holidays
-  (`holidays`), no network.
-- **Analysis:** features `weather.*` as their own family, one value per
-  Companion day.
-- **Done when:** weather exists for every day since 2026-07-15, Today
-  mentions a notable pressure change, and the engine tests weather against
-  everything else.
+- **Day length and public holidays**, computed locally (no network). Needs
+  `astral`/`holidays`, or a small sunrise formula and a holiday list, since
+  PyPI downloads are blocked here (§5).
+- **Weather on the Metrics pages** gets the same glance treatment as the
+  rest once that lands (§4.3b).
 
 ### 4.3 M4 part 2: capture on the phone
 

@@ -12,6 +12,9 @@ services:
     depends_on:
       healthlog-db:
         condition: service_healthy
+      # Started first so it creates the shared volume with its own ownership (it writes, we only read).
+      companion-collector:
+        condition: service_started
     ports:
       # Localhost only: reach it through Tailscale Serve or a reverse proxy on this host.
       - "${COMPANION_BIND:-127.0.0.1}:${COMPANION_PORT:-8020}:8000"
@@ -23,6 +26,9 @@ services:
       DAY_BOUNDARY: ${DAY_BOUNDARY:-04:00}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       COOKIE_SECURE: ${COMPANION_COOKIE_SECURE:-true}
+    volumes:
+      # The collector's weather file; read-only here, the Companion itself never fetches (R5).
+      - companion-outside:/outside:ro
     restart: unless-stopped
 
   companion-jobs:
@@ -33,6 +39,8 @@ services:
       companion-web:
         condition: service_healthy
     environment: *companion-env
+    volumes:
+      - companion-outside:/outside:ro
     # No HTTP server in this process; the image's web health check doesn't apply.
     healthcheck:
       disable: true
@@ -40,3 +48,32 @@ services:
     mem_limit: 1g
     cpus: 1.0
     restart: unless-stopped
+
+  # Weather (M3, opt-in): the one container that reaches the internet. It has no database credentials and no
+  # health data, sits on its own network (it can't reach the database), and sends Open-Meteo only a location
+  # rounded to ~10 km and a date range. Off until WEATHER_LATITUDE and WEATHER_LONGITUDE are set in .env.
+  #   Backfill:  docker exec healthlog-companion-collector collector backfill --since 2026-07-15
+  companion-collector:
+    build: ./companion/collector
+    image: healthlog-companion-collector:dev
+    container_name: healthlog-companion-collector
+    environment:
+      TZ: ${TZ:?set TZ in .env}
+      WEATHER_LATITUDE: ${WEATHER_LATITUDE:-}
+      WEATHER_LONGITUDE: ${WEATHER_LONGITUDE:-}
+      WEATHER_SINCE: ${WEATHER_SINCE:-}
+    volumes:
+      - companion-outside:/data
+    networks:
+      - outside
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    restart: unless-stopped
+
+volumes:
+  companion-outside:
+
+networks:
+  outside:

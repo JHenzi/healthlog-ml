@@ -95,6 +95,8 @@ and `TZ` set in `.env` (the Companion refuses to start without it).
 | `COMPANION_BIND` | `127.0.0.1` | host address the port is published on. Keep it on localhost; set it to another address only if a reverse proxy on a different machine must reach it directly |
 | `COMPANION_COOKIE_SECURE` | `true` | send the session cookie over HTTPS only; leave on in production |
 | `TRUSTED_PROXIES` | private ranges | same meaning as HealthLog's: which peers may set `X-Forwarded-For` |
+| `WEATHER_LATITUDE`, `WEATHER_LONGITUDE` | *(off)* | your home area, for weather. The collector rounds both to 0.1° (~10 km) before anything is sent. Leave unset to keep weather off |
+| `WEATHER_SINCE` | 92 days ago | first day of the automatic backfill, e.g. `2026-07-15` (your first HealthLog day) |
 
 `SESSION_DAYS` (30), `LOGIN_MAX_FAILURES` (5) and `LOGIN_LOCKOUT_MINUTES` (15)
 can also be set on the containers.
@@ -165,9 +167,26 @@ curl -H "Authorization: Bearer hlc_…" https://<host>:8443/api/today
 | `companion migrate` | apply the Companion's migrations (schema `companion`) |
 | `companion set-password [--stdin]` | set the operator password (signs out all sessions) |
 | `companion token create NAME --scope …` / `list` / `revoke ID` | manage API tokens |
-| `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, rebuild the daily feature table, run the insight engine (also nightly at 04:15, and *Rebuild now* on the Metrics and Insights pages) |
+| `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, load the weather file, rebuild the daily feature table, run the insight engine (also nightly at 04:15, and *Rebuild now* on the Metrics and Insights pages) |
 | `companion web` | migrate, then serve on port 8000 (the `companion-web` service) |
 | `companion jobs` | run the scheduler (the `companion-jobs` service) |
+
+## Weather (optional)
+
+Weather and air quality for your area come from [Open-Meteo](https://open-meteo.com)
+(no account or key). Set `WEATHER_LATITUDE` and `WEATHER_LONGITUDE` in `.env`
+and `WEATHER_SINCE` to your first HealthLog day, then restart. The
+`companion-collector` container backfills every hour since then on its first
+start and refreshes the last ten days each night at 03:40, before the
+Companion's 04:15 refresh. To backfill by hand (any range, safe to repeat):
+
+```bash
+docker exec healthlog-companion-collector collector backfill --since 2026-07-15
+docker exec healthlog-companion companion refresh
+```
+
+`collector once` refreshes the recent days now. What is sent and why it's
+safe: [`docs/privacy.md`](docs/privacy.md).
 
 ## Data the Companion needs from Health Auto Export
 

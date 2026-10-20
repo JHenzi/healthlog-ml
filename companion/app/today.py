@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from . import upstream
+from . import outside, upstream
 from .models import StateOfMindEntry
 from .timeutil import day_bounds
 from .upstream import SourceDay
@@ -343,4 +343,14 @@ def load_today(db: Session, zone: ZoneInfo, boundary: dt.time, today: dt.date) -
     ).all()
     mood_entries = [(v, tuple(labels or ())) for v, labels in moods]
     lines.append(mood_sentence(mood_entries))
+    now = dt.datetime.now(dt.UTC)
+    note = _safe(
+        db,
+        problems,
+        "weather",
+        lambda: outside.weather_note(outside.stored_hours(db, now - dt.timedelta(hours=60)), now),
+        None,
+    )
+    if note:
+        lines.append(note)
     return TodayView(today, lines, problems, build_tiles(series, energy, mood_entries, today))

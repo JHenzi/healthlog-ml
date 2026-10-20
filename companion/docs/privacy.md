@@ -3,7 +3,7 @@
 What stays local, what leaves, and what is sent to models. Updated with each
 milestone.
 
-## As of M4 (part 1)
+## As of M3 (weather)
 
 | Data | Where it lives | Leaves the server? |
 |---|---|---|
@@ -15,12 +15,20 @@ milestone.
 | Daily features (one number per day per series) | `companion.daily_features`, rebuilt nightly | no |
 | Insights (sentences and their statistics) | `companion.insights`, replaced each run | only to your browser or token holder |
 | Your trackers and every entry (values, times, device source) | `companion.trackers`, `events` (append-only), `observations` | no |
+| Home location (if weather is on) | `.env` only (`WEATHER_LATITUDE`, `WEATHER_LONGITUDE`), given to the collector container | rounded to 0.1° (~10 km), to Open-Meteo |
+| Hourly weather and air quality | the collector's file, then `companion.weather_hours` | no (it came from outside) |
 
-- **No outbound network calls.** The Companion contains no HTTP client.
-  `tests/privacy` checks that the app code imports none, and that the pages,
-  login and contract check run with non-loopback connections blocked. The
-  first allowlisted, opt-in exception will be the weather fetcher (M3), which
-  will send a rounded location (~10 km) and a date range, nothing else.
+- **No outbound network calls from the Companion.** It contains no HTTP
+  client. `tests/privacy` checks that the app code imports none, and that the
+  pages, login and contract check run with non-loopback connections blocked.
+- **One opt-in exception: the weather collector** (`companion-collector`,
+  off until you set a location). It is a separate container with no database
+  credentials and no health data, on its own network (it can't reach the
+  database). It sends Open-Meteo only a location rounded to 0.1° (~10 km), a
+  date range and the variable names, once at backfill and then nightly, and
+  connects to nothing but Open-Meteo's two hosts. It writes a CSV file that
+  the Companion reads read-only and validates in full; a file with any bad
+  line is ignored (`tests/unit/test_collector.py`, `test_outside.py`).
 - **No telemetry**, no model downloads at runtime (`HF_HUB_OFFLINE=1` in the image).
 - **Never logged:** the password (correct or not), session cookies, API tokens.
 - **A deleted entry stays in the event log** as a log event followed by a
