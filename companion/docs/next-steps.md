@@ -147,7 +147,7 @@ need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
 ### 4.2 M3: weather (built 2026-10-20; waits on your location, §2)
 
 - ~~**Day length and public holidays**~~: done 2026-10-20 as the almanac
-  (`app/almanac.py`), with the moon and a holiday run-up note on the Overview.
+  (`app/almanac.py`), with the moon and days until the next holiday (R17: no run-up window).
 - **Weather on the Metrics pages** gets the same glance treatment as the
   rest once that lands (§4.3b).
 
@@ -196,8 +196,9 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
 ### 4.4 M5 follow-ups and M6
 
 - ~~Distributed lag models~~: done 2026-10-19 (analysis-engine.md, "Links
-  spread over days"). Weather joins as an exposure when M3 lands.
-- ~~Adjusted re-check~~: done 2026-10-19 (sleep and steps; analysis-engine.md).
+  spread over days"). Every ordered pair since 2026-10-20 (R17).
+- ~~Adjusted re-check~~: done 2026-10-19; since 2026-10-20 it allows for
+  the series the run found linked to both sides, not a fixed list (R17).
 - ~~Streaks and records~~: done 2026-10-20, "Worth noting" on the Overview
   (`app/highlights.py`): tracker streaks (3+ days) and quiet runs (7+ recorded
   days), and records over 60+ days of data. Records wait for 60 days, so the
@@ -233,9 +234,17 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
   sources; weather and the almanac have their own groups since 2026-10-20.
 - **Almanac, later:** more countries and regional holidays (states, Länder);
   day length as an analysed feature once there's a year of data (now the
-  trend removal leaves nothing of it); "this time last year" for the season
-  note; vacation and sick-day spans (M4 part 2) as the personal side of the
+  vacation and sick-day spans (M4 part 2) as the personal side of the
   calendar.
+- **"Worth noting", driven by findings:** the threshold-based weather note
+  and the holiday run-up note were dropped under R17 (they encoded our
+  guesses). Instead: mention a series' latest value on the Overview only
+  when the engine has reported a link between it and something of yours
+  ("Pressure rose 9 hPa yesterday; for you, a rise tends to be followed by
+  shorter sleep").
+- **R17 cost to watch:** testing everything makes the FDR family bigger
+  (more tests, a higher bar per finding). Expected and accepted; record the
+  test count per run (`RunStats.tests`) as series are added.
 - **Re-derives are slow:** each `rederive-*` re-reads every raw payload
   (~80 s each for 153 payloads). Fine now; worth a note to upstream if
   `raw_ingest` grows a lot.

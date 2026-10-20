@@ -97,7 +97,7 @@ def likely_range(i: Insight) -> Range | None:
     return Range(_x(lo, *scale), _x(hi, *scale), _x(est, *scale), _x(0.0, *scale), text, lo > 0 or hi < 0)
 
 
-# Everyday drivers the engine allows for (analysis.constants.ADJUST_FOR), as they read in a sentence.
+# Insights stored before the engine recorded labels name only these two drivers.
 DRIVER_WORDS = {"sleep.total_h": "sleep", "hl.step_count": "steps"}
 VERDICTS = {
     "holds": "still holds allowing for {}",
@@ -118,8 +118,9 @@ def adjusted(i: Insight) -> Adjusted | None:
     adj = (i.details or {}).get("adjusted")
     if not adj or adj.get("verdict") not in VERDICTS:
         return None
-    words = [DRIVER_WORDS.get(d, d) for d in adj["for"]]
-    drivers = " and ".join(words)
+    labels = adj.get("labels") or [DRIVER_WORDS.get(d, d) for d in adj["for"]]
+    words = [w[0].lower() + w[1:] if w[:1].isupper() and not w[1:2].isupper() else w for w in labels]
+    drivers = ", ".join(words[:-1]) + f" and {words[-1]}" if len(words) > 1 else words[0]
     text = VERDICTS[adj["verdict"]].format(drivers)
     if adj["verdict"] == "weaker" and len(words) > 1:
         text = text.replace(" is allowed", " are allowed")

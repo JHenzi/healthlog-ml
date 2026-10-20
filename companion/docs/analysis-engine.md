@@ -71,12 +71,27 @@ Weekday rhythms have no range. Stored in `insights.details` (`ci`, `pct_ci`).
 
 ## Links spread over days
 
-For each exposure (trackers, total sleep, caffeine, time in daylight) and
-each series of another family, one regression of the outcome on the
-exposure today and on each of the 7 days before, with the eight lag weights
+For each ordered pair of analysed series from different families (every
+series is tried on both sides, R17), one regression of the second on the
+first today and on each of the 7 days before, with the eight lag weights
 constrained to a smooth curve (an Almon polynomial of degree 2). That makes
-a whole week of lags **one** test with 3 degrees of freedom in the FDR
-family, not eight. It needs 56 overlapping days. A curve is reported only
+a whole week of lags one curve with 3 degrees of freedom, not eight. Both
+directions are fitted and the pair keeps the one with the smaller p,
+doubled (Bonferroni), so a pair is **one** test in the FDR family. Without
+that, trying both orders (R17) pushed two series with a shared weekday
+pattern to 10.5% false links (target 10%); with it, 7% (200 seeds,
+2026-10-20).
+
+**Calibration for every pair (2026-10-20).** Running the curve test on
+every pair (R17) exposed an optimistic effective n: it came from one lag
+column, but the fitted curve weighs a week of lags and drifts more slowly
+than any one of them. With 10 noise series and two planted links, 16% of
+reported links were false (target 15%); every false curve was a broad,
+flat one (chance slow co-drift). The effective n now comes from the fitted
+curve's predictor and y without the curve: 10.2%, with the planted spread
+effects still found. The curve's share is also adjusted for its fitted
+weights on the effective n. Slow harmonics in the nuisance model made it
+worse (28%) and were dropped. It needs 56 overlapping days. A curve is reported only
 when its largest weight is 2 or more days later; same-day and next-day links
 are the day-level tests' job. The evidence page draws the curve as one bar
 per day.
@@ -97,9 +112,11 @@ or weaker; the numbers are in the PR.
 
 ## Adjusted re-check
 
-Each reported relationship is re-read allowing for everyday drivers,
-`ADJUST_FOR` (today: total sleep and steps), skipping a driver from either
-side's family. It is a partial Spearman correlation on the same residuals
+Each reported relationship is re-read allowing for the series the run
+itself reported as linked to **both** sides (day-level links), at most
+`ADJUST_MAX_DRIVERS`, the most strongly linked first, skipping either side's
+family. No list of "usual suspects" (R17): when nothing is linked to both
+sides, there's no re-check. It is a partial Spearman correlation on the same residuals
 (a yes/no side as 0/1), with each driver on the later day and, for a
 next-day finding, on the earlier day too, plus a likely range on the
 effective n less the covariates. The verdict:
@@ -113,27 +130,22 @@ It adds no p-values to the FDR family: it reads findings that already
 cleared the bar, so it can't create a discovery, only qualify one. Stored as
 `insights.details.adjusted`; shown on Discoveries and the evidence page.
 
-## Outside data (weather, the almanac)
+## Weather and the almanac
 
-Weather can go with what follows it, but nothing you do changes it. So a
-feature of an outside family (`EXOGENOUS_FAMILIES`: `weather`, `almanac`) is only
-ever the earlier or same-day side of a relationship: same day, and weather
-today against the outcome tomorrow, never the reverse. It never gets its own
-week/month change or weekday test (a colder month is the season, not news),
-and weather is never paired with weather. Three weather features are
-distributed-lag exposures (`DLM_EXPOSURES`: temperature, pressure change,
-PM2.5). Of the 15 daily weather features, 7 are analysed; the rest are shown
-but not tested, so near-duplicates (high, low and mean temperature) don't
-dilute the FDR family. Feature definitions: `app/outside.py`.
+Tested like every other series (R17: measure, don't presume): both time
+orders, week/month changes and weekday rhythm included. A link like
+"headaches tend to be followed by a pressure rise the next day" is reported
+as measured, in time order and in association language (R10). All 15 daily
+weather features are analysed; near-duplicates (high, low and mean
+temperature) share the `weather` family, so they are never tested against
+each other. Feature definitions: `app/outside.py`.
 
-The almanac (`app/almanac.py`) is computed here from the date: the moon
-(share lit, analysed), public holidays and the two weeks before a big one
-(Christmas, Thanksgiving; yes/no, analysed), and day length (shown, not
-tested: it moves smoothly with the season, so the 28-day trend removal
-leaves nothing of it). Holidays mostly fall on Mondays, so a holiday finding
-can overlap the weekday rhythm; the explain view shows both. Each holiday
-is one occasion, so holiday findings need several before the yes/no group
-reaches `MIN_GROUP_DAYS`.
+The almanac (`app/almanac.py`) is computed here from the date: day length,
+the moon (share lit), public holidays (yes/no) and days until the next one.
+Day length moves smoothly with the season, so the trend removal leaves
+little of it for the day-level tests; its week/month changes are real and
+reported. Holidays mostly fall on Mondays, so a holiday finding can overlap
+the weekday rhythm; the explain view shows both.
 
 ## Validation (tests/stats)
 
@@ -162,11 +174,10 @@ push and 200 nightly (`STATS_SEEDS`).
 | a direct link with independent sleep "still holds" | ≥ 85% |
 | a yes/no link planted through sleep reads "holds" | ≤ 15% |
 | planted weather → next-night sleep link, found with weather first | ≥ 80% (measured: 100% of 200) |
-| a series that the weather merely follows is never reported as its cause; weather never gets a change or weekday finding, even with a season and a weekend pattern | never |
-| unrelated weather with a season: datasets reporting any relationship | ≤ 15% (measured: 8.5% of 200) |
-| stress 1.7 SD higher in the two weeks before Thanksgiving and Christmas, found as a run-up link | ≥ 80% (measured: 92.5% of 200; a 1.3 SD shift: 77%) |
-| almanac features never an outcome, a change or a rhythm | never |
-| the moon and holidays against unrelated series: datasets reporting a calendar link | ≤ 15% (measured: 2.5% of 200) |
+| headaches the day before a pressure rise, found with headaches first | ≥ 80% (measured: 92.5% of 200) |
+| unrelated weather with a season: datasets reporting any relationship | ≤ 15% (measured: 13% of 200; 8.5% before R17 added the second time order) |
+| planted moon → sleep link (±0.3 h), found | ≥ 80% (measured: 86% of 200) |
+| the moon and holidays against unrelated series: datasets reporting a calendar link | ≤ 15% (measured: 1.5% of 200) |
 
 **What the suite caught (2026-10-17).** The first version flagged
 relationships in **35%** of pure-noise datasets. Measuring each test on null

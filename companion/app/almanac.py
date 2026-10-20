@@ -5,8 +5,8 @@ needs only a latitude (the coarse ``WEATHER_LATITUDE``, never the longitude);
 holidays need a country, taken from ``HOLIDAYS_COUNTRY`` or guessed from ``TZ``.
 Everything is pure and tested against published dates.
 
-Like the weather, almanac features are outside data: they can go with what
-follows them, never the other way round (analysis-engine.md, "Outside data").
+Facts about the date, analysed like every other series (R17): no idea of
+which days ought to matter is built in.
 """
 
 from __future__ import annotations
@@ -115,7 +115,7 @@ class Holiday:
     moves: bool = False  # a fixed date that falls on a weekend gives a weekday off (the country's rule)
 
 
-# National public holidays only (regional ones differ too much to guess). Big ones get a run-up window.
+# National public holidays only (regional ones differ too much to guess).
 COUNTRIES: dict[str, tuple[Holiday, ...]] = {
     "US": (
         Holiday("New Year's Day", fixed(1, 1), moves=True),
@@ -163,9 +163,6 @@ COUNTRIES: dict[str, tuple[Holiday, ...]] = {
     ),
 }
 SUPPORTED = tuple(COUNTRIES)
-# Holidays with a run-up worth looking at: the weeks before them are usually different.
-RUNUP_HOLIDAYS = frozenset({"Christmas", "Weihnachten", "Thanksgiving"})
-RUNUP_DAYS = 14
 
 
 def holidays(year: int, country: str) -> dict[dt.date, str]:
@@ -187,11 +184,6 @@ def holidays(year: int, country: str) -> dict[dt.date, str]:
                 off += dt.timedelta(days=1)
         out.setdefault(off, f"{name} (observed)")
     return out
-
-
-def runups(years: range, country: str) -> dict[dt.date, str]:
-    """The big holidays by date (the actual day, not the observed one)."""
-    return {h.rule(year): h.name for year in years for h in COUNTRIES[country] if h.name in RUNUP_HOLIDAYS}
 
 
 # Time zone -> country, for the default. Zones not listed get no holidays until HOLIDAYS_COUNTRY is set.
@@ -267,13 +259,13 @@ class AlmanacDef:
     analyse: bool
 
 
+# Every one is analysed like any other series (R17). Day length moves smoothly with the season, so the trend
+# removal leaves little of it for the day-level tests; its week/month changes are reported as measured.
 DEFS = (
-    # Day length moves smoothly with the season, so removing the slow trend (as every test does) leaves nothing
-    # of it: shown for context, not tested. A year of data could change that (next-steps §4.5).
-    AlmanacDef("almanac.day_length", "Day length (sunrise to sunset)", "h", "continuous", False),
+    AlmanacDef("almanac.day_length", "Day length (sunrise to sunset)", "h", "continuous", True),
     AlmanacDef("almanac.moon", "Moon (share lit)", "%", "continuous", True),
     AlmanacDef("almanac.holiday", "Public holiday", None, "count", True),
-    AlmanacDef("almanac.holiday_runup", "Two weeks before a big holiday", None, "count", True),
+    AlmanacDef("almanac.days_to_holiday", "Days until the next public holiday", "days", "continuous", True),
 )
 
 
@@ -288,10 +280,7 @@ def almanac_features(
     if latitude is not None:
         out["almanac.day_length"] = {d: round(day_length(d, latitude), 3) for d in days}
     if country is not None:
-        years = range(first.year, last.year + 2)
-        off = {d for y in years for d in holidays(y, country)}
-        big = runups(years, country)
-        before = {h - dt.timedelta(days=k) for h in big for k in range(1, RUNUP_DAYS + 1)}
+        off = sorted({d for y in range(first.year, last.year + 2) for d in holidays(y, country)})
         out["almanac.holiday"] = {d: float(d in off) for d in days}
-        out["almanac.holiday_runup"] = {d: float(d in before) for d in days}
+        out["almanac.days_to_holiday"] = {d: float(next((h - d).days for h in off if h >= d)) for d in days}
     return out

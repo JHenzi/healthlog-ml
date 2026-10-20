@@ -266,14 +266,21 @@ def distributed_lag(x: pd.Series, y: pd.Series, max_lag: int, degree: int, min_d
     if rss1 <= 0 or rss0 <= 0:
         return None
     index = frame.index[1:]
-    n_eff = effective_n(len(ys), acf(pd.Series(xs[:, m], index)), acf(pd.Series(left, index)))
+    # Effective n of the fitted curve's predictor (the exposure as the curve weighs it, smoother than any one
+    # lag) against y without the curve: with every pair tried (R17), a single lag column was too optimistic.
+    fitted_x = xs[:, m:] @ full[m:]
+    base = ys - xs[:, :m] @ rest
+    n_eff = effective_n(len(ys), acf(pd.Series(fitted_x, index)), acf(pd.Series(base, index)))
     df2 = len(ys) - xs.shape[1] - 1
     f = ((rss0 - rss1) / q) / (rss1 / df2) * (n_eff / len(ys))
     p = float(stats.f.sf(f, q, max(n_eff - xs.shape[1] - 1, 2.0)))
 
     weights = basis @ full[m:]  # y units per x unit, by lag
     curve = weights * float(frame[0].std()) / float(frame["y"].std())
-    share = max(1 - rss1 / rss0, 0.0)
+    # The curve's share of what's left, adjusted for its q fitted weights on the effective n: with every pair
+    # tried (R17), the raw share's chance inflation (~q / n) let noise through the effect floor.
+    raw_share = max(1 - rss1 / rss0, 0.0)
+    share = max(raw_share - q * (1 - raw_share) / max(n_eff - xs.shape[1] - 1, 2.0), 0.0)
     r = math.copysign(math.sqrt(share), float(np.sum(weights)) or 1.0)
     return LagCurve(r, p, n, n_eff, [round(float(c), 3) for c in curve], int(np.argmax(np.abs(curve))))
 

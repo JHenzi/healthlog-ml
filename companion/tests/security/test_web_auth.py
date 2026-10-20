@@ -31,9 +31,7 @@ def _login(client, password: str = PASSWORD):
 
 @pytest.fixture
 def no_upstream_reads(monkeypatch):
-    monkeypatch.setattr(
-        today, "load_today", lambda db, zone, boundary, day, country=None: today.TodayView(day, ["line"], [])
-    )
+    monkeypatch.setattr(today, "load_today", lambda db, zone, boundary, day: today.TodayView(day, ["line"], []))
 
 
 def test_login_page_says_when_no_password_is_set(client):
@@ -85,9 +83,7 @@ def test_logout_requires_csrf(client, user, no_upstream_reads):
 
 def test_user_text_is_escaped(client, user, monkeypatch):
     payload = '<script>alert(1)</script>"><img src=x onerror=alert(1)>'
-    monkeypatch.setattr(
-        today, "load_today", lambda db, zone, boundary, day, country=None: today.TodayView(day, [payload], [payload])
-    )
+    monkeypatch.setattr(today, "load_today", lambda db, zone, boundary, day: today.TodayView(day, [payload], [payload]))
     _login(client)
     html = client.get("/").text
     assert "<script>alert(1)</script>" not in html

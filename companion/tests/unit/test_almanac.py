@@ -8,14 +8,12 @@ import datetime as dt
 import pytest
 
 from app.almanac import (
-    RUNUP_DAYS,
     almanac_features,
     country_for_zone,
     day_length,
     easter,
     holidays,
     moon_lit,
-    runups,
 )
 
 D = dt.date
@@ -54,11 +52,6 @@ def test_gb_ca_de_holidays():
     assert D(2026, 10, 4) not in de  # Germany doesn't move holidays off a weekend
 
 
-def test_runups_are_the_big_holidays_only():
-    assert runups(range(2026, 2027), "US") == {D(2026, 11, 26): "Thanksgiving", D(2026, 12, 25): "Christmas"}
-    assert runups(range(2026, 2027), "DE") == {D(2026, 12, 25): "Weihnachten"}
-
-
 def test_day_length():
     # New York (40.7° N): about 9 h 15 min at the winter solstice, 15 h 05 min at the summer one.
     assert day_length(D(2026, 12, 21), 40.7) == pytest.approx(9 + 15 / 60, abs=5 / 60)
@@ -91,8 +84,9 @@ def test_features_cover_every_day_and_only_what_is_set():
     moon_only = almanac_features(first, last, None, None)
     assert set(moon_only) == {"almanac.moon"} and len(moon_only["almanac.moon"]) == 31
     full = almanac_features(first, last, 40.7, "US")
-    assert set(full) == {"almanac.moon", "almanac.day_length", "almanac.holiday", "almanac.holiday_runup"}
+    assert set(full) == {"almanac.moon", "almanac.day_length", "almanac.holiday", "almanac.days_to_holiday"}
     assert full["almanac.holiday"][D(2026, 12, 25)] == 1.0 and full["almanac.holiday"][D(2026, 12, 24)] == 0.0
-    runup = [d for d, v in full["almanac.holiday_runup"].items() if v]
-    assert runup == [D(2026, 12, 25) - dt.timedelta(days=k) for k in range(RUNUP_DAYS, 0, -1)]
+    to_go = full["almanac.days_to_holiday"]
+    assert to_go[D(2026, 12, 20)] == 5.0 and to_go[D(2026, 12, 25)] == 0.0
+    assert to_go[D(2026, 12, 26)] == 6.0  # New Year's Day 2027 is next
     assert almanac_features(last, first, 40.7, "US") == {}

@@ -239,6 +239,4 @@ def test_every_sentence_has_evidence_and_association_wording_only():
 
 def test_calendar_events_read_as_events():
     meta = FeatureMeta("Public holiday", kind="count", family="almanac")
-    for feature in ("almanac.holiday", "almanac.holiday_runup"):
-        event = happening(feature, meta)
-        assert event.startswith("it was") and "logged" not in event
+    assert happening("almanac.holiday", meta) == "it was a public holiday"

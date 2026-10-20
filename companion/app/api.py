@@ -47,7 +47,7 @@ def health(db: Session = Depends(get_db)) -> dict:
 def get_today(db: Session = Depends(get_db), _token: ApiToken = Depends(require_scope("read"))) -> dict:
     settings = get_settings()
     day = current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
-    view = today.load_today(db, settings.zone, settings.day_boundary, day, settings.holiday_country)
+    view = today.load_today(db, settings.zone, settings.day_boundary, day)
     return {
         "day": view.day.isoformat(),
         "sentences": view.sentences,

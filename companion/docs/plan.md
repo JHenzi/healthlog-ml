@@ -105,12 +105,12 @@ data immediately.
 
 - [x] Opt-in config: coarse home location (rounded to 0.1°, ~10 km) in `.env`; off when unset.
 - [x] Open-Meteo collector sidecar: hourly weather (temperature, humidity, dew point, pressure, precipitation, cloud, wind, UV, sunlight) and air quality (PM2.5, PM10, US AQI); **historical backfill** (`collector backfill --since`); nightly refresh of the last 10 days. A validated CSV on a shared volume replaces the planned `source_cache` table: the Companion stores the hours in `weather_hours`.
-- [x] Computed locally (`app/almanac.py`, no package): day length from the latitude, the moon, public holidays for US/CA/GB/DE (country from `TZ` or `HOLIDAYS_COUNTRY`) and the two weeks before Christmas and Thanksgiving, as outside data. The Overview compares those weeks with the four before them (2026-10-20).
-- [x] Weather in the engine as outside data: same-day and weather-then-next-day associations and spread-over-days curves against everything else, never as an outcome (analysis-engine.md, "Outside data").
+- [x] Computed locally (`app/almanac.py`, no package): day length from the latitude, the moon, public holidays for US/CA/GB/DE (country from `TZ` or `HOLIDAYS_COUNTRY`) and days until the next one (2026-10-20). Analysed like every other series (R17).
+- [x] Weather in the engine, tested like every other series in both time orders (R17; it was one-directional until 2026-10-20).
 
 **Status (2026-10-20):** built and validated; live once a location is set in `.env` (next-steps §2). Associations need the usual 21 overlapping days, which the backfill provides at once for HealthLog's series.
 
-**Done when:** weather features exist for every day since 2026-07-16; the Today page mentions relevant weather ("pressure dropped 9 hPa since yesterday"); a few weather associations appear (with *n* and honest strength).
+**Done when:** weather features exist for every day since 2026-07-16; weather series appear on My Metrics (the threshold-based weather note was dropped under R17); a few weather associations appear (with *n* and honest strength).
 
 ## M4: Trackers & capture (large; starts the self-tracking clock)
 
@@ -133,7 +133,7 @@ data immediately.
 
 - [ ] **Feature table builder**: one row per day, columns from HealthLog, State of Mind, trackers, weather; the reviewed-day rule (missing ≠ zero). *(The table and the HealthLog + mood columns exist since M2; trackers and weather add columns.)*
 - [x] Day-level relationships with lags (Spearman on residuals; Mann-Whitney/Cliff's delta; Fisher), FDR, effect floors, minimum support. Lags 0 and +1 in both directions; families keep definitional pairs out.
-- [x] **Distributed lag models** for daily exposures (trackers, sleep, caffeine, daylight; weather when it lands) → outcome curves over lags 0–7, one test per pair, reported when the peak is 2+ days later (2026-10-19). Calibrated on noise, trend and weekday confounders (analysis-engine.md).
+- [x] **Distributed lag models** for every ordered pair of series (a curated exposure list until 2026-10-20, R17) → outcome curves over lags 0–7, one test per pair, reported when the peak is 2+ days later (2026-10-19). Calibrated on noise, trend and weekday confounders (analysis-engine.md).
 - [x] Week/month views: last 7 vs 28 days and last 28 vs 56 days, as autocorrelation-aware mean shifts.
 - [x] Descriptive insights: weekday rhythms (Kruskal-Wallis); 30-day vs prior on the Metrics page. *(Streaks and bests: later.)*
 - [x] Adjusted re-check of every reported relationship for sleep and steps (partial Spearman; "holds", "weaker", "largely accounted for"), validated on planted confounders (2026-10-19).

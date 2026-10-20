@@ -27,33 +27,19 @@ CHANGE_CLIFF_FLOOR = 0.33
 WEEKDAY_MIN_PER_DAY = 4
 WEEKDAY_ETA2_FLOOR = 0.06  # Kruskal-Wallis effect size (~"medium")
 
-# Distributed lags: an exposure's link to an outcome spread over days 0..DLM_MAX_LAG, as one smooth curve
-# (Almon polynomial of DLM_DEGREE) and one test per exposure-outcome pair. Exposures are things you do or get
-# (trackers, sleep, caffeine, daylight, weather); outcomes are everything else. Only curves that peak at
-# DLM_MIN_PEAK days or later are reported: same-day and next-day links are the day-level tests' job.
+# Distributed lags: a feature's link to another spread over days 0..DLM_MAX_LAG, as one smooth curve (Almon
+# polynomial of DLM_DEGREE) and one test per ordered pair. Every analysed feature is tried on both sides (R17: no
+# list of "exposures"). Only curves that peak at DLM_MIN_PEAK days or later are reported: same-day and next-day
+# links are the day-level tests' job.
 DLM_MAX_LAG = 7
 DLM_DEGREE = 2
 DLM_MIN_DAYS = 56
 DLM_MIN_PEAK = 2
-DLM_EXPOSURE_FAMILY_PREFIXES = ("tracker:",)
-DLM_EXPOSURES = (
-    "sleep.total_h",
-    "hl.caffeine",
-    "hl.time_in_daylight",
-    "weather.temp_mean",
-    "weather.pressure_change",
-    "weather.pm25_mean",
-)
 
-# Outside data (weather, the almanac): it can go with what follows it, never the other way round. So an outside
-# feature is only ever the earlier or same-day side of a relationship, never an outcome, and its own week/month
-# changes and weekday rhythm aren't tested (the season isn't news, and those tests would only dilute the FDR family).
-EXOGENOUS_FAMILIES = ("weather", "almanac")
-
-# Adjusted re-check of reported relationships: does the link survive once these everyday drivers are allowed
-# for? A finding is re-checked against each one that isn't in either side's family. Not new tests (no p-values
-# join the FDR family): a robustness reading of findings already reported.
-ADJUST_FOR = ("sleep.total_h", "hl.step_count")
+# Adjusted re-check of reported relationships: does a link survive once the series reported as linked to both
+# sides are allowed for? The data picks them (R17), at most ADJUST_MAX_DRIVERS, the most strongly linked first. Not
+# new tests (no p-values join the FDR family): a robustness reading of findings already reported.
+ADJUST_MAX_DRIVERS = 3
 ADJUST_EXPLAINED_SHARE = 0.5  # adjusted |rho| below this share of the unadjusted one, and unclear: "explained"
 
 # Likely ranges shown with every finding (design 1b/1c).

@@ -1,7 +1,6 @@
-"""Outside data in the engine (R8): weather is related to everything else only as the earlier or same-day side.
-A planted weather effect on the next day is found; something that merely precedes the weather is never reported
-as linked to it; the season and a weekday pattern in the weather are never reported as discoveries. Seeded and
-synthetic (R4)."""
+"""Weather in the engine (R8, R17): tested like any other series, in both time orders. A planted weather effect on
+the next day is found with the weather first; a series the weather follows is found with that series first;
+unrelated weather with a season stays quiet. Seeded and synthetic (R4)."""
 
 from __future__ import annotations
 
@@ -66,23 +65,26 @@ def test_a_weather_effect_on_the_next_day_is_found():
     assert found >= 0.8 * len(SEEDS)
 
 
-def test_weather_is_never_an_outcome_or_a_change_or_a_rhythm():
+def test_a_series_the_weather_follows_is_reported_in_time_order():
+    found = 0
     for seed in SEEDS:
         rng = np.random.default_rng(seed)
         temp, pressure = _weather(rng)
         headache = (rng.random(DAYS) < 0.3).astype(float)
-        pressure[1:] += 4 * headache[:-1]  # the weather "follows" headaches: must never be reported that way
+        pressure[1:] += 4 * headache[:-1]  # headaches come the day before a pressure rise: measured, not presumed
         values = {
             "weather.temp_mean": _series(temp),
             "weather.pressure_change": _series(pressure),
             "hl.headache": _series(headache),
             "sleep.total_h": _series(7 + 0.3 * rng.normal(size=DAYS)),
         }
-        for f in analyse(values, META, TODAY):
-            if f.kind != "association":
-                assert not f.a.startswith("weather."), f  # no week/month change or weekday rhythm for the weather
-            if f.b and f.b.startswith("weather."):
-                assert f.lag == 0 and not f.a.startswith("weather."), f
+        hits = [
+            f
+            for f in analyse(values, META, TODAY)
+            if f.kind == "association" and {f.a, f.b} == {"hl.headache", "weather.pressure_change"}
+        ]
+        found += bool(hits and hits[0].a == "hl.headache" and hits[0].lag == 1)
+    assert found >= 0.8 * len(SEEDS)
 
 
 def test_unrelated_weather_stays_quiet():

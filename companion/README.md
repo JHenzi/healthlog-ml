@@ -31,7 +31,7 @@ What works today (milestones M1, M2, M4 part 1 and M5 v1):
   Today, back-date from the tracker's page, and fill gaps in the **evening
   review**. Every tracker becomes daily series in the same analysis;
 - password sign-in, plus scoped API tokens for Shortcuts and scripts;
-- `GET /api/today` (a `read` token), the same sentences as JSON, plus `notes` (a weather change, the run-up to a holiday, streaks, records);
+- `GET /api/today` (a `read` token), the same sentences as JSON, plus `notes` (streaks, records);
 - a startup and nightly check that HealthLog's tables still match what we
   read (`companion check-upstream`).
 
@@ -192,14 +192,9 @@ safe: [`docs/privacy.md`](docs/privacy.md).
 ## The almanac
 
 Worked out on the server from the date, with nothing fetched: the moon,
-public holidays (by `HOLIDAYS_COUNTRY`, or your time zone's country) and the
-two weeks before Christmas and Thanksgiving, plus day length when
-`WEATHER_LATITUDE` is set (the latitude alone, rounded to 0.1°). They are
-analysed like the weather: only ever the earlier side of a link. In the two
-weeks before a big holiday and the week after, the Overview compares stress,
-sleep, resting heart rate and energy reserve with the four weeks before
-("Leading up to Christmas (the last 10 days): stress averaged 40, up from 30
-in the four weeks before.").
+public holidays and days until the next one (by `HOLIDAYS_COUNTRY`, or your
+time zone's country), plus day length when `WEATHER_LATITUDE` is set (the
+latitude alone, rounded to 0.1°). Analysed like every other series.
 
 ## Data the Companion needs from Health Auto Export
 

@@ -1,5 +1,6 @@
-"""Adjusted re-check (R8): a link that only exists through sleep must read as explained by it; a direct link
-must still hold once sleep is allowed for. Seeded and synthetic (R4)."""
+"""Adjusted re-check (R8, R17): the series reported as linked to both sides are allowed for, picked by the data. A
+link that only exists through sleep must read as explained by it; a direct link must not. Seeded and synthetic
+(R4)."""
 
 from __future__ import annotations
 
@@ -58,7 +59,7 @@ def test_a_link_through_sleep_reads_as_explained():
         }
 
     verdicts = _verdicts(make)
-    assert len(verdicts) >= 0.8 * len(SEEDS)  # the raw link is found...
+    assert len(verdicts) >= 0.8 * len(SEEDS)  # the raw link is found, sleep with it on both sides...
     assert verdicts.count("explained") >= 0.85 * len(verdicts)  # ...and sleep accounts for it
 
 
@@ -71,9 +72,10 @@ def test_a_direct_link_still_holds():
             "y": _series(0.6 * x + 0.8 * rng.normal(size=DAYS)),
         }
 
+    # Sleep is unrelated here, so it is rarely linked to both sides and the re-check rarely runs; when it does
+    # (a chance link), the direct link must not read as explained.
     verdicts = _verdicts(make)
-    assert len(verdicts) >= 0.8 * len(SEEDS)
-    assert verdicts.count("holds") >= 0.85 * len(verdicts)
+    assert verdicts.count("explained") <= max(1, 0.15 * len(verdicts))
 
 
 def test_a_yes_no_link_through_sleep_reads_as_explained():

@@ -81,6 +81,14 @@ pipeline; the Companion owns its own schema, engine and UI.
   suggest discussing with a clinician.
 - **R13: Every user-facing number carries its evidence**: *n*, strength,
   and, for text-derived features, the entries behind it.
+- **R17: Measure, don't presume.** The engine looks for relationships
+  between everything and reports what it measures. No built-in theory of
+  what matters: no curated exposure or confounder lists, no feature tested
+  in one direction only, no hand-picked windows, holidays or thresholds that
+  encode an expectation. Allowed, because they are about measurement
+  quality: the FDR family, effect floors, trend removal, minimum days, and
+  skipping pairs linked by definition (same family). UI presentation can be
+  opinionated; the analysis can't.
 
 ## Conventions (same as upstream)
 
