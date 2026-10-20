@@ -253,7 +253,7 @@ class TodayView:
     sentences: list[str]
     problems: list[str]
     tiles: tuple[Tile, ...] = ()
-    notes: tuple[str, ...] = ()  # worth noting: a weather change, streaks, records
+    notes: tuple[str, ...] = ()  # worth noting: a weather change, the season, streaks, records
 
 
 def build_sentences(
@@ -308,7 +308,7 @@ def _safe(db: Session, problems: list[str], label: str, read: Callable[[], objec
         return empty
 
 
-def load_today(db: Session, zone: ZoneInfo, boundary: dt.time, today: dt.date) -> TodayView:
+def load_today(db: Session, zone: ZoneInfo, boundary: dt.time, today: dt.date, country: str | None = None) -> TodayView:
     problems = [str(p) for p in upstream.check_upstream(db)]
     first = today - dt.timedelta(days=BASELINE_DAYS + 1)
     yesterday = today - dt.timedelta(days=1)
@@ -353,5 +353,7 @@ def load_today(db: Session, zone: ZoneInfo, boundary: dt.time, today: dt.date) -
         None,
     )
     notes = [note] if note else []
-    notes += [n.text for n in _safe(db, problems, "highlights", lambda: highlights.load_highlights(db, today), [])]
+    notes += [
+        n.text for n in _safe(db, problems, "highlights", lambda: highlights.load_highlights(db, today, country), [])
+    ]
     return TodayView(today, lines, problems, build_tiles(series, energy, mood_entries, today), tuple(notes))

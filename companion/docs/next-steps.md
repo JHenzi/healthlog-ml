@@ -146,9 +146,8 @@ need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
 
 ### 4.2 M3: weather (built 2026-10-20; waits on your location, §2)
 
-- **Day length and public holidays**, computed locally (no network). Needs
-  `astral`/`holidays`, or a small sunrise formula and a holiday list, since
-  PyPI downloads are blocked here (§5).
+- ~~**Day length and public holidays**~~: done 2026-10-20 as the almanac
+  (`app/almanac.py`), with the moon and a holiday run-up note on the Overview.
 - **Weather on the Metrics pages** gets the same glance treatment as the
   rest once that lands (§4.3b).
 
@@ -230,6 +229,13 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
 - **A change to upstream's `docker-compose.yml` recreates `healthlog-db`**
   on deploy (seen with #120's `TIMESCALEDB_TELEMETRY`): a few seconds of
   downtime, data safe on its volume.
+- ~~**Weather missing from My Metrics**~~: the list only knew the original
+  sources; weather and the almanac have their own groups since 2026-10-20.
+- **Almanac, later:** more countries and regional holidays (states, Länder);
+  day length as an analysed feature once there's a year of data (now the
+  trend removal leaves nothing of it); "this time last year" for the season
+  note; vacation and sick-day spans (M4 part 2) as the personal side of the
+  calendar.
 - **Re-derives are slow:** each `rederive-*` re-reads every raw payload
   (~80 s each for 153 payloads). Fine now; worth a note to upstream if
   `raw_ingest` grows a lot.

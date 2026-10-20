@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from app.highlights import RECORD_MIN_DAYS, Def, fmt_value, highlights, record, streak
+from app.highlights import RECORD_MIN_DAYS, Def, fmt_value, highlights, record, season, streak
 
 TODAY = dt.date(2026, 10, 20)
 YESTERDAY = TODAY - dt.timedelta(days=1)
@@ -56,3 +56,41 @@ def test_highlights_put_streaks_first_and_cap_the_list():
 def test_fmt_value():
     assert fmt_value(18402.0, "count") == "18,402 count"
     assert fmt_value(12.5, "°C") == "12.5 °C" and fmt_value(3.0, None) == "3"
+
+
+STRESS = Def("Stress (mean of measured minutes)", None, "stress", "continuous")
+SLEEP_H = Def("Sleep (total)", "h", "sleep", "continuous")
+CHRISTMAS = {dt.date(2026, 12, 25): "Christmas"}
+
+
+def _season_series(base: float, runup: float) -> dict[str, dict[dt.date, float]]:
+    start = dt.date(2026, 12, 11)  # 14 days before Christmas
+    stress = {start - dt.timedelta(days=k): base for k in range(1, 29)}
+    stress |= {start + dt.timedelta(days=k): runup for k in range(14)}
+    sleep = {d: 7.0 for d in stress}
+    return {"stress.mean": stress, "sleep.total_h": sleep}
+
+
+def test_season_compares_the_run_up_with_the_four_weeks_before():
+    series, defs = _season_series(30.0, 40.0), {"stress.mean": STRESS, "sleep.total_h": SLEEP_H}
+    note = season(series, defs, CHRISTMAS, dt.date(2026, 12, 21))
+    assert (
+        note.text
+        == "Leading up to Christmas (the last 10 days): stress averaged 40, up from 30 in the four weeks before."
+    )
+    after = season(series, defs, CHRISTMAS, dt.date(2026, 12, 28))
+    assert after.text == "In the two weeks before Christmas: stress averaged 40, up from 30 in the four weeks before."
+    assert "because" not in note.text and "caused" not in note.text  # R10
+    notes = highlights(series, defs, dt.date(2026, 12, 21), CHRISTMAS)
+    assert notes[0].kind == "season"
+
+
+def test_season_stays_quiet_when_too_early_too_late_too_small_or_too_sparse():
+    defs = {"stress.mean": STRESS, "sleep.total_h": SLEEP_H}
+    series = _season_series(30.0, 40.0)
+    assert season(series, defs, CHRISTMAS, dt.date(2026, 12, 16)) is None  # 5 days in
+    assert season(series, defs, CHRISTMAS, dt.date(2027, 1, 5)) is None  # long past
+    assert season(_season_series(30.0, 32.0), defs, CHRISTMAS, dt.date(2026, 12, 21)) is None  # under 10%
+    sparse = {k: {d: v for d, v in vals.items() if d.day % 3 == 0} for k, vals in series.items()}
+    assert season(sparse, defs, CHRISTMAS, dt.date(2026, 12, 21)) is None  # most days unknown (R7)
+    assert highlights(series, defs, dt.date(2026, 12, 21)) == []  # no country, no holidays

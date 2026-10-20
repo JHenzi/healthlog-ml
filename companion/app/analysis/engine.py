@@ -3,7 +3,7 @@
 Three horizons, one Benjamini-Hochberg family (R8):
 
 - **day**: relationships between features of different families, same day
-  (lag 0) and next day in both directions (lag 1). Outside data (weather) is
+  (lag 0) and next day in both directions (lag 1). Outside data (weather, almanac) is
   only ever the earlier side: never an outcome, and never tested for its own
   changes or weekday rhythm. Continuous pairs use
   Spearman on residuals; a yes/no feature (a count that is 0 on some observed

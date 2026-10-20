@@ -15,6 +15,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .almanac import SUPPORTED, country_for_zone
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(populate_by_name=True, extra="ignore")
@@ -32,6 +34,10 @@ class Settings(BaseSettings):
     trusted_proxies: str = Field(default="", alias="TRUSTED_PROXIES")
     # The collector's files (weather), mounted read-only. No file there means weather is off.
     outside_dir: Path = Field(default=Path("/outside"), alias="OUTSIDE_DIR")
+    # The almanac (day length): the weather location's latitude only, rounded to 0.1°. Unset: no day length.
+    latitude: float | None = Field(default=None, alias="WEATHER_LATITUDE")
+    # Public holidays: a country code (US, CA, GB, DE), "none" to turn them off, or empty to go by TZ.
+    holidays_country: str = Field(default="", alias="HOLIDAYS_COUNTRY")
 
     @field_validator("tz")
     @classmethod
@@ -41,6 +47,30 @@ class Settings(BaseSettings):
         except (ZoneInfoNotFoundError, ValueError) as exc:
             raise ValueError(f"TZ={value!r} is not a known IANA time zone") from exc
         return value
+
+    @field_validator("latitude", mode="before")
+    @classmethod
+    def _coarse_latitude(cls, value: object) -> float | None:
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return None
+        latitude = float(value)
+        if not -90 <= latitude <= 90:
+            raise ValueError("WEATHER_LATITUDE must be between -90 and 90")
+        return round(latitude, 1)
+
+    @field_validator("holidays_country")
+    @classmethod
+    def _known_country(cls, value: str) -> str:
+        value = value.strip().upper()
+        if value not in ("", "NONE", *SUPPORTED):
+            raise ValueError(f"HOLIDAYS_COUNTRY={value!r}: use one of {', '.join(SUPPORTED)} or none")
+        return value
+
+    @property
+    def holiday_country(self) -> str | None:
+        if self.holidays_country == "NONE":
+            return None
+        return self.holidays_country or country_for_zone(self.tz)
 
     @property
     def zone(self) -> ZoneInfo:

@@ -11,6 +11,11 @@ daily feature table; ``load_highlights`` does the read.
   ``STREAK_MIN_DAYS`` days in a row, or at zero ``QUIET_MIN_DAYS`` days in a
   row after you had used it. Only recorded days count (R7): an unknown day
   ends a streak.
+- **Season**: in the two weeks before a big holiday (Christmas, Thanksgiving)
+  and the week after it, how stress, sleep, resting heart rate and energy
+  reserve compare with the four weeks before the run-up, when one moved by at
+  least ``SEASON_PCT_FLOOR`` percent. A description of these weeks, not a
+  finding: one holiday is one occasion.
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ from dataclasses import dataclass
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from . import almanac
 from .models import DailyFeature, FeatureDef
 
 RECORD_MIN_DAYS = 60
@@ -30,6 +36,18 @@ QUIET_MIN_DAYS = 7
 MAX_NOTES = 4
 # Records say little for these: counts of labels, and values that are a sum of the day's choices.
 RECORD_SOURCES = ("healthlog", "sleep", "stress", "energy", "workout", "weather")
+# Season notes: what the weeks before a big holiday are compared on, and against how long before them.
+SEASON_FEATURES = {
+    "stress.mean": "stress",
+    "sleep.total_h": "sleep",
+    "hl.resting_heart_rate": "resting heart rate",
+    "energy.high": "energy reserve (high)",
+}
+SEASON_BASE_DAYS = 28
+SEASON_MIN_DAYS = 7  # run-up days so far before saying anything
+SEASON_AFTER_DAYS = 7  # the note stays up this long after the holiday
+SEASON_MIN_FRACTION = 0.7  # each window needs this share of its days observed
+SEASON_PCT_FLOOR = 10.0
 
 
 @dataclass(frozen=True)
@@ -42,7 +60,7 @@ class Def:
 
 @dataclass(frozen=True)
 class Note:
-    kind: str  # record | streak | quiet
+    kind: str  # season | record | streak | quiet
     feature: str
     text: str
     days: int  # the days behind it (history length or streak length), for ordering
@@ -99,10 +117,52 @@ def streak(feature: str, d: Def, values: Mapping[dt.date, float], day: dt.date, 
     return None
 
 
-def highlights(series: Mapping[str, Mapping[dt.date, float]], defs: Mapping[str, Def], today: dt.date) -> list[Note]:
-    """Notes for the Overview: streaks first (you made them), then records, longest history first."""
+def _mean_over(values: Mapping[dt.date, float], first: dt.date, last: dt.date) -> float | None:
+    span = (last - first).days + 1
+    vals = [values[first + dt.timedelta(days=i)] for i in range(span) if first + dt.timedelta(days=i) in values]
+    return sum(vals) / len(vals) if vals and len(vals) >= SEASON_MIN_FRACTION * span else None
+
+
+def season(
+    series: Mapping[str, Mapping[dt.date, float]], defs: Mapping[str, Def], big: Mapping[dt.date, str], today: dt.date
+) -> Note | None:
+    """The run-up to a big holiday against the four weeks before it, while it's on or just past."""
+    yesterday = today - dt.timedelta(days=1)
+    for holiday, name in sorted(big.items()):
+        start = holiday - dt.timedelta(days=almanac.RUNUP_DAYS)
+        if start + dt.timedelta(days=SEASON_MIN_DAYS - 1) <= yesterday < holiday:
+            last, lead = yesterday, f"Leading up to {name} (the last {(yesterday - start).days + 1} days)"
+        elif holiday <= yesterday < holiday + dt.timedelta(days=SEASON_AFTER_DAYS):
+            last, lead = holiday - dt.timedelta(days=1), f"In the two weeks before {name}"
+        else:
+            continue
+        base_first, base_last = start - dt.timedelta(days=SEASON_BASE_DAYS), start - dt.timedelta(days=1)
+        parts = []
+        for feature, label in SEASON_FEATURES.items():
+            d, values = defs.get(feature), series.get(feature, {})
+            recent, base = _mean_over(values, start, last), _mean_over(values, base_first, base_last)
+            if d is None or recent is None or not base or abs(recent - base) / abs(base) * 100 < SEASON_PCT_FLOOR:
+                continue
+            word = "up" if recent > base else "down"
+            parts.append(f"{label} averaged {fmt_value(recent, d.unit)}, {word} from {fmt_value(base, d.unit)}")
+        if parts:
+            text = f"{lead}: {'; '.join(parts)} in the four weeks before."
+            return Note("season", "almanac.holiday_runup", text, (last - start).days + 1)
+    return None
+
+
+def highlights(
+    series: Mapping[str, Mapping[dt.date, float]],
+    defs: Mapping[str, Def],
+    today: dt.date,
+    big: Mapping[dt.date, str] | None = None,
+) -> list[Note]:
+    """Notes for the Overview: the season first, then streaks (you made them), then records, longest history
+    first."""
     yesterday = today - dt.timedelta(days=1)
     notes: list[Note] = []
+    if big and (note := season(series, defs, big, today)):
+        notes.append(note)
     for feature, values in series.items():
         d = defs.get(feature)
         if d is None:
@@ -111,17 +171,18 @@ def highlights(series: Mapping[str, Mapping[dt.date, float]], defs: Mapping[str,
         note = streak(feature, d, values, day, today) or record(feature, d, values, day, today)
         if note:
             notes.append(note)
-    order = {"streak": 0, "quiet": 1, "record": 2}
+    order = {"season": 0, "streak": 1, "quiet": 2, "record": 3}
     notes.sort(key=lambda n: (order[n.kind], -n.days, n.feature))
     return notes[:MAX_NOTES]
 
 
-def load_highlights(db: Session, today: dt.date) -> list[Note]:
+def load_highlights(db: Session, today: dt.date, country: str | None = None) -> list[Note]:
     defs = {
         r.feature: Def(r.label, r.unit, r.source, r.kind)
         for r in db.execute(sa.select(FeatureDef)).scalars()
         if r.source in (*RECORD_SOURCES, "tracker")
     }
+    big = almanac.runups(range(today.year - 1, today.year + 1), country) if country else None
     series: dict[str, dict[dt.date, float]] = {}
     rows = db.execute(
         sa.select(DailyFeature.feature, DailyFeature.day, DailyFeature.value).where(
@@ -130,4 +191,4 @@ def load_highlights(db: Session, today: dt.date) -> list[Note]:
     )
     for r in rows:
         series.setdefault(r.feature, {})[r.day] = r.value
-    return highlights(series, defs, today)
+    return highlights(series, defs, today, big)

@@ -60,7 +60,7 @@ def refresh(db: Session) -> RefreshResult:
     seeded = metric_settings.seed(db)
     synced = mood.sync_from_raw(db)
     weather = outside.load_weather(db, settings.outside_dir)
-    rebuilt = features.rebuild(db, settings.zone, settings.day_boundary)
+    rebuilt = features.rebuild(db, settings.zone, settings.day_boundary, settings.latitude, settings.holiday_country)
     found = analysis.run(db, current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary))
     log.info(
         "refresh: %d new metric settings, %d mood entries from %d payloads, weather %s (%d hours), "

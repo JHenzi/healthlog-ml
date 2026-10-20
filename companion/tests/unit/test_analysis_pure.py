@@ -20,7 +20,7 @@ from app.analysis.pure import (
     residualize,
     shift_days,
 )
-from app.analysis.sentences import sentence
+from app.analysis.sentences import happening, sentence
 
 FORBIDDEN = re.compile(r"\b(cause[sd]?|causing|because|leads? to|due to|results? in|diagnos\w*)\b", re.IGNORECASE)
 
@@ -235,3 +235,10 @@ def test_every_sentence_has_evidence_and_association_wording_only():
         line = sentence(f, META)
         assert not FORBIDDEN.search(line), line
         assert re.search(r"\(\d+ (vs \d+ )?days, (weak|moderate|strong)\)\.$|; \d+ vs \d+ days, \w+\)\.$", line), line
+
+
+def test_calendar_events_read_as_events():
+    meta = FeatureMeta("Public holiday", kind="count", family="almanac")
+    for feature in ("almanac.holiday", "almanac.holiday_runup"):
+        event = happening(feature, meta)
+        assert event.startswith("it was") and "logged" not in event

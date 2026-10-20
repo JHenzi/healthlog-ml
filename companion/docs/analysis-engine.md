@@ -113,10 +113,10 @@ It adds no p-values to the FDR family: it reads findings that already
 cleared the bar, so it can't create a discovery, only qualify one. Stored as
 `insights.details.adjusted`; shown on Discoveries and the evidence page.
 
-## Outside data (weather)
+## Outside data (weather, the almanac)
 
 Weather can go with what follows it, but nothing you do changes it. So a
-feature of an outside family (`EXOGENOUS_FAMILIES`, today `weather`) is only
+feature of an outside family (`EXOGENOUS_FAMILIES`: `weather`, `almanac`) is only
 ever the earlier or same-day side of a relationship: same day, and weather
 today against the outcome tomorrow, never the reverse. It never gets its own
 week/month change or weekday test (a colder month is the season, not news),
@@ -125,6 +125,15 @@ distributed-lag exposures (`DLM_EXPOSURES`: temperature, pressure change,
 PM2.5). Of the 15 daily weather features, 7 are analysed; the rest are shown
 but not tested, so near-duplicates (high, low and mean temperature) don't
 dilute the FDR family. Feature definitions: `app/outside.py`.
+
+The almanac (`app/almanac.py`) is computed here from the date: the moon
+(share lit, analysed), public holidays and the two weeks before a big one
+(Christmas, Thanksgiving; yes/no, analysed), and day length (shown, not
+tested: it moves smoothly with the season, so the 28-day trend removal
+leaves nothing of it). Holidays mostly fall on Mondays, so a holiday finding
+can overlap the weekday rhythm; the explain view shows both. Each holiday
+is one occasion, so holiday findings need several before the yes/no group
+reaches `MIN_GROUP_DAYS`.
 
 ## Validation (tests/stats)
 
@@ -155,6 +164,9 @@ push and 200 nightly (`STATS_SEEDS`).
 | planted weather → next-night sleep link, found with weather first | ≥ 80% (measured: 100% of 200) |
 | a series that the weather merely follows is never reported as its cause; weather never gets a change or weekday finding, even with a season and a weekend pattern | never |
 | unrelated weather with a season: datasets reporting any relationship | ≤ 15% (measured: 8.5% of 200) |
+| stress 1.7 SD higher in the two weeks before Thanksgiving and Christmas, found as a run-up link | ≥ 80% (measured: 92.5% of 200; a 1.3 SD shift: 77%) |
+| almanac features never an outcome, a change or a rhythm | never |
+| the moon and holidays against unrelated series: datasets reporting a calendar link | ≤ 15% (measured: 2.5% of 200) |
 
 **What the suite caught (2026-10-17).** The first version flagged
 relationships in **35%** of pure-noise datasets. Measuring each test on null

@@ -14,6 +14,11 @@ from ..metrics_view import fmt
 from ..today import fmt_hours
 from .engine import FeatureMeta, Finding
 
+# Calendar facts as events; each reads after "On days", "The day after" and "When".
+ALMANAC_EVENTS = {
+    "almanac.holiday": "it was a public holiday",
+    "almanac.holiday_runup": "it was in the two weeks before a big holiday",
+}
 WEEKDAY_NAMES = ("Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays", "Sundays")
 
 
@@ -36,6 +41,8 @@ def happening(feature: str, meta: FeatureMeta) -> str:
     """A yes/no feature as an event: 'you logged feeling anxious'."""
     if feature.startswith("mood.label."):
         return f"you logged feeling {feature.removeprefix('mood.label.').replace('_', ' ')}"
+    if feature in ALMANAC_EVENTS:
+        return ALMANAC_EVENTS[feature]
     if feature.startswith("mood.assoc."):
         return f"you logged a mood about {feature.removeprefix('mood.assoc.').replace('_', ' ')}"
     return f"{name(meta)} was logged"
