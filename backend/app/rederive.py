@@ -12,6 +12,9 @@ and the (workout_hae_id, ts) key makes a re-run idempotent.
 entries (``stateOfMind``), keyed by HAE's entry id, and ``rederive-sleep`` for
 sleep sessions, e.g. unaggregated stage segments archived before the parser
 folded them into nights (the sleep upsert never downgrades a fuller night).
+``rederive-symptoms`` and ``rederive-medications`` replay Apple Health symptoms
+and medication doses; they also refresh the canonical slugs after an extension
+of ``health_vocab.py``.
 
 Usage (one-shot, typically via ``docker exec``)::
 
@@ -19,6 +22,8 @@ Usage (one-shot, typically via ``docker exec``)::
     healthlog rederive-workout-hr --dry-run   # parse + report, no writes
     healthlog rederive-state-of-mind [--dry-run]
     healthlog rederive-sleep [--dry-run]
+    healthlog rederive-symptoms [--dry-run]
+    healthlog rederive-medications [--dry-run]
 
 (equivalently ``python -m app rederive-workout-hr`` or ``python -m app.rederive``.)
 """
@@ -106,6 +111,18 @@ def run_rederive_sleep(db: Session, dry_run: bool = False) -> RederiveSummary:
     return _replay(db, lambda p: p.sleep_rows, ingest_svc.store_sleep, ("sleep_end", "source", "sleep_start"), dry_run)
 
 
+def run_rederive_symptoms(db: Session, dry_run: bool = False) -> RederiveSummary:
+    """Replay every archived payload, upserting its symptom entries."""
+    return _replay(db, lambda p: p.symptom_rows, ingest_svc.store_symptoms, ("start_time", "name", "source"), dry_run)
+
+
+def run_rederive_medications(db: Session, dry_run: bool = False) -> RederiveSummary:
+    """Replay every archived payload, upserting its medication dose events."""
+    return _replay(
+        db, lambda p: p.medication_rows, ingest_svc.store_medication_doses, ("medication", "dose_time"), dry_run
+    )
+
+
 def _log_summary(summary: RederiveSummary, dry_run: bool, command: str = "rederive-workout-hr") -> None:
     log.info(
         "%s%s done: payloads=%d rows=%d failures=%d",
@@ -148,6 +165,26 @@ def run_sleep(args: argparse.Namespace) -> int:
         summary = run_rederive_sleep(db, dry_run=args.dry_run)
 
     _log_summary(summary, args.dry_run, "rederive-sleep")
+    return 1 if summary.failures else 0
+
+
+def run_symptoms(args: argparse.Namespace) -> int:
+    bootstrap()
+
+    with db_session() as db:
+        summary = run_rederive_symptoms(db, dry_run=args.dry_run)
+
+    _log_summary(summary, args.dry_run, "rederive-symptoms")
+    return 1 if summary.failures else 0
+
+
+def run_medications(args: argparse.Namespace) -> int:
+    bootstrap()
+
+    with db_session() as db:
+        summary = run_rederive_medications(db, dry_run=args.dry_run)
+
+    _log_summary(summary, args.dry_run, "rederive-medications")
     return 1 if summary.failures else 0
 
 

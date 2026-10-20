@@ -360,6 +360,18 @@ this feature, replay them once (idempotent):
 docker exec healthlog healthlog rederive-state-of-mind
 ```
 
+Apple Health **symptoms** and **medications** (iOS 26) work the same way: add one REST
+API automation each with Data type **Symptoms** / **Medications** (German UI: *Symptome* /
+*Medikamente*). Entries land in the `symptoms` and `medication_doses` tables with their
+localised names, severities and statuses mapped to canonical values (§4.12 of the
+architecture doc); unrecognised values are kept as-is. For payloads archived earlier, or
+after an update that recognises more values, replay them once (idempotent):
+
+```bash
+docker exec healthlog healthlog rederive-symptoms
+docker exec healthlog healthlog rederive-medications
+```
+
 ## Stress score
 
 HealthLog derives a Garmin-style **stress score** (0–100) and intraday timeline

@@ -14,6 +14,8 @@ instead of a module path::
     healthlog rederive-workout-hr           # backfill HR samples from the archive
     healthlog rederive-state-of-mind        # backfill State of Mind entries from the archive
     healthlog rederive-sleep                # re-derive sleep sessions from the archive
+    healthlog rederive-symptoms             # backfill Apple Health symptoms from the archive
+    healthlog rederive-medications          # backfill medication doses from the archive
     healthlog rederive-stress               # recompute the stress timeline (full history)
     healthlog rederive-stress --days 30     # recompute only the trailing 30 days
     healthlog rederive-body-battery         # recompute the Body-Battery timeline (full history)
@@ -70,6 +72,14 @@ def build_parser() -> argparse.ArgumentParser:
     rsl = sub.add_parser("rederive-sleep", help="re-derive sleep sessions from the raw archive")
     rederive.add_arguments(rsl)
     rsl.set_defaults(func=rederive.run_sleep)
+
+    rsy = sub.add_parser("rederive-symptoms", help="backfill Apple Health symptoms from the raw archive")
+    rederive.add_arguments(rsy)
+    rsy.set_defaults(func=rederive.run_symptoms)
+
+    rmd = sub.add_parser("rederive-medications", help="backfill medication doses from the raw archive")
+    rederive.add_arguments(rmd)
+    rmd.set_defaults(func=rederive.run_medications)
 
     rst = sub.add_parser("rederive-stress", help="recompute the stress timeline from stored heart-rate history")
     stress_backfill.add_arguments(rst)
