@@ -640,7 +640,9 @@ other sources in two ways that shape the tables (migration `0024_symptoms_medica
   uses the raw name, so extending a map never re-keys rows: the slugs are coalesce-updated
   on replay, and `healthlog rederive-symptoms` / `rederive-medications` fill them in for
   stored rows. "Not present" is kept as a row (`severity = not_present`), an explicit "no"
-  rather than missing data.
+  rather than missing data. A symptom logged without a level is `present`; appetite changes
+  carry a direction instead (`no_change`, `increased`, `decreased`) in the same column.
+  Two entries of one symptom in the same minute share a key, so the last one wins.
 
 The German spellings in the maps are only those confirmed by a real HAE export
 (`backend/tests/fixtures/hae_*_de.json`); English keys follow Apple's display names. Entries
