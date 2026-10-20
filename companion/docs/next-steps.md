@@ -214,6 +214,12 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
 
 ### 4.5 Found along the way (do when convenient)
 
+- **Purge a tracker or tag (plan M11):** removing a tag or archiving a
+  tracker keeps its history (fixed 2026-10-20: removed tags used to vanish
+  from the analysis, archived trackers kept getting zeros). Offer an explicit
+  "delete its entries too" with a confirmation, built on the same redaction
+  as the diary purge (risks.md E5).
+
 - **Features from HealthLog's new tables:** heart rate notifications and ECGs
   (counts per day, ECG average HR), symptoms (present or not, by slug, once
   logged). Each needs a contract entry (R3) and a `check-upstream` update.

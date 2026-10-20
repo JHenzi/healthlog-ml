@@ -165,7 +165,7 @@ data immediately.
 | M8 Diary | entries, embeddings (pgvector), concepts with confirm/reject tuning, themes, evidence views (§3) | M5 |
 | M9 Experiments | n-of-1 interventions with baselines and confounder checks (§4.5) | M5 |
 | M10 Imports & interop | CSV import from other tracking apps; export (§5) | M4 |
-| M11 Polish | reminders (web push), weekly summary, `proxy_header` auth, optional native iOS app | — |
+| M11 Polish | reminders (web push), weekly summary, `proxy_header` auth, optional native iOS app; **purge** a tracker's or tag's entries on request (redacts the event log too, risks.md E5; removing or archiving keeps history) | — |
 
 Throughout: anything generic about getting Apple Health data in becomes an
 upstream PR (A2 registry entries is the next one, informed by M2; Symptoms

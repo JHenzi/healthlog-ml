@@ -185,3 +185,23 @@ def test_tag_is_one_when_picked_zero_when_used_or_reviewed_unknown_otherwise():
 def test_tags_only_tracker_has_only_tag_features():
     f = daily_features(DAY_TAGS, [_tag(D1, "travel")], set(), D3, NY, FOUR)
     assert f.values == {"tracker.day_tags.tag.travel": {D1: 1.0}, "tracker.day_tags.tag.sick": {D1: 0.0}}
+
+
+def test_a_removed_tag_keeps_its_history_up_to_its_last_use():
+    obs = [_tag(D1, "late_night"), _obs(D1, 9, 7), _obs(D2, 9, 4), _obs(D3, 9, 5)]
+    f = daily_features(WORK, obs, {D2, D3}, D3, NY, FOUR)  # "late_night" is no longer on WORK's list
+    assert f.values["tracker.work_day.tag.late_night"] == {D1: 1.0}  # not 0 after it stopped being offered
+    assert f.labels["tracker.work_day.tag.late_night"] == ("Work day: late night (removed)", None, "count")
+    obs = [_tag(D1, "late_night"), _obs(D2, 9, 4), _tag(D3, "late_night")]
+    f = daily_features(WORK, obs, set(), D3, NY, FOUR)
+    assert f.values["tracker.work_day.tag.late_night"] == {D1: 1.0, D2: 0.0, D3: 1.0}
+
+
+def test_an_archived_tracker_keeps_its_history_but_is_not_zero_filled_after_its_last_entry():
+    archived = TrackerSpec("coffee", "Coffee", "count", always_logged=True, archived=True)
+    f = daily_features(archived, [_obs(D1, 8, 1)], {D2, D3}, D3, NY, FOUR)
+    assert f.values["tracker.coffee.total"] == {D1: 1.0}
+    reviewed_only = TrackerSpec("coffee", "Coffee", "count", archived=True)
+    f = daily_features(reviewed_only, [_obs(D2, 8, 2)], {D1, D3}, D3, NY, FOUR)
+    assert f.values["tracker.coffee.total"] == {D1: 0.0, D2: 2.0}
+    assert daily_features(reviewed_only, [], {D1}, D3, NY, FOUR).values == {}

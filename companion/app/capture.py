@@ -50,6 +50,7 @@ def spec_of(t: Tracker) -> TrackerSpec:
         options=tuple(t.options or ()),
         always_logged=t.always_logged,
         tags=tuple(t.tags or ()),
+        archived=bool(t.archived),
     )
 
 

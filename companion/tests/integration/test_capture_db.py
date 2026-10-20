@@ -170,3 +170,18 @@ def test_tag_toggles_on_and_off_and_reaches_features(db, mood_scale):
     features.rebuild(db, NY, FOUR)
     assert features.series(db, "tracker.energy_level.tag.travel") == {day: 1.0}
     assert features.series(db, "tracker.energy_level.tag.slept_badly") == {day: 0.0}
+
+
+def test_removing_a_tag_or_archiving_a_tracker_keeps_its_history(db, coffee):
+    day = dt.date(2026, 10, 10)
+    tags = capture.add_day_tags(db, ["Travel", "Sick"])
+    _toggle(db, tags, "travel", day)
+    _log(db, coffee, 2, when=dt.datetime.combine(day, dt.time(8), tzinfo=NY))
+    capture.remove_day_tag(db, "Travel")
+    capture.update_tracker(db, coffee, archived=True)
+    capture.set_reviewed(db, day + dt.timedelta(days=1), True, source="test")
+    capture.rebuild(db, NY, FOUR)  # replaying the log doesn't depend on the current tag list
+    assert capture.tags_for_day(db, day) == {tags.id: {"travel"}}
+    features.rebuild(db, NY, FOUR)
+    assert features.series(db, "tracker.day_tags.tag.travel") == {day: 1.0}
+    assert features.series(db, "tracker.coffee.total") == {day: 2.0}  # no zero after archiving
