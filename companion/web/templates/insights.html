@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Discoveries · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
-{% from "_icons.html" import discovery_head %}
+{% from "_icons.html" import discovery_head, range_bar %}
 {% block content %}
 <section class="card">
   <p class="kicker">Discover</p>
@@ -26,6 +26,7 @@
   <a class="discovery glance" href="/insights/{{ i.id }}">
     {{ discovery_head(cards[i.id], i.n, preliminary_days) }}
     <p class="detail-line">{{ i.sentence }}</p>
+    {{ range_bar(ranges[i.id]) }}
     <p class="meta">{{ i.strength|capitalize }} · adjusted p {{ "%.2g"|format(i.p_adj) }} · Inspect evidence ›</p>
   </a>
   {% endfor %}

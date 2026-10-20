@@ -216,9 +216,7 @@ The warm look and the at-a-glance layer are live
 
 From the wireframes:
 
-- **Evidence intervals** on discoveries (1b, 1c). Bootstrap or
-  Fisher-z intervals from the effective n, drawn as a likely-range bar with
-  a no-effect tick.
+- ~~Evidence intervals~~: done 2026-10-19 (likely ranges, analysis-engine.md).
 - **Explore** (3a).
 - **Settings and data** (4b).
 - **Experiments** (4a, with M9).

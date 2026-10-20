@@ -27,5 +27,8 @@ CHANGE_CLIFF_FLOOR = 0.33
 WEEKDAY_MIN_PER_DAY = 4
 WEEKDAY_ETA2_FLOOR = 0.06  # Kruskal-Wallis effect size (~"medium")
 
+# Likely ranges shown with every finding (design 1b/1c).
+INTERVAL_LEVEL = 0.95
+
 # Wording thresholds for |rho| / |delta|.
 STRENGTH_BANDS = ((0.5, "strong"), (0.3, "moderate"), (0.0, "weak"))

@@ -34,11 +34,14 @@ from .pure import (
     as_daily,
     benjamini_hochberg,
     cliffs_delta,
+    delta_interval,
     kruskal_weekday,
     lag1_autocorr,
     mann_whitney_eff,
-    mean_shift_test,
+    mean_shift,
+    phi_interval,
     residualize,
+    rho_interval,
     shift_days,
     spearman_eff,
     strength,
@@ -159,7 +162,11 @@ def _pair(x: str, y: str, lag: int, px: _Prepared, py: _Prepared) -> Finding | N
             len(both),
             int(tt + tf),
             int(ft + ff),
-            details={"rate_with": rate_with, "rate_without": rate_without},
+            details={
+                "rate_with": rate_with,
+                "rate_without": rate_without,
+                "ci": _rounded(phi_interval(phi, len(both))),
+            },
         )
     if px.flag is not None:
         res = _group_test(shift_days(px.flag, lag), px.acf_flag, py, py.raw)
@@ -178,7 +185,13 @@ def _pair(x: str, y: str, lag: int, px: _Prepared, py: _Prepared) -> Finding | N
             g.n_with + g.n_without,
             g.n_with,
             g.n_without,
-            details={"median_with": medians["with"], "median_without": medians["without"], "flag_side": "a"},
+            details={
+                "median_with": medians["with"],
+                "median_without": medians["without"],
+                "flag_side": "a",
+                "n_eff": round(g.n_eff, 1),
+                "ci": _rounded(delta_interval(g.delta, g.n_with, g.n_without, g.n_eff)),
+            },
         )
     if py.flag is not None:
         # Continuous x (shifted by lag) split by whether y happened on the later day.
@@ -199,14 +212,33 @@ def _pair(x: str, y: str, lag: int, px: _Prepared, py: _Prepared) -> Finding | N
             g.n_with + g.n_without,
             g.n_with,
             g.n_without,
-            details={"median_with": medians["with"], "median_without": medians["without"], "flag_side": "b"},
+            details={
+                "median_with": medians["with"],
+                "median_without": medians["without"],
+                "flag_side": "b",
+                "n_eff": round(g.n_eff, 1),
+                "ci": _rounded(delta_interval(g.delta, g.n_with, g.n_without, g.n_eff)),
+            },
         )
     corr = spearman_eff(shift_days(px.resid, lag), py.resid, px.acf, py.acf)
     if corr is None or corr.n < C.MIN_PAIRED_DAYS:
         return None
     return Finding(
-        "association", "day", x, y, lag, "spearman", corr.rho, corr.p, corr.n, details={"n_eff": round(corr.n_eff, 1)}
+        "association",
+        "day",
+        x,
+        y,
+        lag,
+        "spearman",
+        corr.rho,
+        corr.p,
+        corr.n,
+        details={"n_eff": round(corr.n_eff, 1), "ci": _rounded(rho_interval(corr.rho, corr.n_eff))},
     )
+
+
+def _rounded(interval: tuple[float, float]) -> list[float]:
+    return [round(interval[0], 3), round(interval[1], 3)]
 
 
 def _changes(prepared_raw: Mapping[str, pd.Series], today: dt.date) -> list[Finding]:
@@ -223,9 +255,12 @@ def _changes(prepared_raw: Mapping[str, pd.Series], today: dt.date) -> list[Find
                 continue
             # Mean shift with autocorrelation-aware sizes: a plain rank test on consecutive days
             # flagged ~30% of pure noise as a change (see tests/stats).
-            p = mean_shift_test(recent.to_numpy(), base.to_numpy(), lag1_autocorr(raw))
+            shift = mean_shift(recent.to_numpy(), base.to_numpy(), lag1_autocorr(raw))
+            p = shift.p
             base_mean = float(base.mean())
             pct = (float(recent.mean()) - base_mean) / abs(base_mean) * 100 if base_mean else 0.0
+            lo, hi = shift.interval()
+            pct_ci = [round(lo / abs(base_mean) * 100, 1), round(hi / abs(base_mean) * 100, 1)] if base_mean else None
             out.append(
                 Finding(
                     "change",
@@ -245,6 +280,7 @@ def _changes(prepared_raw: Mapping[str, pd.Series], today: dt.date) -> list[Find
                         "pct": pct,
                         "recent_days": recent_days,
                         "base_days": base_days,
+                        "pct_ci": pct_ci,
                     },
                 )
             )
