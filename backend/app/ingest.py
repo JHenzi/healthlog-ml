@@ -23,6 +23,8 @@ from sqlalchemy.sql.expression import literal_column
 from . import units
 from .health_vocab import canonical_medication_status, canonical_severity, canonical_symptom
 from .models import (
+    EcgRecording,
+    HeartRateNotification,
     MedicationDose,
     MetricRegistry,
     MetricSample,
@@ -72,6 +74,10 @@ class ParsedPayload:
     medication_rows: list[dict] = field(default_factory=list)
     # Entries dropped for a missing name or start time. (name, data type)
     dropped_entries: list[tuple[str, str]] = field(default_factory=list)
+    # Apple Watch heart rate notifications (heartRateNotifications) -> heart_rate_notifications;
+    # ECG recordings (ecg) -> ecg_recordings, as summaries without the waveform.
+    heart_notification_rows: list[dict] = field(default_factory=list)
+    ecg_rows: list[dict] = field(default_factory=list)
 
 
 def _num(value) -> float | None:
@@ -527,6 +533,70 @@ def _parse_medication(entry: dict, out: ParsedPayload) -> None:
     )
 
 
+def _source_name(value) -> str:
+    """HAE ships ``source`` as a plain string in most sections, but as
+    ``{name, identifier}`` in heart rate notifications."""
+    if isinstance(value, dict):
+        value = value.get("name")
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _parse_heart_notification(entry: dict, out: ParsedPayload) -> None:
+    """One Apple Watch heart rate notification. No id is shipped, so (start,
+    kind, source) is the key; the heart-rate samples behind the alert are
+    summarised (the raw archive keeps them)."""
+    kind = _text_or_none(entry.get("heartNotification"))
+    start = parse_hae_datetime(entry.get("start"))
+    if kind is None or start is None:
+        out.dropped_entries.append((str(entry.get("heartNotification") or ""), "heart_rate_notification"))
+        return
+    samples = entry.get("heartRateData")
+    rates = [
+        q
+        for q in (_num(s.get("qty")) for s in (samples if isinstance(samples, list) else []) if isinstance(s, dict))
+        if q is not None
+    ]
+    out.heart_notification_rows.append(
+        {
+            "start_time": start,
+            "end_time": parse_hae_datetime(entry.get("end")),
+            "kind": kind,
+            "threshold": _num(entry.get("threshold")),
+            "source": _source_name(entry.get("source")),
+            "hr_min": min(rates) if rates else None,
+            "hr_avg": sum(rates) / len(rates) if rates else None,
+            "hr_max": max(rates) if rates else None,
+            "hr_samples": len(rates) if rates else None,
+        }
+    )
+
+
+def _parse_ecg(entry: dict, out: ParsedPayload) -> None:
+    """One ECG recording, as a summary. The voltage waveform is deliberately
+    not stored (ARCHITECTURE §10); an inconclusive recording reports an average
+    heart rate of 0, which is stored as NULL."""
+    start = parse_hae_datetime(entry.get("start"))
+    if start is None:
+        out.dropped_entries.append((str(entry.get("classification") or ""), "ecg"))
+        return
+    average = _num(entry.get("averageHeartRate"))
+    voltages = entry.get("voltageMeasurements")
+    count = _num(entry.get("numberOfVoltageMeasurements"))
+    if count is None and isinstance(voltages, list):
+        count = len(voltages)
+    out.ecg_rows.append(
+        {
+            "start_time": start,
+            "end_time": parse_hae_datetime(entry.get("end")),
+            "classification": _text_or_none(entry.get("classification")),
+            "average_heart_rate": average if average else None,
+            "sampling_frequency": _num(entry.get("samplingFrequency")),
+            "voltage_samples": int(count) if count is not None else None,
+            "source": _source_name(entry.get("source")),
+        }
+    )
+
+
 def parse_payload(payload: dict, type_map: dict[str, str] | None = None) -> ParsedPayload:
     """Translate an HAE payload into normalised rows. Pure, DB-free.
 
@@ -573,6 +643,14 @@ def parse_payload(payload: dict, type_map: dict[str, str] | None = None) -> Pars
         if isinstance(entry, dict):
             _parse_medication(entry, out)
 
+    for entry in data.get("heartRateNotifications") or []:
+        if isinstance(entry, dict):
+            _parse_heart_notification(entry, out)
+
+    for entry in data.get("ecg") or []:
+        if isinstance(entry, dict):
+            _parse_ecg(entry, out)
+
     return out
 
 
@@ -616,6 +694,8 @@ class StoreResult:
     dropped_state_of_mind: int = 0
     symptom_rows: int = 0
     medication_rows: int = 0
+    heart_notification_rows: int = 0
+    ecg_rows: int = 0
     dropped_entries: int = 0
     # New vs. updated counts from the Postgres xmax trick: xmax=0 means the
     # row was freshly inserted; xmax!=0 means an existing row was updated (i.e.
@@ -626,6 +706,8 @@ class StoreResult:
     state_of_mind_new: int = 0
     symptom_new: int = 0
     medication_new: int = 0
+    heart_notification_new: int = 0
+    ecg_new: int = 0
 
 
 # Postgres caps a single statement at 65535 bound parameters, so a multi-year
@@ -829,6 +911,35 @@ def store_medication_doses(db: Session, rows: list[dict]) -> int:
     )
 
 
+def store_heart_notifications(db: Session, rows: list[dict]) -> int:
+    """Idempotent upsert of heart rate notifications keyed by (start_time, kind,
+    source); returns the count of freshly-inserted rows. Shared with the
+    re-derive CLI."""
+    key = ("start_time", "kind", "source")
+    deduped = _dedupe(rows, key)
+    return _upsert(
+        db,
+        HeartRateNotification,
+        deduped,
+        set_keys=[k for k in (deduped[0] if deduped else ()) if k not in key],
+        constraint="uq_heart_rate_notifications",
+    )
+
+
+def store_ecg_recordings(db: Session, rows: list[dict]) -> int:
+    """Idempotent upsert of ECG summaries keyed by (start_time, source); returns
+    the count of freshly-inserted rows. Shared with the re-derive CLI."""
+    key = ("start_time", "source")
+    deduped = _dedupe(rows, key)
+    return _upsert(
+        db,
+        EcgRecording,
+        deduped,
+        set_keys=[k for k in (deduped[0] if deduped else ()) if k not in key],
+        constraint="uq_ecg_recordings",
+    )
+
+
 def store(db: Session, parsed: ParsedPayload) -> StoreResult:
     """Idempotent upsert of parsed rows. Safe to replay overlapping windows.
 
@@ -868,6 +979,8 @@ def store(db: Session, parsed: ParsedPayload) -> StoreResult:
     state_of_mind_new = store_state_of_mind(db, parsed.state_of_mind_rows)
     symptom_new = store_symptoms(db, parsed.symptom_rows)
     medication_new = store_medication_doses(db, parsed.medication_rows)
+    heart_notification_new = store_heart_notifications(db, parsed.heart_notification_rows)
+    ecg_new = store_ecg_recordings(db, parsed.ecg_rows)
 
     for metric, unit in parsed.flagged_units:
         log.warning("unit mismatch for %s: incoming '%s' kept as-is (no known conversion)", metric, unit)
@@ -915,6 +1028,8 @@ def store(db: Session, parsed: ParsedPayload) -> StoreResult:
         dropped_state_of_mind=len(parsed.dropped_state_of_mind),
         symptom_rows=len(parsed.symptom_rows),
         medication_rows=len(parsed.medication_rows),
+        heart_notification_rows=len(parsed.heart_notification_rows),
+        ecg_rows=len(parsed.ecg_rows),
         dropped_entries=len(parsed.dropped_entries),
         metric_new=metric_new,
         sleep_new=sleep_new,
@@ -922,6 +1037,8 @@ def store(db: Session, parsed: ParsedPayload) -> StoreResult:
         state_of_mind_new=state_of_mind_new,
         symptom_new=symptom_new,
         medication_new=medication_new,
+        heart_notification_new=heart_notification_new,
+        ecg_new=ecg_new,
     )
 
 

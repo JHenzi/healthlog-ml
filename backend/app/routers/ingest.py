@@ -108,11 +108,14 @@ async def ingest_payload(
     INGEST_ROWS.labels(kind="state_of_mind").inc(result.state_of_mind_rows)
     INGEST_ROWS.labels(kind="symptom").inc(result.symptom_rows)
     INGEST_ROWS.labels(kind="medication").inc(result.medication_rows)
+    INGEST_ROWS.labels(kind="heart_notification").inc(result.heart_notification_rows)
+    INGEST_ROWS.labels(kind="ecg").inc(result.ecg_rows)
     LAST_INGEST.set_to_current_time()
 
     audit.info(
         "ingest.stored ip=%s metrics=%d(%d new) sleep=%d(%d new) workouts=%d(%d new) "
-        "state_of_mind=%d(%d new) symptoms=%d(%d new) medications=%d(%d new) unknown=%d flagged_units=%d "
+        "state_of_mind=%d(%d new) symptoms=%d(%d new) medications=%d(%d new) heart_notifications=%d(%d new) "
+        "ecg=%d(%d new) unknown=%d flagged_units=%d "
         "implausible=%d dropped_workouts=%d dropped_sleep=%d dropped_state_of_mind=%d dropped_entries=%d",
         ip,
         result.metric_rows,
@@ -127,6 +130,10 @@ async def ingest_payload(
         result.symptom_new,
         result.medication_rows,
         result.medication_new,
+        result.heart_notification_rows,
+        result.heart_notification_new,
+        result.ecg_rows,
+        result.ecg_new,
         result.unknown_metrics,
         result.flagged_units,
         result.implausible_values,
@@ -160,6 +167,8 @@ async def ingest_payload(
         dropped_state_of_mind=result.dropped_state_of_mind,
         symptom_rows=result.symptom_rows,
         medication_rows=result.medication_rows,
+        heart_notification_rows=result.heart_notification_rows,
+        ecg_rows=result.ecg_rows,
         dropped_entries=result.dropped_entries,
         metric_new=result.metric_new,
         sleep_new=result.sleep_new,
@@ -167,4 +176,6 @@ async def ingest_payload(
         state_of_mind_new=result.state_of_mind_new,
         symptom_new=result.symptom_new,
         medication_new=result.medication_new,
+        heart_notification_new=result.heart_notification_new,
+        ecg_new=result.ecg_new,
     )
