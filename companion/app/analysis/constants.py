@@ -45,10 +45,10 @@ DLM_EXPOSURES = (
     "weather.pm25_mean",
 )
 
-# Outside data (weather): it can go with what follows it, never the other way round. So an outside feature is
-# only ever the earlier or same-day side of a relationship, never an outcome, and its own week/month changes and
-# weekday rhythm aren't tested (the season isn't news, and those tests would only dilute the FDR family).
-EXOGENOUS_FAMILIES = ("weather",)
+# Outside data (weather, the almanac): it can go with what follows it, never the other way round. So an outside
+# feature is only ever the earlier or same-day side of a relationship, never an outcome, and its own week/month
+# changes and weekday rhythm aren't tested (the season isn't news, and those tests would only dilute the FDR family).
+EXOGENOUS_FAMILIES = ("weather", "almanac")
 
 # Adjusted re-check of reported relationships: does the link survive once these everyday drivers are allowed
 # for? A finding is re-checked against each one that isn't in either side's family. Not new tests (no p-values

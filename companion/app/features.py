@@ -2,7 +2,8 @@
 
 Sources so far: every HealthLog metric (``hl.<metric>``), sleep, stress, energy
 reserve, workouts, State of Mind, the user's own trackers
-(``tracker.<key>.*``) and the weather (``weather.*``, M3). Assembly is
+(``tracker.<key>.*``), the weather (``weather.*``, M3) and the almanac
+(``almanac.*``: day length, moon, holidays). Assembly is
 pure (``assemble``); ``rebuild`` reads through the read contract and replaces
 the cache in one transaction, so new feature definitions apply to all history.
 
@@ -21,7 +22,7 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from . import mood, outside, trackers, upstream
+from . import almanac, mood, outside, trackers, upstream
 from .auth import now_utc
 from .capture import spec_of
 from .models import DailyFeature, DayReview, FeatureDef, MetricSetting, Observation, StateOfMindEntry, Tracker
@@ -250,7 +251,9 @@ def load_tracker_inputs(db: Session) -> tuple[list[tuple[trackers.TrackerSpec, l
     return specs, reviewed
 
 
-def rebuild(db: Session, zone: ZoneInfo, boundary: dt.time) -> RebuildResult:
+def rebuild(
+    db: Session, zone: ZoneInfo, boundary: dt.time, latitude: float | None = None, country: str | None = None
+) -> RebuildResult:
     """Recompute every feature from scratch and replace the cache (caller commits)."""
     specs, reviewed = load_tracker_inputs(db)
     last_day = current_day(now_utc(), zone, boundary) - dt.timedelta(days=1)  # zero-fill never reaches today
@@ -272,6 +275,13 @@ def rebuild(db: Session, zone: ZoneInfo, boundary: dt.time) -> RebuildResult:
     for d in outside.DEFS:
         definition = Def(d.feature, d.label, d.unit, "weather", analyse=d.analyse, family="weather")
         fs.add(definition, weather.get(d.feature, {}))
+    # The almanac covers the days the rest of the data does (it has a value for every date).
+    first_day = min((day for values in fs.values.values() for day in values), default=None)
+    if first_day is not None:
+        calendar = almanac.almanac_features(first_day, last_day, latitude, country)
+        for a in almanac.DEFS:
+            definition = Def(a.feature, a.label, a.unit, "almanac", a.kind, a.analyse, family="almanac")
+            fs.add(definition, calendar.get(a.feature, {}))
     db.execute(sa.delete(DailyFeature))
     db.execute(sa.delete(FeatureDef))
     if fs.defs:

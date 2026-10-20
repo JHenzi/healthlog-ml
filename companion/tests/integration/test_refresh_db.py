@@ -12,7 +12,7 @@ import pytest
 from sqlalchemy import func, select, text
 
 from app import features, jobs, metric_settings, mood
-from app.models import DailyFeature, MetricSetting, StateOfMindEntry
+from app.models import DailyFeature, FeatureDef, MetricSetting, StateOfMindEntry
 
 NY = ZoneInfo("America/New_York")
 ID_A = "2D4F6A8C-0E1B-4C3D-8E5F-7A9B1C3D5E7F"
@@ -173,3 +173,25 @@ def test_a_bad_weather_file_loads_nothing_and_keeps_what_was_there(db, outside_d
     _weather_file(outside_dir, 3, temp="999")  # outside the plausible range
     assert jobs.refresh(db).weather.status == "rejected"
     assert features.series(db, "weather.temp_mean") == before
+
+
+def test_the_almanac_follows_latitude_and_country(db, archive, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("WEATHER_LATITUDE", "40.7")
+    get_settings.cache_clear()
+    try:
+        jobs.refresh(db)  # TZ is America/New_York: US holidays by default
+        defs = {f.feature: f for f in db.execute(select(FeatureDef)).scalars() if f.source == "almanac"}
+        assert set(defs) == {"almanac.moon", "almanac.day_length", "almanac.holiday", "almanac.holiday_runup"}
+        assert defs["almanac.day_length"].analyse is False and defs["almanac.holiday"].family == "almanac"
+        assert set(features.series(db, "almanac.holiday").values()) <= {0.0, 1.0}
+        monkeypatch.setenv("HOLIDAYS_COUNTRY", "none")
+        monkeypatch.delenv("WEATHER_LATITUDE")
+        get_settings.cache_clear()
+        jobs.refresh(db)
+        assert {f.feature for f in db.execute(select(FeatureDef)).scalars() if f.source == "almanac"} == {
+            "almanac.moon"
+        }
+    finally:
+        get_settings.cache_clear()

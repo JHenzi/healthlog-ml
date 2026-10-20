@@ -114,7 +114,7 @@ def today_page(
         return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
     settings = get_settings()
     day = current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
-    view = today.load_today(db, settings.zone, settings.day_boundary, day)
+    view = today.load_today(db, settings.zone, settings.day_boundary, day, settings.holiday_country)
     from .web_trackers import today_capture  # late import: web_trackers builds on this module
 
     return templates.TemplateResponse(
@@ -185,7 +185,7 @@ def _today() -> dt.date:
     return current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
 
 
-SOURCE_ORDER = ("tracker", "sleep", "healthlog", "stress", "energy", "workout", "mood")
+SOURCE_ORDER = ("tracker", "sleep", "healthlog", "stress", "energy", "workout", "mood", "weather", "almanac")
 SOURCE_TITLES = {
     "tracker": "Your trackers",
     "sleep": "Sleep",
@@ -194,6 +194,8 @@ SOURCE_TITLES = {
     "energy": "Energy reserve",
     "workout": "Workouts",
     "mood": "Mood (State of Mind)",
+    "weather": "Weather",
+    "almanac": "Almanac",
 }
 
 
@@ -299,7 +301,7 @@ def save_metric_settings(
     except ValueError as exc:  # raised before anything changed
         return metric_detail(feature, request, session, db, error=str(exc))
     settings = get_settings()
-    features.rebuild(db, settings.zone, settings.day_boundary)
+    features.rebuild(db, settings.zone, settings.day_boundary, settings.latitude, settings.holiday_country)
     db.commit()
     return RedirectResponse(f"/metrics/{feature}", status_code=status.HTTP_303_SEE_OTHER)
 

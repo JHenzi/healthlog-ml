@@ -31,7 +31,7 @@ What works today (milestones M1, M2, M4 part 1 and M5 v1):
   Today, back-date from the tracker's page, and fill gaps in the **evening
   review**. Every tracker becomes daily series in the same analysis;
 - password sign-in, plus scoped API tokens for Shortcuts and scripts;
-- `GET /api/today` (a `read` token), the same sentences as JSON, plus `notes` (a weather change, streaks, records);
+- `GET /api/today` (a `read` token), the same sentences as JSON, plus `notes` (a weather change, the run-up to a holiday, streaks, records);
 - a startup and nightly check that HealthLog's tables still match what we
   read (`companion check-upstream`).
 
@@ -97,6 +97,7 @@ and `TZ` set in `.env` (the Companion refuses to start without it).
 | `TRUSTED_PROXIES` | private ranges | same meaning as HealthLog's: which peers may set `X-Forwarded-For` |
 | `WEATHER_LATITUDE`, `WEATHER_LONGITUDE` | *(off)* | your home area, for weather. The collector rounds both to 0.1° (~10 km) before anything is sent. Leave unset to keep weather off |
 | `WEATHER_SINCE` | 92 days ago | first day of the automatic backfill, e.g. `2026-07-15` (your first HealthLog day) |
+| `HOLIDAYS_COUNTRY` | from `TZ` | public holidays for the almanac: `US`, `CA`, `GB` or `DE`, or `none`. A US, Canadian, UK or German time zone picks its country |
 
 `SESSION_DAYS` (30), `LOGIN_MAX_FAILURES` (5) and `LOGIN_LOCKOUT_MINUTES` (15)
 can also be set on the containers.
@@ -187,6 +188,18 @@ docker exec healthlog-companion companion refresh
 
 `collector once` refreshes the recent days now. What is sent and why it's
 safe: [`docs/privacy.md`](docs/privacy.md).
+
+## The almanac
+
+Worked out on the server from the date, with nothing fetched: the moon,
+public holidays (by `HOLIDAYS_COUNTRY`, or your time zone's country) and the
+two weeks before Christmas and Thanksgiving, plus day length when
+`WEATHER_LATITUDE` is set (the latitude alone, rounded to 0.1°). They are
+analysed like the weather: only ever the earlier side of a link. In the two
+weeks before a big holiday and the week after, the Overview compares stress,
+sleep, resting heart rate and energy reserve with the four weeks before
+("Leading up to Christmas (the last 10 days): stress averaged 40, up from 30
+in the four weeks before.").
 
 ## Data the Companion needs from Health Auto Export
 

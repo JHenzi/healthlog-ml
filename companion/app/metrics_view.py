@@ -106,4 +106,6 @@ PROVENANCE = {
     "stress": "Derived",
     "energy": "Derived",
     "tracker": "Logged",
+    "weather": "Outside",
+    "almanac": "Computed",
 }

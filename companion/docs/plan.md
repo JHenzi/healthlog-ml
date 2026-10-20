@@ -105,7 +105,7 @@ data immediately.
 
 - [x] Opt-in config: coarse home location (rounded to 0.1°, ~10 km) in `.env`; off when unset.
 - [x] Open-Meteo collector sidecar: hourly weather (temperature, humidity, dew point, pressure, precipitation, cloud, wind, UV, sunlight) and air quality (PM2.5, PM10, US AQI); **historical backfill** (`collector backfill --since`); nightly refresh of the last 10 days. A validated CSV on a shared volume replaces the planned `source_cache` table: the Companion stores the hours in `weather_hours`.
-- [ ] Computed locally: sunrise/sunset/day length, public holidays (needs `astral`/`holidays` or a local formula; PyPI is DNS-blocked here, see next-steps §5).
+- [x] Computed locally (`app/almanac.py`, no package): day length from the latitude, the moon, public holidays for US/CA/GB/DE (country from `TZ` or `HOLIDAYS_COUNTRY`) and the two weeks before Christmas and Thanksgiving, as outside data. The Overview compares those weeks with the four before them (2026-10-20).
 - [x] Weather in the engine as outside data: same-day and weather-then-next-day associations and spread-over-days curves against everything else, never as an outcome (analysis-engine.md, "Outside data").
 
 **Status (2026-10-20):** built and validated; live once a location is set in `.env` (next-steps §2). Associations need the usual 21 overlapping days, which the backfill provides at once for HealthLog's series.

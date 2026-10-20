@@ -89,3 +89,19 @@ def test_bad_settings_show_an_error(signed_in, a_metric):
         data={"csrf": csrf, "aggregation": "sum", "min_value": "10", "max_value": "1"},
     )
     assert "lower bound is above the upper bound" in response.text
+
+
+def test_outside_and_almanac_series_are_listed(signed_in, db):
+    db.add(
+        FeatureDef(
+            feature="weather.temp_mean", label="Temperature (mean)", unit="°C", source="weather", kind="continuous"
+        )
+    )
+    db.add(FeatureDef(feature="almanac.moon", label="Moon (share lit)", unit="%", source="almanac", kind="continuous"))
+    db.add(DailyFeature(day="2026-10-10", feature="weather.temp_mean", value=11.0))
+    db.add(DailyFeature(day="2026-10-10", feature="almanac.moon", value=40.0))
+    db.flush()
+    listing = signed_in.get("/metrics").text
+    assert "Weather" in listing and "Temperature (mean)" in listing
+    assert "Almanac" in listing and "Moon (share lit)" in listing
+    assert signed_in.get("/metrics/almanac.moon").status_code == 200

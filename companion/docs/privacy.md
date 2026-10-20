@@ -3,7 +3,7 @@
 What stays local, what leaves, and what is sent to models. Updated with each
 milestone.
 
-## As of M3 (weather)
+## As of M3 (weather, the almanac)
 
 | Data | Where it lives | Leaves the server? |
 |---|---|---|
@@ -17,6 +17,7 @@ milestone.
 | Your trackers and every entry (values, times, device source) | `companion.trackers`, `events` (append-only), `observations` | no |
 | Home location (if weather is on) | `.env` only (`WEATHER_LATITUDE`, `WEATHER_LONGITUDE`), given to the collector container | rounded to 0.1° (~10 km), to Open-Meteo |
 | Hourly weather and air quality | the collector's file, then `companion.weather_hours` | no (it came from outside) |
+| Latitude (if set) and holiday country | `.env`; the Companion uses the latitude, rounded to 0.1°, for day length | no: day length, moon and holidays are computed here |
 
 - **No outbound network calls from the Companion.** It contains no HTTP
   client. `tests/privacy` checks that the app code imports none, and that the

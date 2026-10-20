@@ -26,6 +26,9 @@ services:
       DAY_BOUNDARY: ${DAY_BOUNDARY:-04:00}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       COOKIE_SECURE: ${COMPANION_COOKIE_SECURE:-true}
+      # The almanac, computed here: day length from the latitude alone; holidays by country (default from TZ).
+      WEATHER_LATITUDE: ${WEATHER_LATITUDE:-}
+      HOLIDAYS_COUNTRY: ${HOLIDAYS_COUNTRY:-}
     volumes:
       # The collector's weather file; read-only here, the Companion itself never fetches (R5).
       - companion-outside:/outside:ro
