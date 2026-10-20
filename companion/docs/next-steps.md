@@ -32,15 +32,14 @@ In order of how much they unblock:
    tailscale serve --bg --https=8443 http://127.0.0.1:8020
    ```
    Then open `https://<host>.<tailnet>.ts.net:8443` on the phone.
-3. **Re-import the sleep history** (risks.md L3). Health Auto Export → manual
-   export → only **Sleep Analysis**, 2026-07-16 to 2026-10-14, with **summarize /
-   aggregate on**. Put the file in HealthLog's import folder (`config/import/`),
-   then:
+3. **Sleep history: nothing to re-import.** Apple Health has no sleep before
+   2026-09-24, and every night since is already stored. Sleep reaches the
+   56 days the spread-over-days analysis needs in mid-November. To import any
+   other manual export, drop it in `config/import/` and name the file:
    ```bash
-   docker exec healthlog healthlog backfill /config/import
+   docker exec healthlog-healthlog-1 healthlog backfill /config/import/<file>.json
    docker exec healthlog-companion companion refresh
    ```
-   The import is idempotent, so the nights already stored don't duplicate.
 4. **Add two HAE automations** (REST API, same URL and secret as the Health
    Metrics one):
    - **Workouts**: HealthLog has 0 today.
@@ -53,9 +52,9 @@ In order of how much they unblock:
 6. **Optional, HealthLog recompute after the time-zone change** (plan M0,
    unverified):
    ```bash
-   docker exec healthlog healthlog analyze
-   docker exec healthlog healthlog rederive-stress
-   docker exec healthlog healthlog rederive-body-battery
+   docker exec healthlog-healthlog-1 healthlog analyze
+   docker exec healthlog-healthlog-1 healthlog rederive-stress
+   docker exec healthlog-healthlog-1 healthlog rederive-body-battery
    docker exec healthlog-companion companion refresh
    ```
 
