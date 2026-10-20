@@ -1,9 +1,9 @@
 {
   "uid": "healthlog-overview",
   "title": "HealthLog – Overview",
-  "description": "Daily health snapshot: last night's sleep, HRV & resting heart rate, stress score and Body Battery, mood (State of Mind), sleep trends, overnight vitals, activity, body weight, and the nightly analysis' findings. Stress and Body Battery are derived proxies calibrated to your own baseline, not Garmin-comparable values. Days, bedtime and wake-up hours follow the configured TZ (hidden 'tz' variable, read from the database); times are displayed in your browser's timezone (Settings → Timezone to override). Time window: 30 days.",
+  "description": "Daily health snapshot: last night's sleep, HRV & resting heart rate, stress score and Body Battery, mood (State of Mind), heart rate alerts and ECGs, sleep trends, overnight vitals, activity, body weight, and the nightly analysis' findings. Stress and Body Battery are derived proxies calibrated to your own baseline, not Garmin-comparable values. Days, bedtime and wake-up hours follow the configured TZ (hidden 'tz' variable, read from the database); times are displayed in your browser's timezone (Settings → Timezone to override). Time window: 30 days.",
   "schemaVersion": 39,
-  "version": 7,
+  "version": 8,
   "timezone": "browser",
   "time": {
     "from": "now-30d",
@@ -2185,12 +2185,192 @@
       ]
     },
     {
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 38
+      },
+      "id": 44,
+      "title": "Heart Events",
+      "type": "row",
+      "panels": [
+        {
+          "id": 45,
+          "type": "table",
+          "title": "Heart rate notifications",
+          "description": "Apple Watch high, low and irregular rhythm alerts (exported by Health Auto Export). Threshold is the alert's configured limit; min / avg / max summarise the heart-rate readings behind the alert. Descriptive only: the nightly analysis does not use these yet.",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 39
+          },
+          "datasource": {
+            "uid": "healthlog-db"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Threshold"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bpm"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Min"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bpm"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Avg"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bpm"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Max"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bpm"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [
+              {
+                "displayName": "Time",
+                "desc": true
+              }
+            ]
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "rawSql": "SELECT start_time AS \"Time\", INITCAP(REPLACE(REPLACE(kind, '_notification', ''), '_', ' ')) AS \"Alert\", threshold AS \"Threshold\", hr_min AS \"Min\", ROUND(hr_avg::numeric, 1) AS \"Avg\", hr_max AS \"Max\" FROM heart_rate_notifications WHERE $__timeFilter(start_time) ORDER BY start_time DESC",
+              "format": "table",
+              "datasource": {
+                "uid": "healthlog-db"
+              }
+            }
+          ]
+        },
+        {
+          "id": 46,
+          "type": "table",
+          "title": "ECG recordings",
+          "description": "Apple Watch ECG recordings: the watch's classification and the average heart rate during the 30-second recording. Only a summary is stored, never the waveform. An inconclusive recording has no average heart rate.",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 39
+          },
+          "datasource": {
+            "uid": "healthlog-db"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Avg heart rate"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bpm"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [
+              {
+                "displayName": "Time",
+                "desc": true
+              }
+            ]
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "rawSql": "SELECT start_time AS \"Time\", classification AS \"Result\", average_heart_rate AS \"Avg heart rate\" FROM ecg_recordings WHERE $__timeFilter(start_time) ORDER BY start_time DESC",
+              "format": "table",
+              "datasource": {
+                "uid": "healthlog-db"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 39
       },
       "id": 29,
       "panels": [],
@@ -2206,7 +2386,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 39
+        "y": 40
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2253,7 +2433,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 39
+        "y": 40
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2300,7 +2480,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 47
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2347,7 +2527,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 47
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2391,7 +2571,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 54
       },
       "id": 34,
       "panels": [],
@@ -2407,7 +2587,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 54
+        "y": 55
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2462,7 +2642,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 54
+        "y": 55
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2553,7 +2733,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 63
       },
       "id": 37,
       "panels": [],
@@ -2569,7 +2749,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 64
       },
       "datasource": {
         "uid": "healthlog-db"
@@ -2606,7 +2786,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 71
       },
       "datasource": {
         "uid": "healthlog-db"
