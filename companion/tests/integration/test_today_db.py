@@ -106,3 +106,20 @@ def test_sql_day_rule_matches_python_rule(db):
 
 def test_contract_matches_live_schema(db):
     assert upstream.check_upstream(db) == []
+
+
+def test_highlights_read_the_feature_table(db):
+    from app.highlights import RECORD_MIN_DAYS, load_highlights
+    from app.models import DailyFeature, FeatureDef
+
+    today = dt.date(2026, 10, 20)
+    db.add(FeatureDef(feature="hl.step_count", label="Steps", unit=None, source="healthlog", kind="continuous"))
+    db.add(FeatureDef(feature="mood.label.calm", label="Calm", unit=None, source="mood", kind="count"))
+    for i in range(RECORD_MIN_DAYS):
+        day = today - dt.timedelta(days=RECORD_MIN_DAYS - i)
+        steps = 20000.0 if i == RECORD_MIN_DAYS - 1 else 5000.0 + i
+        db.add(DailyFeature(day=day, feature="hl.step_count", value=steps))
+        db.add(DailyFeature(day=day, feature="mood.label.calm", value=1.0))  # mood isn't a tracker: no streak
+    db.flush()
+    notes = load_highlights(db, today)
+    assert [n.text for n in notes] == [f"Steps: 20,000 yesterday, the highest in {RECORD_MIN_DAYS} days of data."]
