@@ -417,3 +417,8 @@ button.chip[class*="tc-"][aria-pressed="true"] { color: #fffaf1; background: var
 .range-bar .est { fill: var(--color-accent-strong, var(--color-accent)); }
 .likely-text { font-size: 13px; color: var(--color-muted); font-variant-numeric: tabular-nums; }
 .likely + .muted.small { display: block; line-height: 1.45; margin-top: 4px; }
+
+/* — adjusted re-check: does the link survive allowing for sleep and steps? */
+.recheck { display: inline-block; font-size: 13px; font-weight: 700; margin: 4px 0 0; padding: 1px 8px; border-radius: 999px; }
+.recheck-holds { color: var(--color-accent-strong, var(--color-accent)); background: var(--color-accent-tint); }
+.recheck-weaker, .recheck-explained { color: var(--color-muted); background: var(--color-hairline); }

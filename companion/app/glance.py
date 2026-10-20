@@ -96,6 +96,44 @@ def likely_range(i: Insight) -> Range | None:
     return Range(_x(lo, *scale), _x(hi, *scale), _x(est, *scale), _x(0.0, *scale), text, lo > 0 or hi < 0)
 
 
+# Everyday drivers the engine allows for (analysis.constants.ADJUST_FOR), as they read in a sentence.
+DRIVER_WORDS = {"sleep.total_h": "sleep", "hl.step_count": "steps"}
+VERDICTS = {
+    "holds": "still holds allowing for {}",
+    "weaker": "weaker once {} is allowed for",
+    "explained": "largely accounted for by {}",
+}
+
+
+@dataclass(frozen=True)
+class Adjusted:
+    verdict: str  # holds | weaker | explained
+    text: str  # "still holds allowing for sleep and steps"
+    range: Range
+
+
+def adjusted(i: Insight) -> Adjusted | None:
+    """The adjusted re-check of a relationship, if the run made one: the verdict in words and the adjusted range."""
+    adj = (i.details or {}).get("adjusted")
+    if not adj or adj.get("verdict") not in VERDICTS:
+        return None
+    words = [DRIVER_WORDS.get(d, d) for d in adj["for"]]
+    drivers = " and ".join(words)
+    text = VERDICTS[adj["verdict"]].format(drivers)
+    if adj["verdict"] == "weaker" and len(words) > 1:
+        text = text.replace(" is allowed", " are allowed")
+    lo, hi = adj["ci"]
+    span = Range(
+        _x(lo, -1.0, 1.0),
+        _x(hi, -1.0, 1.0),
+        _x(adj["rho"], -1.0, 1.0),
+        _x(0.0, -1.0, 1.0),
+        f"{_signed(lo, '.2f')} to {_signed(hi, '.2f')} (0 is no link)",
+        lo > 0 or hi < 0,
+    )
+    return Adjusted(adj["verdict"], text, span)
+
+
 def tag_colours(tags: Sequence[str]) -> dict[str, tuple[str, int]]:
     """Day tag slug → (its text, its colour index): by position in the list, so a tag keeps its colour."""
     return {tag_slug(t): (t, k % TAG_COLOURS) for k, t in enumerate(tags)}

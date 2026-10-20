@@ -27,6 +27,7 @@
     {{ discovery_head(cards[i.id], i.n, preliminary_days) }}
     <p class="detail-line">{{ i.sentence }}</p>
     {{ range_bar(ranges[i.id]) }}
+    {% if adjusted[i.id] %}<p class="recheck recheck-{{ adjusted[i.id].verdict }}">{{ adjusted[i.id].text|capitalize }}</p>{% endif %}
     <p class="meta">{{ i.strength|capitalize }} · adjusted p {{ "%.2g"|format(i.p_adj) }} · Inspect evidence ›</p>
   </a>
   {% endfor %}

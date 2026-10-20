@@ -370,6 +370,7 @@ def insights_page(
             "sections": sections,
             "cards": _cards(db, list(rows)),
             "ranges": {i.id: glance.likely_range(i) for i in rows},
+            "adjusted": {i.id: glance.adjusted(i) for i in rows},
             "run": last_run.value if last_run else None,
             "csrf": session.csrf_token,
             "any": bool(rows),
@@ -404,6 +405,7 @@ def insight_detail(
             "defs": defs,
             "method": METHOD_NAMES.get(insight.method, insight.method),
             "likely": glance.likely_range(insight),
+            "adjusted": glance.adjusted(insight),
             "csrf": session.csrf_token,
         },
     )

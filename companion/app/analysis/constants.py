@@ -27,6 +27,12 @@ CHANGE_CLIFF_FLOOR = 0.33
 WEEKDAY_MIN_PER_DAY = 4
 WEEKDAY_ETA2_FLOOR = 0.06  # Kruskal-Wallis effect size (~"medium")
 
+# Adjusted re-check of reported relationships: does the link survive once these everyday drivers are allowed
+# for? A finding is re-checked against each one that isn't in either side's family. Not new tests (no p-values
+# join the FDR family): a robustness reading of findings already reported.
+ADJUST_FOR = ("sleep.total_h", "hl.step_count")
+ADJUST_EXPLAINED_SHARE = 0.5  # adjusted |rho| below this share of the unadjusted one, and unclear: "explained"
+
 # Likely ranges shown with every finding (design 1b/1c).
 INTERVAL_LEVEL = 0.95
 

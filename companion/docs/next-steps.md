@@ -230,8 +230,8 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
 - **Distributed lag models** (exposure → outcome over lags 0–7, one test each
   in the FDR family). They need months of data. Add planted curved and spread
   effects to `tests/stats` first.
-- **Adjusted re-check** of the top findings for sleep and workday
-  confounders. **Streaks and personal bests** as descriptive insights.
+- ~~Adjusted re-check~~: done 2026-10-19 (sleep and steps; analysis-engine.md).
+  **Streaks and personal bests** as descriptive insights.
 - **M6 within-day:** event-locked responses (coffee → steps, HR, stress over
   −60…+180 min against time-matched control days). Tracker entries already
   have timestamps.

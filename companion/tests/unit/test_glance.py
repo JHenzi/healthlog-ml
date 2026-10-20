@@ -61,3 +61,16 @@ def test_change_range_is_in_percent_and_old_runs_have_none():
     assert r.text == "+8% to +31% (0 is no change)" and r.zero_x == 100.0
     assert likely_range(_insight(details={})) is None
     assert likely_range(_insight(kind="weekday", feature_b=None, details={"high": 1, "low": 6})) is None
+
+
+def test_adjusted_recheck_in_words():
+    from app.glance import adjusted
+
+    adj = {"for": ["sleep.total_h", "hl.step_count"], "rho": -0.31, "ci": [-0.52, -0.08], "verdict": "holds"}
+    a = adjusted(_insight(details={"adjusted": adj}))
+    assert a.text == "still holds allowing for sleep and steps" and a.range.clear
+    weaker = adjusted(_insight(details={"adjusted": adj | {"verdict": "weaker", "ci": [-0.4, 0.1]}}))
+    assert weaker.text == "weaker once sleep and steps are allowed for" and not weaker.range.clear
+    one = adjusted(_insight(details={"adjusted": adj | {"for": ["sleep.total_h"], "verdict": "explained"}}))
+    assert one.text == "largely accounted for by sleep"
+    assert adjusted(_insight(details={})) is None

@@ -68,6 +68,24 @@ days widens it:
 
 Weekday rhythms have no range. Stored in `insights.details` (`ci`, `pct_ci`).
 
+## Adjusted re-check
+
+Each reported relationship is re-read allowing for everyday drivers,
+`ADJUST_FOR` (today: total sleep and steps), skipping a driver from either
+side's family. It is a partial Spearman correlation on the same residuals
+(a yes/no side as 0/1), with each driver on the later day and, for a
+next-day finding, on the earlier day too, plus a likely range on the
+effective n less the covariates. The verdict:
+
+- **holds**: same sign, and the adjusted range excludes 0;
+- **weaker**: same sign, at least half the unadjusted strength, but the range
+  reaches 0;
+- **largely accounted for**: otherwise.
+
+It adds no p-values to the FDR family: it reads findings that already
+cleared the bar, so it can't create a discovery, only qualify one. Stored as
+`insights.details.adjusted`; shown on Discoveries and the evidence page.
+
 ## Validation (tests/stats)
 
 Seeded synthetic data, 100 days. The suite runs 20 seeds per check on every
@@ -86,6 +104,9 @@ push and 200 nightly (`STATS_SEEDS`).
 | weekday rhythm found | yes |
 | ρ range covers the planted value (independent / AR(1) φ = 0.6 days) | 90–99% / 88–99% of 400 datasets (measured: 95% / 96%; a range on the plain n covers only 79% on the AR(1) days) |
 | δ range and change range cover the planted value | ≥ 88% of 400 datasets |
+| a link planted only through sleep reads "largely accounted for" (two measures) | ≥ 85% of the datasets that report it |
+| a direct link with independent sleep "still holds" | ≥ 85% |
+| a yes/no link planted through sleep reads "holds" | ≤ 15% |
 
 **What the suite caught (2026-10-17).** The first version flagged
 relationships in **35%** of pure-noise datasets. Measuring each test on null
@@ -117,5 +138,4 @@ numbers so an empty list explains itself.
 - **Distributed lag models** (effects spread over days 1–7) need months of
   daily data, so they are not in v1.
 - **Within-day** event-locked responses: M6.
-- **Adjusted re-checks** of top findings for sleep and workday confounders.
 - **ML models**: M7.

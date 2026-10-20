@@ -134,6 +134,7 @@ data immediately.
 - [ ] **Distributed lag models** for daily exposures (weather, sleep, caffeine) → outcome curves over lags 0–7 ("rain Monday → mood Wednesday"). *(Needs months of data; next.)*
 - [x] Week/month views: last 7 vs 28 days and last 28 vs 56 days, as autocorrelation-aware mean shifts.
 - [x] Descriptive insights: weekday rhythms (Kruskal-Wallis); 30-day vs prior on the Metrics page. *(Streaks and bests: later.)*
+- [x] Adjusted re-check of every reported relationship for sleep and steps (partial Spearman; "holds", "weaker", "largely accounted for"), validated on planted confounders (2026-10-19).
 - [x] Likely ranges (95%, effective-n aware) on every association and change, with coverage checks (2026-10-19).
 - [x] Sentence templates per method and type; **Insights** feed with an "explain" view (numbers, method, *n*, evidence); `GET /api/insights`.
 - [x] Nightly job at 04:15 (after HealthLog's 03:30 run), at the end of the refresh.
