@@ -84,6 +84,8 @@ esac
 
 echo "== verify"
 docker exec healthlog-companion companion check-upstream
-docker exec healthlog-companion companion refresh | tail -1
+# No pipe here: a failing refresh must stop the deploy (a "| tail" once hid one).
+out=$(docker exec healthlog-companion companion refresh 2>&1) || { echo "$out" | tail -20; exit 1; }
+echo "$out" | tail -1
 trap - EXIT
 echo "== deployed. Backup taken before this deploy: $dump"

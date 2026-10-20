@@ -12,6 +12,7 @@ import datetime as dt
 import logging
 from dataclasses import dataclass
 
+import sqlalchemy as sa
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
@@ -23,6 +24,10 @@ from .db import session_scope
 from .timeutil import current_day
 
 log = logging.getLogger("companion.jobs")
+
+# One refresh at a time: the jobs process refreshes on start, a deploy refreshes to verify, and "Rebuild now"
+# can be pressed at any moment. Each rebuilds the feature table, so two at once collide on its key.
+REFRESH_LOCK = 0x636F6D70  # "comp"
 
 
 def contract_check() -> int:
@@ -44,7 +49,11 @@ class RefreshResult:
 
 
 def refresh(db: Session) -> RefreshResult:
-    """Everything that turns HealthLog's data into our daily features (caller commits)."""
+    """Everything that turns HealthLog's data into our daily features (caller commits).
+
+    Waits for any refresh already running (a transaction-level advisory lock, released at commit or rollback).
+    """
+    db.execute(sa.text("SELECT pg_advisory_xact_lock(:key)"), {"key": REFRESH_LOCK})
     settings = get_settings()
     seeded = metric_settings.seed(db)
     synced = mood.sync_from_raw(db)
