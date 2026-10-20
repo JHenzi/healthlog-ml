@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 from functools import lru_cache
+from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, field_validator
@@ -29,6 +30,8 @@ class Settings(BaseSettings):
     login_lockout_minutes: int = Field(default=15, alias="LOGIN_LOCKOUT_MINUTES")
     # Same semantics as HealthLog's TRUSTED_PROXIES (empty = private ranges, '*' = all).
     trusted_proxies: str = Field(default="", alias="TRUSTED_PROXIES")
+    # The collector's files (weather), mounted read-only. No file there means weather is off.
+    outside_dir: Path = Field(default=Path("/outside"), alias="OUTSIDE_DIR")
 
     @field_validator("tz")
     @classmethod

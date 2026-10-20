@@ -132,3 +132,44 @@ def test_only_one_refresh_runs_at_a_time(db, companion_engine):
         taken = other.execute(text("SELECT pg_try_advisory_xact_lock(:k)"), {"k": jobs.REFRESH_LOCK}).scalar_one()
         other.rollback()
     assert taken is False
+
+
+@pytest.fixture
+def outside_dir(tmp_path, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("OUTSIDE_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    yield tmp_path
+    get_settings.cache_clear()
+
+
+def _weather_file(path, days: int, temp: str = "11.0") -> None:
+    from app.outside import COLUMNS, FILE_NAME, HEADER
+
+    start = dt.datetime(2026, 10, 1, tzinfo=dt.UTC)
+    lines = [",".join(HEADER)]
+    for i in range(days * 24):
+        stamp = (start + dt.timedelta(hours=i)).strftime("%Y-%m-%dT%H:00Z")
+        values = {"temperature_c": temp, "pressure_hpa": "1012.0"}
+        lines.append(",".join([stamp, *(values.get(c, "") for c in COLUMNS)]))
+    (path / FILE_NAME).write_text("\n".join(lines) + "\n")
+
+
+def test_weather_loads_from_the_collector_file_into_features(db, outside_dir):
+    assert jobs.refresh(db).weather.status == "off"  # no file: weather is off, nothing else changes
+    _weather_file(outside_dir, 5)
+    result = jobs.refresh(db)
+    assert (result.weather.status, result.weather.hours) == ("loaded", 120)
+    temps = features.series(db, "weather.temp_mean")
+    assert dt.date(2026, 10, 2) in temps and set(temps.values()) == {11.0}
+    assert jobs.refresh(db).weather.hours == 120  # idempotent upsert
+
+
+def test_a_bad_weather_file_loads_nothing_and_keeps_what_was_there(db, outside_dir):
+    _weather_file(outside_dir, 3)
+    jobs.refresh(db)
+    before = features.series(db, "weather.temp_mean")
+    _weather_file(outside_dir, 3, temp="999")  # outside the plausible range
+    assert jobs.refresh(db).weather.status == "rejected"
+    assert features.series(db, "weather.temp_mean") == before

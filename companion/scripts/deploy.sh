@@ -49,7 +49,7 @@ trap 'echo; echo "!! deploy stopped. To put the data back: companion/scripts/res
 case "$what" in
 companion)
     echo "== Companion from $(git -C "$repo" rev-parse --short HEAD)"
-    compose up -d --build --force-recreate companion-web companion-jobs
+    compose up -d --build --force-recreate companion-collector companion-web companion-jobs
     wait_healthy healthlog-companion
     ;;
 healthlog)

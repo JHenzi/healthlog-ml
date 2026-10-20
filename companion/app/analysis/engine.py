@@ -3,7 +3,9 @@
 Three horizons, one Benjamini-Hochberg family (R8):
 
 - **day**: relationships between features of different families, same day
-  (lag 0) and next day in both directions (lag 1). Continuous pairs use
+  (lag 0) and next day in both directions (lag 1). Outside data (weather) is
+  only ever the earlier side: never an outcome, and never tested for its own
+  changes or weekday rhythm. Continuous pairs use
   Spearman on residuals; a yes/no feature (a count that is 0 on some observed
   days and >0 on others, e.g. "felt anxious") uses Mann-Whitney + Cliff's
   delta, or Fisher's exact test when both sides are yes/no.
@@ -125,12 +127,20 @@ def _group_test(flag: pd.Series, acf_flag: np.ndarray, cont: _Prepared, cont_raw
     return result, medians
 
 
+def _exogenous(meta: FeatureMeta) -> bool:
+    return meta.family in C.EXOGENOUS_FAMILIES
+
+
 def _associations(prepared: dict[str, _Prepared], meta: Mapping[str, FeatureMeta]) -> list[Finding]:
     out: list[Finding] = []
     for a, b in combinations(sorted(prepared), 2):
-        if meta[a].family == meta[b].family:
+        if meta[a].family == meta[b].family or (_exogenous(meta[a]) and _exogenous(meta[b])):
             continue
+        if _exogenous(meta[b]):
+            a, b = b, a  # outside data reads as the first side ("on warmer days, ...")
         for x, y, lag in ((a, b, 0), (a, b, 1), (b, a, 1)):
+            if lag and _exogenous(meta[y]):
+                continue  # nothing you do today goes with tomorrow's weather
             finding = _pair(x, y, lag, prepared[x], prepared[y])
             if finding is not None:
                 out.append(finding)
@@ -255,7 +265,7 @@ def _lag_curves(prepared: Mapping[str, _Prepared], meta: Mapping[str, FeatureMet
         if not _is_exposure(x, meta[x]):
             continue
         for y in sorted(prepared):
-            if y == x or meta[y].family == meta[x].family:
+            if y == x or meta[y].family == meta[x].family or _exogenous(meta[y]):
                 continue
             px, py = prepared[x], prepared[y]
             res = distributed_lag(px.raw, py.raw, C.DLM_MAX_LAG, C.DLM_DEGREE, C.DLM_MIN_DAYS)
@@ -441,7 +451,7 @@ def analyse(
         p = _prepare(series, m)
         if p is not None:
             prepared[feature] = p
-    raw = {f: p.raw for f, p in prepared.items()}
+    raw = {f: p.raw for f, p in prepared.items() if not _exogenous(meta[f])}
 
     candidates = _associations(prepared, meta) + _lag_curves(prepared, meta) + _changes(raw, today) + _weekdays(raw)
     adjusted = benjamini_hochberg([f.p for f in candidates])  # one family for everything (R8)

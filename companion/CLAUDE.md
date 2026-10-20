@@ -103,3 +103,4 @@ Handoff, setup and the work queue: [`docs/next-steps.md`](docs/next-steps.md).
 - Path allowlist (R1): `sh companion/scripts/check_paths.sh upstream/dev`
 - Upstream contract (live): `docker exec healthlog-companion companion check-upstream`
 - Rebuild features and insights (live): `docker exec healthlog-companion companion refresh`
+- Weather backfill (live, opt-in): `docker exec healthlog-companion-collector collector backfill --since <date>`

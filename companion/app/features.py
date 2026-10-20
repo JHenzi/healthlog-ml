@@ -1,8 +1,8 @@
 """The daily feature table: one value per (Companion day, feature) over every source (design §4.1).
 
 Sources so far: every HealthLog metric (``hl.<metric>``), sleep, stress, energy
-reserve, workouts, State of Mind and the user's own trackers
-(``tracker.<key>.*``). Weather (M3) will join the same table. Assembly is
+reserve, workouts, State of Mind, the user's own trackers
+(``tracker.<key>.*``) and the weather (``weather.*``, M3). Assembly is
 pure (``assemble``); ``rebuild`` reads through the read contract and replaces
 the cache in one transaction, so new feature definitions apply to all history.
 
@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from . import mood, trackers, upstream
+from . import mood, outside, trackers, upstream
 from .auth import now_utc
 from .capture import spec_of
 from .models import DailyFeature, DayReview, FeatureDef, MetricSetting, Observation, StateOfMindEntry, Tracker
@@ -268,6 +268,10 @@ def rebuild(db: Session, zone: ZoneInfo, boundary: dt.time) -> RebuildResult:
     )
     fs.defs |= tracked.defs
     fs.values |= tracked.values
+    weather = outside.weather_features(outside.stored_hours(db), zone, boundary, now_utc())
+    for d in outside.DEFS:
+        definition = Def(d.feature, d.label, d.unit, "weather", analyse=d.analyse, family="weather")
+        fs.add(definition, weather.get(d.feature, {}))
     db.execute(sa.delete(DailyFeature))
     db.execute(sa.delete(FeatureDef))
     if fs.defs:

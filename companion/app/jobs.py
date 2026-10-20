@@ -2,8 +2,9 @@
 
 - 04:10 local: the read-contract check.
 - 04:15 local, after HealthLog's 03:30 analysis and before its 04:30 backup:
-  ``refresh`` (seed metric settings, copy new State of Mind entries, rebuild
-  the daily feature table, run the insight engine).
+  ``refresh`` (seed metric settings, copy new State of Mind entries, load
+  the collector's weather file, rebuild the daily feature table, run the
+  insight engine).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
 
-from . import features, metric_settings, mood, upstream
+from . import features, metric_settings, mood, outside, upstream
 from .analysis import run as analysis
 from .config import get_settings
 from .db import session_scope
@@ -44,6 +45,7 @@ def contract_check() -> int:
 class RefreshResult:
     seeded: metric_settings.SeedResult
     mood: mood.SyncResult
+    weather: outside.LoadResult
     features: features.RebuildResult
     insights: analysis.RunResult
 
@@ -57,18 +59,22 @@ def refresh(db: Session) -> RefreshResult:
     settings = get_settings()
     seeded = metric_settings.seed(db)
     synced = mood.sync_from_raw(db)
+    weather = outside.load_weather(db, settings.outside_dir)
     rebuilt = features.rebuild(db, settings.zone, settings.day_boundary)
     found = analysis.run(db, current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary))
     log.info(
-        "refresh: %d new metric settings, %d mood entries from %d payloads, %d features / %d rows, %d insights",
+        "refresh: %d new metric settings, %d mood entries from %d payloads, weather %s (%d hours), "
+        "%d features / %d rows, %d insights",
         seeded.added,
         synced.entries,
         synced.payloads,
+        weather.status,
+        weather.hours,
         rebuilt.features,
         rebuilt.rows,
         found.insights,
     )
-    return RefreshResult(seeded, synced, rebuilt, found)
+    return RefreshResult(seeded, synced, weather, rebuilt, found)
 
 
 def nightly_refresh() -> None:

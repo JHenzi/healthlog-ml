@@ -103,10 +103,12 @@ useful page.
 Weather history can be backfilled, so this delivers insights on existing
 data immediately.
 
-- [ ] Opt-in config: coarse home location (rounded to ~10 km), sources on/off.
-- [ ] Open-Meteo client: daily + hourly weather (temperature, humidity, pressure, precipitation, cloud, wind, UV) and air quality; **historical backfill** for all HealthLog days; nightly incremental fetch; `source_cache` table.
-- [ ] Computed locally: sunrise/sunset/day length (`astral`), public holidays (`holidays`).
-- [ ] A first simple insight pass on existing data: same-day and next-day associations between weather and sleep, HRV, steps, stress.
+- [x] Opt-in config: coarse home location (rounded to 0.1°, ~10 km) in `.env`; off when unset.
+- [x] Open-Meteo collector sidecar: hourly weather (temperature, humidity, dew point, pressure, precipitation, cloud, wind, UV, sunlight) and air quality (PM2.5, PM10, US AQI); **historical backfill** (`collector backfill --since`); nightly refresh of the last 10 days. A validated CSV on a shared volume replaces the planned `source_cache` table: the Companion stores the hours in `weather_hours`.
+- [ ] Computed locally: sunrise/sunset/day length, public holidays (needs `astral`/`holidays` or a local formula; PyPI is DNS-blocked here, see next-steps §5).
+- [x] Weather in the engine as outside data: same-day and weather-then-next-day associations and spread-over-days curves against everything else, never as an outcome (analysis-engine.md, "Outside data").
+
+**Status (2026-10-20):** built and validated; live once a location is set in `.env` (next-steps §2). Associations need the usual 21 overlapping days, which the backfill provides at once for HealthLog's series.
 
 **Done when:** weather features exist for every day since 2026-07-16; the Today page mentions relevant weather ("pressure dropped 9 hPa since yesterday"); a few weather associations appear (with *n* and honest strength).
 
