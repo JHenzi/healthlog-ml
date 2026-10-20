@@ -220,6 +220,36 @@ def delta_interval(
     return 2 * lo - 1, 2 * hi - 1
 
 
+@dataclass(frozen=True)
+class PartialResult:
+    rho: float  # rank correlation of x and y after both lose what the covariates explain
+    rho_raw: float  # the same days without the covariates
+    n: int
+    resid_x: pd.Series
+    resid_y: pd.Series
+
+
+def partial_spearman(frame: pd.DataFrame, x: str, y: str, covariates: list[str]) -> PartialResult | None:
+    """Partial Spearman: rank every column, regress x and y ranks on the covariate ranks, correlate what is left."""
+    frame = frame.dropna()
+    if len(frame) < 4 or frame[x].nunique() < 2 or frame[y].nunique() < 2:
+        return None
+    ranks = frame.rank()
+    design = np.column_stack([np.ones(len(ranks)), ranks[covariates].to_numpy()])
+
+    def left(col: str) -> np.ndarray:
+        target = ranks[col].to_numpy()
+        coef, *_ = np.linalg.lstsq(design, target, rcond=None)
+        return target - design @ coef
+
+    rx, ry = left(x), left(y)
+    if rx.std() == 0 or ry.std() == 0:
+        return None
+    rho = float(np.corrcoef(rx, ry)[0, 1])
+    rho_raw = float(np.corrcoef(ranks[x], ranks[y])[0, 1])
+    return PartialResult(rho, rho_raw, len(frame), pd.Series(rx, frame.index), pd.Series(ry, frame.index))
+
+
 def benjamini_hochberg(pvalues: list[float]) -> list[float]:
     """Adjusted p-values (step-up), same order as the input."""
     m = len(pvalues)

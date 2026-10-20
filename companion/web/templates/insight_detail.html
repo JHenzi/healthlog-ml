@@ -15,6 +15,7 @@
     <dt>Method</dt><dd>{{ method }}</dd>
     <dt>Effect</dt><dd>{{ "%.3f"|format(i.effect) }} ({{ i.strength }})</dd>
     {% if likely %}<dt>Likely range</dt><dd>{{ range_bar(likely) }}<span class="muted small">95% of the time a range built this way contains the true value. It allows for day-to-day carry-over, so it is wider than a textbook one.</span></dd>{% endif %}
+    {% if adjusted %}<dt>Re-checked</dt><dd><span class="recheck recheck-{{ adjusted.verdict }}">{{ adjusted.text|capitalize }}</span>{{ range_bar(adjusted.range) }}<span class="muted small">The same link after removing, day by day, what these everyday drivers account for. A link that only runs through them fades here.</span></dd>{% endif %}
     <dt>Days</dt><dd>{{ i.n }}{% if i.n_a is not none %} ({{ i.n_a }} vs {{ i.n_b }}){% endif %}{% if i.details.n_eff %}; effective {{ i.details.n_eff }} after allowing for day-to-day carry-over{% endif %}</dd>
     <dt>p (raw / adjusted)</dt><dd>{{ "%.2g"|format(i.p) }} / {{ "%.2g"|format(i.p_adj) }}</dd>
     {% if i.lag is not none %}<dt>Timing</dt><dd>{% if i.lag == 0 %}same day{% else %}first measure on one day, second on the next{% endif %}</dd>{% endif %}

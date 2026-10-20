@@ -35,10 +35,12 @@ from .pure import (
     benjamini_hochberg,
     cliffs_delta,
     delta_interval,
+    effective_n,
     kruskal_weekday,
     lag1_autocorr,
     mann_whitney_eff,
     mean_shift,
+    partial_spearman,
     phi_interval,
     residualize,
     rho_interval,
@@ -312,6 +314,57 @@ def _weekdays(prepared_raw: Mapping[str, pd.Series]) -> list[Finding]:
     return out
 
 
+def _view(name: str, p: _Prepared, as_flag: bool) -> pd.Series:
+    return p.flag if as_flag and p.flag is not None else p.resid
+
+
+def _adjusted(f: Finding, prepared: Mapping[str, _Prepared], meta: Mapping[str, FeatureMeta]) -> dict | None:
+    """Re-read a reported relationship allowing for everyday drivers (ADJUST_FOR): does it hold, or do they explain it?
+
+    The same residuals the finding came from (a yes/no side as 0/1), with each driver on the later day and, for
+    a next-day finding, on the earlier day too. Partial Spearman on the overlapping days, with a likely range on
+    the effective n less the covariates.
+    """
+    if f.kind != "association" or f.method == "fisher" or f.b is None:
+        return None
+    families = {meta[f.a].family, meta[f.b].family}
+    drivers = [c for c in C.ADJUST_FOR if c in prepared and c not in (f.a, f.b) and meta[c].family not in families]
+    if not drivers:
+        return None
+    side = f.details.get("flag_side")
+    x = shift_days(_view(f.a, prepared[f.a], side == "a"), f.lag or 0)
+    y = _view(f.b, prepared[f.b], side == "b")
+    columns = {"x": x, "y": y}
+    for c in drivers:
+        columns[c] = prepared[c].resid
+        if f.lag:
+            columns[f"{c}@before"] = shift_days(prepared[c].resid, f.lag)
+    frame = pd.concat(columns, axis=1, join="inner").dropna()
+    covariates = [k for k in columns if k not in ("x", "y")]
+    if len(frame) < C.MIN_PAIRED_DAYS:
+        return None
+    res = partial_spearman(frame, "x", "y", covariates)
+    if res is None:
+        return None
+    n_eff = effective_n(res.n, acf(res.resid_x), acf(res.resid_y)) - len(covariates)
+    lo, hi = rho_interval(res.rho, max(n_eff, 3.0))
+    same_sign = res.rho * res.rho_raw > 0
+    if same_sign and (lo > 0 or hi < 0):
+        verdict = "holds"
+    elif same_sign and abs(res.rho) >= C.ADJUST_EXPLAINED_SHARE * abs(res.rho_raw):
+        verdict = "weaker"
+    else:
+        verdict = "explained"
+    return {
+        "for": drivers,
+        "rho": round(res.rho, 3),
+        "unadjusted": round(res.rho_raw, 3),
+        "n": res.n,
+        "ci": _rounded((lo, hi)),
+        "verdict": verdict,
+    }
+
+
 def _passes_floor(f: Finding) -> bool:
     if f.kind == "association":
         return abs(f.effect) >= (C.RHO_FLOOR if f.method in ("spearman", "fisher") else C.CLIFF_FLOOR)
@@ -369,6 +422,10 @@ def analyse(
         if key not in best or f.score > best[key].score:
             best[key] = f
     ranked = sorted(best.values(), key=lambda f: f.score, reverse=True)
+    ranked = [
+        replace(f, details={**f.details, "adjusted": adj}) if (adj := _adjusted(f, prepared, meta)) else f
+        for f in ranked
+    ]
     if run_stats is not None:
         run_stats.features, run_stats.eligible = len(values), len(prepared)
         run_stats.tests, run_stats.reported = len(candidates), len(ranked)
