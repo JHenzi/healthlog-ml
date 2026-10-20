@@ -74,3 +74,20 @@ def test_adjusted_recheck_in_words():
     one = adjusted(_insight(details={"adjusted": adj | {"for": ["sleep.total_h"], "verdict": "explained"}}))
     assert one.text == "largely accounted for by sleep"
     assert adjusted(_insight(details={})) is None
+
+
+def test_spread_link_reads_days_later_and_draws_its_curve():
+    from app.glance import lag_bars
+
+    i = _insight(
+        method="distributed_lag",
+        lag=3,
+        effect=0.35,
+        details={"curve": [0.0, 0.05, 0.2, 0.3, 0.2, 0.0, -0.05, 0.0], "peak": 3},
+    )
+    c = card(i, DEFS)
+    assert (c.next_day, c.days_later, c.link) == (False, 3, "together")
+    bars = lag_bars(i)
+    assert len(bars) == 8 and [b.lag for b in bars if b.peak] == [3]
+    assert bars[3].height == 26 and bars[3].up and not bars[6].up
+    assert lag_bars(_insight()) == []

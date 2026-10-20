@@ -49,6 +49,13 @@ def _evidence(f: Finding) -> str:
 
 def association(f: Finding, meta: Mapping[str, FeatureMeta]) -> str:
     a, b = meta[f.a], meta[f.b]
+    if f.method == "distributed_lag":
+        direction = "higher" if f.effect > 0 else "lower"
+        peak = f.details["peak"]
+        return (
+            f"Higher {name(a)} tends to be followed by {direction} {name(b)} over the next days, "
+            f"most around {peak} days later ({_evidence(f)})."
+        )
     if f.method == "spearman":
         direction = "higher" if f.effect > 0 else "lower"
         if f.lag == 0:

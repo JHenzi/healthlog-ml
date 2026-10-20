@@ -131,7 +131,7 @@ data immediately.
 
 - [ ] **Feature table builder**: one row per day, columns from HealthLog, State of Mind, trackers, weather; the reviewed-day rule (missing ≠ zero). *(The table and the HealthLog + mood columns exist since M2; trackers and weather add columns.)*
 - [x] Day-level relationships with lags (Spearman on residuals; Mann-Whitney/Cliff's delta; Fisher), FDR, effect floors, minimum support. Lags 0 and +1 in both directions; families keep definitional pairs out.
-- [ ] **Distributed lag models** for daily exposures (weather, sleep, caffeine) → outcome curves over lags 0–7 ("rain Monday → mood Wednesday"). *(Needs months of data; next.)*
+- [x] **Distributed lag models** for daily exposures (trackers, sleep, caffeine, daylight; weather when it lands) → outcome curves over lags 0–7, one test per pair, reported when the peak is 2+ days later (2026-10-19). Calibrated on noise, trend and weekday confounders (analysis-engine.md).
 - [x] Week/month views: last 7 vs 28 days and last 28 vs 56 days, as autocorrelation-aware mean shifts.
 - [x] Descriptive insights: weekday rhythms (Kruskal-Wallis); 30-day vs prior on the Metrics page. *(Streaks and bests: later.)*
 - [x] Adjusted re-check of every reported relationship for sleep and steps (partial Spearman; "holds", "weaker", "largely accounted for"), validated on planted confounders (2026-10-19).
