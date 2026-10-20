@@ -5,18 +5,19 @@ set up a machine to work on it, and the work queue in order. Strategy is in
 [`roadmap.md`](roadmap.md), the milestone checklist in [`plan.md`](plan.md),
 risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 
-*Last updated 2026-10-19.*
+*Last updated 2026-10-20.*
 
 ## 1. Where things stand
 
 | Piece | State |
 |---|---|
-| Fork `main` (`JHenzi/healthlog-ml`) | upstream `main` as of its #106 release (includes #104/#105) + Companion M1, M2, M4 part 1, M5 v1 (fork PRs #1–#4, all CI green). Upstream's #108–#110 are on their `dev` and arrive with their next release. |
-| Upstream PRs | #104, #105 (backfill split) and #108 (time zone) **merged** into `anym001/healthlog:dev`; #111 (State of Mind) **merged** on 2026-10-18, with the maintainer's follow-ups in #112. The live HealthLog runs the released `:latest` image, which is still at migration 0021, so `public.state_of_mind` doesn't exist there yet |
-| Live services | `healthlog-companion` (web, `127.0.0.1:8020`) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis), built from the fork's `main` |
-| Companion DB | schema `companion`, migrations up to `0004_trackers`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
-| Data | 76 daily series (1,834 day values since 2026-07-15), 30 State of Mind entries, 0 trackers yet |
-| Insights | engine live and validated; 0 findings yet: only 26 of 76 series have ≥ 21 days, and pairs overlap on ~25 days |
+| Fork `main` (`JHenzi/healthlog-ml`) | upstream `dev` as of #120 (merged 2026-10-20, fork PR #24) + the Companion through the distributed-lag and refresh-lock slices (fork PRs #1–#23, CI green) |
+| Upstream PRs | all ours merged: #104, #105, #108, #111 (State of Mind), #113, #117 (caffeine, HRV RMSSD), #118 (heart rate notifications, ECG). His #116 (symptoms, medications), #119 (German symptom names) and #120 (telemetry off) are in too |
+| Live HealthLog | `healthlog-local:c2131ca`, built from the fork (`deploy.sh healthlog build`), schema `0027_timescaledb_telemetry_off` |
+| Live Companion | `healthlog-companion` (web, `127.0.0.1:8020`) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis) |
+| Companion DB | schema `companion`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
+| Data | 87 daily series (2,109 day values since 2026-07-15); sleep since 2026-09-24 (that is all Apple Health has); 3 heart rate notifications, 6 ECGs; 0 symptoms, 0 medications, 0 workouts |
+| Insights | engine live and validated; 0 findings yet: 1,189 tests over 32 of 87 series, too few overlapping days. Sleep reaches 56 days (spread-over-days) in mid-November |
 
 ## 2. Your to-dos (no code)
 
@@ -111,52 +112,27 @@ contract check and a refresh. HealthLog upgrades, rehearsals and rollback:
   `upstream/dev` and gets a PR there.
 - **Docs:** updated in the same PR. When a milestone moves, update `plan.md`
   (checkboxes + a **Status** line), `roadmap.md`, and this file.
-- **Syncing upstream** after each of their releases:
-  ```bash
-  git fetch upstream
-  git switch main && git merge upstream/main
-  ```
-  Then rebuild, run `companion check-upstream`, and run `backup.sh`.
+- **Syncing upstream:** merge `upstream/dev` on a branch, rehearse, PR,
+  deploy with `deploy.sh healthlog build`; the steps are in
+  [`upgrading.md`](upgrading.md), *Folding in upstream changes*.
 
 ## 4. Work queue
 
 ### 4.1 Upstream (track A)
 
-- **State of Mind (#111, merged to `dev`):** once a HealthLog release ships
-  migration 0023 and the live image is updated, read `public.state_of_mind`
-  through the contract instead of `raw_ingest`.
-  To switch: add the table to `CONTRACT`, point `mood.sync_from_raw` at it
-  (or replace it), and keep the `mood_entries` copy so history and the
-  analysis don't change.
-- **A4 unaggregated sleep:** fixed upstream in #113 (folds segments into
-  nights, counts what it can't use, adds `healthlog rederive-sleep`). When a
-  release ships it, follow *Folding in upstream changes* in
-  [`roadmap.md`](roadmap.md) and run the re-derive.
-- **Defensive sync (do next):** pin the HealthLog image to a release tag
-  instead of `:latest` (`HEALTHLOG_VERSION=v0.6.1` in `.env`, the version
-  running today), and add a nightly CI job that runs the contract
-  check against `:dev`.
-- **Read API v1 (A6):** offered by the maintainer, requirements on #107.
-  Not scheduled.
-- **A2 registry entries** (caffeine, alcohol, water, mindful minutes), as
-  asked on #107. Not symptoms: see A5.
-- **A5 Symptoms and Medications** (low priority: we track neither yet;
-  symptoms first, medications second; shape proposed on #111). HAE exports these as their own data types,
-  not Health Metrics, so they get a parser and table each, like State of
-  Mind. The maintainer asked to discuss the shape first. Facts from HAE's
-  export-format docs (no samples in our `raw_ingest` yet):
-  - `data.symptoms[]`: `start`, `end` (equal for a point in time), `name`
-    (e.g. "Headache"), `severity` (e.g. Mild/Moderate/Severe, not a closed
-    set), `userEntered`, `source`. **No entry id**, unlike State of Mind.
-  - `data.medications[]` (iOS 26+): `displayText`, `nickname`, `form`,
-    `start`/`end` (the course), `scheduledDate`, `status` (Taken, Skipped,
-    Snoozed, Not Logged, …), `isArchived`, `dosage` (unitless), `codings[]`
-    (RxNorm/NDC). No entry id either.
-  - Draft shape: `symptoms` keyed by (`start_time`, `name`, `source`), with
-    `severity` kept as raw text; `medication_doses` keyed by (medication
-    identity, `scheduled_time`). Open questions: whether `name` arrives
-    localised (as workout names do), and how unscheduled as-needed doses are
-    keyed. Symptoms first; medications after a real sample.
+Follow upstream: merge his `dev` about monthly, or sooner for something we
+need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
+
+- **Read API v1 (A6):** offered by the maintainer, requirements on #107. He
+  mentions it again on #116 ("once that exists"). Not scheduled.
+- **A2 registry entries** still open: alcohol, water, mindful minutes
+  (caffeine went in with #117).
+- **Sanitised fixtures he asked for (#118):** a German-locale ECG export
+  (classification text is probably localised) and any heart rate
+  notification other than `low_heart_rate_notification`. Only when one turns
+  up in a real export.
+- **Medications:** his #116 keys doses on `(medication, dose_time)`. Nothing
+  to do until we log any.
 
 ### 4.2 M3: weather (next build; it backfills, so findings come quickly)
 
@@ -235,6 +211,24 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
   have timestamps.
 - **Performance:** the pair loop is O(features²); about 7 s for a full
   refresh today. Watch it as trackers and weather add series (risks.md F1).
+
+### 4.5 Found along the way (do when convenient)
+
+- **Features from HealthLog's new tables:** heart rate notifications and ECGs
+  (counts per day, ECG average HR), symptoms (present or not, by slug, once
+  logged). Each needs a contract entry (R3) and a `check-upstream` update.
+- **Mood from `public.state_of_mind`:** HealthLog parses it since 0023. We
+  still parse `raw_ingest` ourselves (`mood.sync_from_raw`) so history and
+  the analysis stay unchanged; switching means a contract entry and a check
+  that both give the same entries.
+- ~~**Grafana telemetry**~~: done 2026-10-20, turned off in `compose.local.yml`
+  (upstream #120 documents the variables but doesn't ship our Grafana).
+- **A change to upstream's `docker-compose.yml` recreates `healthlog-db`**
+  on deploy (seen with #120's `TIMESCALEDB_TELEMETRY`): a few seconds of
+  downtime, data safe on its volume.
+- **Re-derives are slow:** each `rederive-*` re-reads every raw payload
+  (~80 s each for 153 payloads). Fine now; worth a note to upstream if
+  `raw_ingest` grows a lot.
 
 ## 5. Things learned the hard way
 
