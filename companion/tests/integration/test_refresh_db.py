@@ -183,8 +183,8 @@ def test_the_almanac_follows_latitude_and_country(db, archive, monkeypatch):
     try:
         jobs.refresh(db)  # TZ is America/New_York: US holidays by default
         defs = {f.feature: f for f in db.execute(select(FeatureDef)).scalars() if f.source == "almanac"}
-        assert set(defs) == {"almanac.moon", "almanac.day_length", "almanac.holiday", "almanac.holiday_runup"}
-        assert defs["almanac.day_length"].analyse is False and defs["almanac.holiday"].family == "almanac"
+        assert set(defs) == {"almanac.moon", "almanac.day_length", "almanac.holiday", "almanac.days_to_holiday"}
+        assert all(d.analyse for d in defs.values()) and defs["almanac.holiday"].family == "almanac"
         assert set(features.series(db, "almanac.holiday").values()) <= {0.0, 1.0}
         monkeypatch.setenv("HOLIDAYS_COUNTRY", "none")
         monkeypatch.delenv("WEATHER_LATITUDE")

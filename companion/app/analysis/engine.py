@@ -3,9 +3,9 @@
 Three horizons, one Benjamini-Hochberg family (R8):
 
 - **day**: relationships between features of different families, same day
-  (lag 0) and next day in both directions (lag 1). Outside data (weather, almanac) is
-  only ever the earlier side: never an outcome, and never tested for its own
-  changes or weekday rhythm. Continuous pairs use
+  (lag 0) and next day in both directions (lag 1). Every analysed feature is
+  tested the same way, weather and calendar included (R17: measure, don't
+  presume). Continuous pairs use
   Spearman on residuals; a yes/no feature (a count that is 0 on some observed
   days and >0 on others, e.g. "felt anxious") uses Mann-Whitney + Cliff's
   delta, or Fisher's exact test when both sides are yes/no.
@@ -127,20 +127,12 @@ def _group_test(flag: pd.Series, acf_flag: np.ndarray, cont: _Prepared, cont_raw
     return result, medians
 
 
-def _exogenous(meta: FeatureMeta) -> bool:
-    return meta.family in C.EXOGENOUS_FAMILIES
-
-
 def _associations(prepared: dict[str, _Prepared], meta: Mapping[str, FeatureMeta]) -> list[Finding]:
     out: list[Finding] = []
     for a, b in combinations(sorted(prepared), 2):
-        if meta[a].family == meta[b].family or (_exogenous(meta[a]) and _exogenous(meta[b])):
-            continue
-        if _exogenous(meta[b]):
-            a, b = b, a  # outside data reads as the first side ("on warmer days, ...")
+        if meta[a].family == meta[b].family:
+            continue  # linked by definition (total and deep sleep, a tracker's count and its first time)
         for x, y, lag in ((a, b, 0), (a, b, 1), (b, a, 1)):
-            if lag and _exogenous(meta[y]):
-                continue  # nothing you do today goes with tomorrow's weather
             finding = _pair(x, y, lag, prepared[x], prepared[y])
             if finding is not None:
                 out.append(finding)
@@ -254,37 +246,38 @@ def _rounded(interval: tuple[float, float]) -> list[float]:
     return [round(interval[0], 3), round(interval[1], 3)]
 
 
-def _is_exposure(feature: str, meta: FeatureMeta) -> bool:
-    return feature in C.DLM_EXPOSURES or meta.family.startswith(C.DLM_EXPOSURE_FAMILY_PREFIXES)
-
-
 def _lag_curves(prepared: Mapping[str, _Prepared], meta: Mapping[str, FeatureMeta]) -> list[Finding]:
-    """Exposure → outcome over days 0..DLM_MAX_LAG: one smooth curve and one test per pair (R8)."""
+    """Each pair over days 0..DLM_MAX_LAG: one smooth curve per direction, one test per pair (R8).
+
+    Both directions are fitted; the pair keeps the one with the smaller p, doubled (Bonferroni over the two
+    directions), so trying both orders (R17) doesn't add a second test to the family.
+    """
     out: list[Finding] = []
-    for x in sorted(prepared):
-        if not _is_exposure(x, meta[x]):
+    for x, y in combinations(sorted(prepared), 2):
+        if meta[x].family == meta[y].family:
             continue
-        for y in sorted(prepared):
-            if y == x or meta[y].family == meta[x].family or _exogenous(meta[y]):
-                continue
-            px, py = prepared[x], prepared[y]
-            res = distributed_lag(px.raw, py.raw, C.DLM_MAX_LAG, C.DLM_DEGREE, C.DLM_MIN_DAYS)
-            if res is None:
-                continue
-            out.append(
-                Finding(
-                    "association",
-                    "days",
-                    x,
-                    y,
-                    res.peak,
-                    "distributed_lag",
-                    res.r,
-                    res.p,
-                    res.n,
-                    details={"curve": res.curve, "peak": res.peak, "n_eff": round(res.n_eff, 1)},
-                )
+        fits = []
+        for a, b in ((x, y), (y, x)):
+            res = distributed_lag(prepared[a].raw, prepared[b].raw, C.DLM_MAX_LAG, C.DLM_DEGREE, C.DLM_MIN_DAYS)
+            if res is not None:
+                fits.append((res.p, a, b, res))
+        if not fits:
+            continue
+        p, a, b, res = min(fits, key=lambda t: t[0])
+        out.append(
+            Finding(
+                "association",
+                "days",
+                a,
+                b,
+                res.peak,
+                "distributed_lag",
+                res.r,
+                min(1.0, p * len(fits)),
+                res.n,
+                details={"curve": res.curve, "peak": res.peak, "n_eff": round(res.n_eff, 1)},
             )
+        )
     return out
 
 
@@ -363,8 +356,25 @@ def _view(name: str, p: _Prepared, as_flag: bool) -> pd.Series:
     return p.flag if as_flag and p.flag is not None else p.resid
 
 
-def _adjusted(f: Finding, prepared: Mapping[str, _Prepared], meta: Mapping[str, FeatureMeta]) -> dict | None:
-    """Re-read a reported relationship allowing for everyday drivers (ADJUST_FOR): does it hold, or do they explain it?
+def _linked(ranked: list[Finding]) -> dict[str, dict[str, float]]:
+    """Feature -> the features reported as linked to it (day-level), with the strongest score."""
+    out: dict[str, dict[str, float]] = {}
+    for f in ranked:
+        if f.kind != "association" or f.method == "distributed_lag" or f.b is None:
+            continue
+        for x, y in ((f.a, f.b), (f.b, f.a)):
+            out.setdefault(x, {})[y] = max(out.get(x, {}).get(y, 0.0), f.score)
+    return out
+
+
+def _adjusted(
+    f: Finding,
+    prepared: Mapping[str, _Prepared],
+    meta: Mapping[str, FeatureMeta],
+    linked: Mapping[str, Mapping[str, float]],
+) -> dict | None:
+    """Re-read a reported relationship allowing for the series reported as linked to both sides: does it hold, or
+    do they explain it?
 
     The same residuals the finding came from (a yes/no side as 0/1), with each driver on the later day and, for
     a next-day finding, on the earlier day too. Partial Spearman on the overlapping days, with a likely range on
@@ -373,7 +383,9 @@ def _adjusted(f: Finding, prepared: Mapping[str, _Prepared], meta: Mapping[str, 
     if f.kind != "association" or f.method in ("fisher", "distributed_lag") or f.b is None:
         return None
     families = {meta[f.a].family, meta[f.b].family}
-    drivers = [c for c in C.ADJUST_FOR if c in prepared and c not in (f.a, f.b) and meta[c].family not in families]
+    la, lb = linked.get(f.a, {}), linked.get(f.b, {})
+    shared = [c for c in la.keys() & lb.keys() if c in prepared and meta[c].family not in families]
+    drivers = sorted(shared, key=lambda c: (-min(la[c], lb[c]), c))[: C.ADJUST_MAX_DRIVERS]
     if not drivers:
         return None
     side = f.details.get("flag_side")
@@ -402,6 +414,7 @@ def _adjusted(f: Finding, prepared: Mapping[str, _Prepared], meta: Mapping[str, 
         verdict = "explained"
     return {
         "for": drivers,
+        "labels": [meta[c].label for c in drivers],
         "rho": round(res.rho, 3),
         "unadjusted": round(res.rho_raw, 3),
         "n": res.n,
@@ -451,7 +464,7 @@ def analyse(
         p = _prepare(series, m)
         if p is not None:
             prepared[feature] = p
-    raw = {f: p.raw for f, p in prepared.items() if not _exogenous(meta[f])}
+    raw = {f: p.raw for f, p in prepared.items()}
 
     candidates = _associations(prepared, meta) + _lag_curves(prepared, meta) + _changes(raw, today) + _weekdays(raw)
     adjusted = benjamini_hochberg([f.p for f in candidates])  # one family for everything (R8)
@@ -469,8 +482,9 @@ def analyse(
         if key not in best or f.score > best[key].score:
             best[key] = f
     ranked = sorted(best.values(), key=lambda f: f.score, reverse=True)
+    linked = _linked(ranked)
     ranked = [
-        replace(f, details={**f.details, "adjusted": adj}) if (adj := _adjusted(f, prepared, meta)) else f
+        replace(f, details={**f.details, "adjusted": adj}) if (adj := _adjusted(f, prepared, meta, linked)) else f
         for f in ranked
     ]
     if run_stats is not None:

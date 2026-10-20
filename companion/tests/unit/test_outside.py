@@ -14,7 +14,6 @@ from app.outside import (
     WeatherHour,
     parse_weather_csv,
     weather_features,
-    weather_note,
 )
 
 NY = ZoneInfo("America/New_York")
@@ -95,15 +94,3 @@ def test_dst_days_count_their_own_hours():
     hours = _hours(start, 25, precipitation_mm=lambda i: 1.0)
     f = weather_features(hours, NY, FOUR, start + dt.timedelta(hours=30))
     assert f["weather.precipitation"] == {dt.date(2026, 10, 31): 25.0}
-
-
-def test_weather_note_names_big_pressure_and_temperature_changes_only():
-    start = dt.datetime(2026, 10, 10, 0, tzinfo=dt.UTC)
-    falling = _hours(start, 49, pressure_hpa=lambda i: 1020.0 - 0.4 * i, temperature_c=lambda i: 15.0)
-    now = start + dt.timedelta(hours=48, minutes=20)
-    assert weather_note(falling, now) == "Air pressure fell 10 hPa over the last 24 hours."
-    steady = _hours(start, 49, pressure_hpa=lambda i: 1015.0, temperature_c=lambda i: 15.0)
-    assert weather_note(steady, now) is None
-    colder = _hours(start, 49, pressure_hpa=lambda i: 1015.0, temperature_c=lambda i: 20.0 if i <= 24 else 10.0)
-    assert weather_note(colder, now) == "The last 24 hours were 10 °C colder than the day before."
-    assert weather_note(falling, now + dt.timedelta(days=3)) is None  # stale: the collector stopped

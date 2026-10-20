@@ -114,7 +114,7 @@ def today_page(
         return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
     settings = get_settings()
     day = current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
-    view = today.load_today(db, settings.zone, settings.day_boundary, day, settings.holiday_country)
+    view = today.load_today(db, settings.zone, settings.day_boundary, day)
     from .web_trackers import today_capture  # late import: web_trackers builds on this module
 
     return templates.TemplateResponse(

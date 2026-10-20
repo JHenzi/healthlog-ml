@@ -73,6 +73,10 @@ def test_adjusted_recheck_in_words():
     assert weaker.text == "weaker once sleep and steps are allowed for" and not weaker.range.clear
     one = adjusted(_insight(details={"adjusted": adj | {"for": ["sleep.total_h"], "verdict": "explained"}}))
     assert one.text == "largely accounted for by sleep"
+    three = adj | {"labels": ["Sleep (total)", "Temperature (mean)", "HRV"], "for": ["a", "b", "c"]}
+    assert adjusted(_insight(details={"adjusted": three})).text == (
+        "still holds allowing for sleep (total), temperature (mean) and HRV"
+    )
     assert adjusted(_insight(details={})) is None
 
 

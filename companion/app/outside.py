@@ -5,11 +5,9 @@ sidecar fetches Open-Meteo and writes ``weather-hourly.csv`` to a volume the
 Companion mounts read-only. ``load_weather`` validates the whole file against
 a strict schema (exact columns, UTC hours, numeric ranges) and loads nothing if
 any line fails (risks.md E2/E3); otherwise it upserts the hours into
-``weather_hours``. Daily features (``weather_features``) and the Today note
-(``weather_note``) are pure.
+``weather_hours``. Daily features (``weather_features``) are pure.
 
-Weather is outside data: the engine relates it to everything else but never
-treats it as an outcome (analysis-engine.md, "Outside data").
+The engine treats weather like any other series (R17).
 """
 
 from __future__ import annotations
@@ -58,9 +56,6 @@ _HOUR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:00Z$")
 
 # A day needs this many hours of a variable for its daily value (DST days have 23 or 25).
 MIN_HOURS = 20
-# Today note thresholds.
-PRESSURE_NOTE_HPA = 6.0
-TEMPERATURE_NOTE_C = 8.0
 
 
 class OutsideDataError(ValueError):
@@ -158,24 +153,24 @@ class WeatherDef:
     analyse: bool
 
 
-# The analysed ones are a few that tend to differ from each other; the rest are shown but not tested, so the
-# false-discovery family doesn't grow with near-duplicates (R8).
+# Every one is analysed (R17); near-duplicates (high, low and mean temperature) share the family, so they are
+# never tested against each other.
 DEFS = (
     WeatherDef("weather.temp_mean", "Temperature (mean)", "°C", True),
-    WeatherDef("weather.temp_max", "Temperature (high)", "°C", False),
-    WeatherDef("weather.temp_min", "Temperature (low)", "°C", False),
+    WeatherDef("weather.temp_max", "Temperature (high)", "°C", True),
+    WeatherDef("weather.temp_min", "Temperature (low)", "°C", True),
     WeatherDef("weather.temp_range", "Temperature swing (high − low)", "°C", True),
     WeatherDef("weather.humidity_mean", "Humidity (mean)", "%", True),
-    WeatherDef("weather.dew_point_mean", "Dew point (mean)", "°C", False),
-    WeatherDef("weather.pressure_mean", "Air pressure (mean)", "hPa", False),
+    WeatherDef("weather.dew_point_mean", "Dew point (mean)", "°C", True),
+    WeatherDef("weather.pressure_mean", "Air pressure (mean)", "hPa", True),
     WeatherDef("weather.pressure_change", "Air pressure change from the day before", "hPa", True),
     WeatherDef("weather.precipitation", "Precipitation", "mm", True),
     WeatherDef("weather.cloud_mean", "Cloud cover (mean)", "%", True),
-    WeatherDef("weather.wind_max", "Wind (strongest hour)", "km/h", False),
-    WeatherDef("weather.uv_max", "UV index (highest)", None, False),
-    WeatherDef("weather.radiation", "Sunlight energy", "kWh/m²", False),
+    WeatherDef("weather.wind_max", "Wind (strongest hour)", "km/h", True),
+    WeatherDef("weather.uv_max", "UV index (highest)", None, True),
+    WeatherDef("weather.radiation", "Sunlight energy", "kWh/m²", True),
     WeatherDef("weather.pm25_mean", "Fine particles PM2.5 (mean)", "µg/m³", True),
-    WeatherDef("weather.aqi_max", "Air quality index (worst hour, US AQI)", None, False),
+    WeatherDef("weather.aqi_max", "Air quality index (worst hour, US AQI)", None, True),
 )
 
 
@@ -235,35 +230,3 @@ def weather_features(
         if before is not None:
             put("weather.pressure_change", day, mean - before)
     return {f: v for f, v in out.items() if v}
-
-
-# --- Today --------------------------------------------------------------------
-
-
-def _mean_between(hours: list[WeatherHour], column: str, start: dt.datetime, end: dt.datetime) -> float | None:
-    vals = [h.values[column] for h in hours if start < h.time <= end and h.values.get(column) is not None]
-    return statistics.fmean(vals) if len(vals) >= 2 else None
-
-
-def weather_note(hours: Iterable[WeatherHour], now: dt.datetime) -> str | None:
-    """A notable change over the last 24 hours, or None. Facts only (R10)."""
-    hs = list(hours)
-    if not hs:
-        return None
-    latest = max(h.time for h in hs)
-    if now - latest > dt.timedelta(hours=30):
-        return None  # the collector has stopped; don't describe stale weather as current
-    notes = []
-    window = dt.timedelta(hours=3)
-    day = dt.timedelta(hours=24)
-    p_now = _mean_between(hs, "pressure_hpa", latest - window, latest)
-    p_then = _mean_between(hs, "pressure_hpa", latest - day - window, latest - day)
-    if p_now is not None and p_then is not None and abs(p_now - p_then) >= PRESSURE_NOTE_HPA:
-        verb = "rose" if p_now > p_then else "fell"
-        notes.append(f"Air pressure {verb} {abs(p_now - p_then):.0f} hPa over the last 24 hours.")
-    t_now = _mean_between(hs, "temperature_c", latest - day, latest)
-    t_then = _mean_between(hs, "temperature_c", latest - 2 * day, latest - day)
-    if t_now is not None and t_then is not None and abs(t_now - t_then) >= TEMPERATURE_NOTE_C:
-        word = "warmer" if t_now > t_then else "colder"
-        notes.append(f"The last 24 hours were {abs(t_now - t_then):.0f} °C {word} than the day before.")
-    return " ".join(notes) or None

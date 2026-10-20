@@ -106,6 +106,7 @@ be handled when the relevant milestone is built.
 | G1 | Logging fatigue → sparse data | Apple Health for what it models; one-tap Shortcut; review ≤ 60 s; coverage indicator |
 | G2 | Insight overload or noise | ranking, minimum support, "not enough data yet" states |
 | G3 | Medical overreach | association wording (R10); "discuss with a clinician" where health-relevant; no diagnoses |
+| G5 | Built-in theories (curated exposures, one-direction rules, hand-picked windows) hide real patterns and favour our guesses | R17: every analysed series on both sides of every test; confounders picked by the data; `grep` for curated lists in review; stats tests plant effects in the "unexpected" direction (`test_outside_data.py`) |
 | G4 | Scope creep | milestones ship usable slices; M6+ only when the data asks (plan.md) |
 
 ---
