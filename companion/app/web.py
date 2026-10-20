@@ -351,6 +351,8 @@ METHOD_NAMES = {
     "mean_shift": "difference in means with autocorrelation-adjusted sample sizes (effect: Cliff's delta)",
     "fisher": "Fisher's exact test (effect: phi coefficient)",
     "kruskal": "Kruskal-Wallis test across weekdays (effect: eta squared)",
+    "distributed_lag": "distributed lag model over days 0–7, one smooth curve per pair, F test on the effective "
+    "number of days (effect: signed square root of the variance it explains)",
 }
 
 
@@ -405,6 +407,7 @@ def insight_detail(
             "defs": defs,
             "method": METHOD_NAMES.get(insight.method, insight.method),
             "likely": glance.likely_range(insight),
+            "lag_bars": glance.lag_bars(insight),
             "adjusted": glance.adjusted(insight),
             "csrf": session.csrf_token,
         },

@@ -30,7 +30,7 @@
 </div>
 <div class="evidence-line">
   <span class="dots" role="img" aria-label="strength {{ c.dots }} of 3">{% for k in range(3) %}<i{% if k < c.dots %} class="on"{% endif %}></i>{% endfor %}</span>
-  <span>{% if c.b %}{{ "rise together" if c.link == "together" else "move opposite" }}{% if c.next_day %}, next day{% endif %}{% else %}{{ c.link }}{% endif %}</span>
+  <span>{% if c.b %}{{ "rise together" if c.link == "together" else "move opposite" }}{% if c.next_day %}, next day{% endif %}{% if c.days_later %}, about {{ c.days_later }} days later{% endif %}{% else %}{{ c.link }}{% endif %}</span>
   <span>{{ n }} days</span>
   {% if n < preliminary_days %}<span class="tag tag-accent">Preliminary</span>{% endif %}
 </div>

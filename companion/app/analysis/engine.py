@@ -35,6 +35,7 @@ from .pure import (
     benjamini_hochberg,
     cliffs_delta,
     delta_interval,
+    distributed_lag,
     effective_n,
     kruskal_weekday,
     lag1_autocorr,
@@ -243,6 +244,40 @@ def _rounded(interval: tuple[float, float]) -> list[float]:
     return [round(interval[0], 3), round(interval[1], 3)]
 
 
+def _is_exposure(feature: str, meta: FeatureMeta) -> bool:
+    return feature in C.DLM_EXPOSURES or meta.family.startswith(C.DLM_EXPOSURE_FAMILY_PREFIXES)
+
+
+def _lag_curves(prepared: Mapping[str, _Prepared], meta: Mapping[str, FeatureMeta]) -> list[Finding]:
+    """Exposure → outcome over days 0..DLM_MAX_LAG: one smooth curve and one test per pair (R8)."""
+    out: list[Finding] = []
+    for x in sorted(prepared):
+        if not _is_exposure(x, meta[x]):
+            continue
+        for y in sorted(prepared):
+            if y == x or meta[y].family == meta[x].family:
+                continue
+            px, py = prepared[x], prepared[y]
+            res = distributed_lag(px.raw, py.raw, C.DLM_MAX_LAG, C.DLM_DEGREE, C.DLM_MIN_DAYS)
+            if res is None:
+                continue
+            out.append(
+                Finding(
+                    "association",
+                    "days",
+                    x,
+                    y,
+                    res.peak,
+                    "distributed_lag",
+                    res.r,
+                    res.p,
+                    res.n,
+                    details={"curve": res.curve, "peak": res.peak, "n_eff": round(res.n_eff, 1)},
+                )
+            )
+    return out
+
+
 def _changes(prepared_raw: Mapping[str, pd.Series], today: dt.date) -> list[Finding]:
     out: list[Finding] = []
     end = pd.Timestamp(today - dt.timedelta(days=1))  # today is still running
@@ -325,7 +360,7 @@ def _adjusted(f: Finding, prepared: Mapping[str, _Prepared], meta: Mapping[str, 
     a next-day finding, on the earlier day too. Partial Spearman on the overlapping days, with a likely range on
     the effective n less the covariates.
     """
-    if f.kind != "association" or f.method == "fisher" or f.b is None:
+    if f.kind != "association" or f.method in ("fisher", "distributed_lag") or f.b is None:
         return None
     families = {meta[f.a].family, meta[f.b].family}
     drivers = [c for c in C.ADJUST_FOR if c in prepared and c not in (f.a, f.b) and meta[c].family not in families]
@@ -366,6 +401,8 @@ def _adjusted(f: Finding, prepared: Mapping[str, _Prepared], meta: Mapping[str, 
 
 
 def _passes_floor(f: Finding) -> bool:
+    if f.method == "distributed_lag":
+        return abs(f.effect) >= C.RHO_FLOOR and f.details["peak"] >= C.DLM_MIN_PEAK
     if f.kind == "association":
         return abs(f.effect) >= (C.RHO_FLOOR if f.method in ("spearman", "fisher") else C.CLIFF_FLOOR)
     if f.kind == "change":
@@ -406,7 +443,7 @@ def analyse(
             prepared[feature] = p
     raw = {f: p.raw for f, p in prepared.items()}
 
-    candidates = _associations(prepared, meta) + _changes(raw, today) + _weekdays(raw)
+    candidates = _associations(prepared, meta) + _lag_curves(prepared, meta) + _changes(raw, today) + _weekdays(raw)
     adjusted = benjamini_hochberg([f.p for f in candidates])  # one family for everything (R8)
     reported: list[Finding] = []
     for f, p_adj in zip(candidates, adjusted, strict=True):

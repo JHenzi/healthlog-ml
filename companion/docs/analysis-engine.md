@@ -19,6 +19,7 @@ via `companion refresh`.
 | **Week** | Is the last 7 days different from the 28 before? | difference in means with autocorrelation-adjusted sizes |
 | **Month** | Is the last 28 days different from the 56 before? | same |
 | **Weekly rhythm** | Does a series differ by weekday? | Kruskal-Wallis on the de-trended series |
+| **Over days** | Does something you do or get (a tracker, sleep, caffeine, daylight) go with another series over the following week, peaking 2+ days later? | distributed lag model over days 0–7, one test per pair (below) |
 
 Only series of **different families** are related. Families group series
 that are linked by definition: steps, distance and energy (activity), sleep
@@ -68,6 +69,32 @@ days widens it:
 
 Weekday rhythms have no range. Stored in `insights.details` (`ci`, `pct_ci`).
 
+## Links spread over days
+
+For each exposure (trackers, total sleep, caffeine, time in daylight) and
+each series of another family, one regression of the outcome on the
+exposure today and on each of the 7 days before, with the eight lag weights
+constrained to a smooth curve (an Almon polynomial of degree 2). That makes
+a whole week of lags **one** test with 3 degrees of freedom in the FDR
+family, not eight. It needs 56 overlapping days. A curve is reported only
+when its largest weight is 2 or more days later; same-day and next-day links
+are the day-level tests' job. The evidence page draws the curve as one bar
+per day.
+
+**Calibration, and what the suite caught (2026-10-19).** The first version
+reused the other tests' residuals (weekday profile and a 28-day rolling
+trend removed) and corrected the F test by the effective n. On noise it
+said p < .05 in 8.5% of independent and 11% of autocorrelated datasets: the
+rolling detrend leaves structure shared by both series, and a regression on
+eight lags finds it. Fitting the weekday profile and a straight-line trend
+*inside* the regression, with AR(1) errors (Cochrane-Orcutt) and the F test
+shrunk to the effective n of the filtered exposure and residuals, measures
+4.5% (independent), 4.8% (AR(1) φ = 0.6), 5.8% (shared trend), 6.2% (shared
+weekday pattern) and 8% on very slowly drifting series (φ = 0.9), while
+finding 98.5% of planted spread effects at p < .01. Variants with more
+estimated error parameters (AR(2), AR(3)) or plain differencing were looser
+or weaker; the numbers are in the PR.
+
 ## Adjusted re-check
 
 Each reported relationship is re-read allowing for everyday drivers,
@@ -104,6 +131,11 @@ push and 200 nightly (`STATS_SEEDS`).
 | weekday rhythm found | yes |
 | ρ range covers the planted value (independent / AR(1) φ = 0.6 days) | 90–99% / 88–99% of 400 datasets (measured: 95% / 96%; a range on the plain n covers only 79% on the AR(1) days) |
 | δ range and change range cover the planted value | ≥ 88% of 400 datasets |
+| a link spread over days 2–4 is found, with its peak at 2–4 days | ≥ 80% |
+| the curve test on noise (independent; AR(1) φ = 0.6) | p < .05 in ≤ 7% of 400 datasets |
+| the curve test with a shared trend or weekday pattern | ≤ 8% |
+| noise through the whole engine reports a spread link | ≤ 15% of datasets |
+| a same-day link is reported as spread | ≤ 10% |
 | a link planted only through sleep reads "largely accounted for" (two measures) | ≥ 85% of the datasets that report it |
 | a direct link with independent sleep "still holds" | ≥ 85% |
 | a yes/no link planted through sleep reads "holds" | ≤ 15% |
@@ -135,7 +167,5 @@ numbers so an empty list explains itself.
 
 ## Not yet
 
-- **Distributed lag models** (effects spread over days 1–7) need months of
-  daily data, so they are not in v1.
 - **Within-day** event-locked responses: M6.
 - **ML models**: M7.

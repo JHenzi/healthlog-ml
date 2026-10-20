@@ -53,6 +53,7 @@ class Card:
     link: str  # "together", "opposite", "lately", or the weekday high and low
     next_day: bool
     dots: int
+    days_later: int = 0  # a link spread over days, peaking this many days later
 
 
 @dataclass(frozen=True)
@@ -134,6 +135,33 @@ def adjusted(i: Insight) -> Adjusted | None:
     return Adjusted(adj["verdict"], text, span)
 
 
+@dataclass(frozen=True)
+class LagBar:
+    lag: int
+    x: float
+    y: float
+    height: float
+    up: bool
+    peak: bool
+
+
+def lag_bars(i: Insight) -> list[LagBar]:
+    """A spread-over-days link's curve as bars on a 0–200 × 0–60 canvas, zero line at 30."""
+    curve = (i.details or {}).get("curve")
+    if not curve:
+        return []
+    top = max(max(abs(c) for c in curve), 1e-9)
+    width = 200 / len(curve)
+    peak = int((i.details or {}).get("peak", 0))
+    out = []
+    for k, c in enumerate(curve):
+        h = round(abs(c) / top * 26, 1)
+        out.append(
+            LagBar(k, round(k * width + width * 0.2, 1), round(30 - h if c >= 0 else 30, 1), h, c >= 0, k == peak)
+        )
+    return out
+
+
 def tag_colours(tags: Sequence[str]) -> dict[str, tuple[str, int]]:
     """Day tag slug → (its text, its colour index): by position in the list, so a tag keeps its colour."""
     return {tag_slug(t): (t, k % TAG_COLOURS) for k, t in enumerate(tags)}
@@ -152,12 +180,14 @@ def card(i: Insight, defs: Mapping[str, FeatureDef], tags: Mapping[str, tuple[st
     dots = STRENGTH_DOTS.get(i.strength, 1)
     if i.kind == "association" and i.feature_b:
         same = i.effect >= 0
+        spread = i.method == "distributed_lag"
         return Card(
             _side(i.feature_a, defs, "up", tags),
             _side(i.feature_b, defs, "up" if same else "down", tags),
             "together" if same else "opposite",
-            bool(i.lag),
+            bool(i.lag) and not spread,
             dots,
+            int(i.lag or 0) if spread else 0,
         )
     details = i.details or {}
     if i.kind == "change":

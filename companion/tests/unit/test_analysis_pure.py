@@ -180,6 +180,19 @@ def _findings() -> list[Finding]:
             details={"recent_mean": 9000, "base_mean": 7000, "pct": 28.6, "recent_days": 7, "base_days": 28},
         ),
         Finding(
+            "association",
+            "days",
+            "hl.step_count",
+            "sleep.total_h",
+            3,
+            "distributed_lag",
+            0.4,
+            0.001,
+            80,
+            strength="moderate",
+            details={"curve": [0, 0.1, 0.3, 0.4, 0.3, 0.1, 0, 0], "peak": 3},
+        ),
+        Finding(
             "weekday",
             "week",
             "sleep.total_h",
@@ -210,7 +223,11 @@ def test_sentences_read_naturally():
         lines[7] == "Steps over the last 7 days averaged 9,000 count, 29% above the 28 days before "
         "(7,000 count; 7 vs 28 days, strong)."
     )
-    assert lines[8].startswith("Sleep (total) is highest on Sundays (7 h 36 min) and lowest on Mondays (7 h 00 min)")
+    assert lines[8] == (
+        "Higher steps tends to be followed by higher sleep (total) over the next days, most around 3 days later "
+        "(80 days, moderate)."
+    )
+    assert lines[9].startswith("Sleep (total) is highest on Sundays (7 h 36 min) and lowest on Mondays (7 h 00 min)")
 
 
 def test_every_sentence_has_evidence_and_association_wording_only():

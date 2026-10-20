@@ -221,6 +221,64 @@ def delta_interval(
 
 
 @dataclass(frozen=True)
+class LagCurve:
+    r: float  # signed strength: sqrt of the variance share the curve explains, with the sign of its total
+    p: float
+    n: int
+    n_eff: float
+    curve: list[float]  # standardised effect at lags 0..max_lag
+    peak: int  # lag of the largest |effect|
+
+
+def distributed_lag(x: pd.Series, y: pd.Series, max_lag: int, degree: int, min_days: int) -> LagCurve | None:
+    """y(t) on x(t), x(t−1) … x(t−max_lag), the lag weights constrained to a polynomial of ``degree`` (Almon).
+
+    Takes the observed values, not the residuals: the weekday profile and a straight-line trend are fitted
+    inside the regression, because the 28-day rolling detrend the other tests use leaves shared structure that
+    a regression on eight lags picks up (8.5% false positives on independent days, see tests/stats). Errors get
+    an AR(1) model (Cochrane-Orcutt), and the F test for the whole curve (degree + 1 numerator df, one test for
+    a week of lags) is shrunk to the effective n of the filtered exposure and residuals.
+    """
+    columns = {"y": y} | {k: shift_days(x, k) for k in range(max_lag + 1)}
+    frame = pd.concat(columns, axis=1, join="inner").dropna()
+    n = len(frame)
+    if n < min_days or frame["y"].std() == 0 or frame[0].std() == 0:
+        return None
+    days = (frame.index - frame.index[0]).days.to_numpy().astype(float)
+    weekday = frame.index.dayofweek.to_numpy()
+    nuisance = np.column_stack(
+        [np.ones(n), days / max(days.max(), 1.0)] + [(weekday == d).astype(float) for d in range(1, 7)]
+    )
+    basis = np.vander(np.arange(max_lag + 1) / max_lag, degree + 1, increasing=True)
+    curve_cols = frame[list(range(max_lag + 1))].to_numpy() @ basis
+    design = np.column_stack([nuisance, curve_cols])
+    target = frame["y"].to_numpy()
+
+    coef, *_ = np.linalg.lstsq(design, target, rcond=None)
+    resid = target - design @ coef
+    r1 = float(np.clip(np.corrcoef(resid[:-1], resid[1:])[0, 1], -0.95, 0.95)) if resid.std() > 0 else 0.0
+    xs, ys = design[1:] - r1 * design[:-1], target[1:] - r1 * target[:-1]
+    m, q = nuisance.shape[1], degree + 1
+    full, *_ = np.linalg.lstsq(xs, ys, rcond=None)
+    rest, *_ = np.linalg.lstsq(xs[:, :m], ys, rcond=None)
+    left = ys - xs @ full
+    rss1, rss0 = float(np.sum(left**2)), float(np.sum((ys - xs[:, :m] @ rest) ** 2))
+    if rss1 <= 0 or rss0 <= 0:
+        return None
+    index = frame.index[1:]
+    n_eff = effective_n(len(ys), acf(pd.Series(xs[:, m], index)), acf(pd.Series(left, index)))
+    df2 = len(ys) - xs.shape[1] - 1
+    f = ((rss0 - rss1) / q) / (rss1 / df2) * (n_eff / len(ys))
+    p = float(stats.f.sf(f, q, max(n_eff - xs.shape[1] - 1, 2.0)))
+
+    weights = basis @ full[m:]  # y units per x unit, by lag
+    curve = weights * float(frame[0].std()) / float(frame["y"].std())
+    share = max(1 - rss1 / rss0, 0.0)
+    r = math.copysign(math.sqrt(share), float(np.sum(weights)) or 1.0)
+    return LagCurve(r, p, n, n_eff, [round(float(c), 3) for c in curve], int(np.argmax(np.abs(curve))))
+
+
+@dataclass(frozen=True)
 class PartialResult:
     rho: float  # rank correlation of x and y after both lose what the covariates explain
     rho_raw: float  # the same days without the covariates
