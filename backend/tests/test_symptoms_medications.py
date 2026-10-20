@@ -22,6 +22,11 @@ from app.rederive import run_rederive_medications, run_rederive_symptoms
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CEST = dt.timezone(dt.timedelta(hours=2))
+# The symptom fixture logs every Apple Health symptom type once or more (44
+# entries); four appetite-change answers share one minute, so they collapse
+# onto one (start_time, name, source) key, last one wins.
+SYMPTOMS_PARSED = 44
+SYMPTOMS_STORED = 41
 
 
 def _fixture(name: str) -> dict:
@@ -42,6 +47,10 @@ def _count(db, model) -> int:
         ("Headache", "headache"),
         ("  husten ", "coughing"),
         ("Rückenschmerzen", "lower_back_pain"),
+        ("Sinuscongestion", "sinus_congestion"),  # HAE's own spelling
+        ("Brustschmerzen", "breast_pain"),
+        ("Druckgefühl oder Schmerzen in der Brust", "chest_tightness_or_pain"),
+        ("Schnelles Klopfen oder Flattern des Herzschlags", "rapid_pounding_or_fluttering_heartbeat"),
     ],
 )
 def test_symptom_names_map_across_languages(raw, slug):
@@ -60,17 +69,20 @@ def test_unknown_values_map_to_none_not_an_error():
 
 def test_symptom_fixture_parses_with_canonical_slugs():
     rows = parse_payload(_fixture("hae_symptoms_de.json")).symptom_rows
-    assert len(rows) == 5
-    assert {(r["name"], r["symptom"]) for r in rows} == {
-        ("Kopfschmerzen", "headache"),
-        ("Rückenschmerzen", "lower_back_pain"),
-        ("Husten", "coughing"),
-    }
+    assert len(rows) == SYMPTOMS_PARSED
+    # Every German name in the export maps, covering all 39 Apple symptom types.
+    assert all(r["symptom"] is not None for r in rows)
+    assert {r["symptom"] for r in rows} == set(health_vocab.BUILTIN_SYMPTOMS.values())
+    assert ("Kopfschmerzen", "headache") in {(r["name"], r["symptom"]) for r in rows}
     assert {(r["severity_raw"], r["severity"]) for r in rows} == {
         ("Leicht", "mild"),
         ("Mäßig", "moderate"),
         ("Schwer", "severe"),
+        ("Präsent", "present"),
         ("Nicht vorhanden", "not_present"),  # an explicit "no" is kept as a row
+        ("Keine Änderung", "no_change"),  # appetite changes take a direction
+        ("Erhöht", "increased"),
+        ("Verringert", "decreased"),
     }
     assert all(r["source"] == "Health" and r["user_entered"] is True and r["cycle_start"] is False for r in rows)
     ranged = [r for r in rows if r["end_time"] != r["start_time"]]
@@ -125,14 +137,14 @@ def test_fixtures_ingest_end_to_end(db):
     for name in ("hae_symptoms_de.json", "hae_medications_de.json"):
         status, _ = ingest_bytes(db, (FIXTURES / name).read_bytes())
         assert status == "stored"
-    assert (_count(db, Symptom), _count(db, MedicationDose)) == (5, 5)
+    assert (_count(db, Symptom), _count(db, MedicationDose)) == (SYMPTOMS_STORED, 5)
 
 
 def test_store_is_idempotent(db):
     for _ in range(2):
         store(db, parse_payload(_fixture("hae_symptoms_de.json")))
         store(db, parse_payload(_fixture("hae_medications_de.json")))
-    assert (_count(db, Symptom), _count(db, MedicationDose)) == (5, 5)
+    assert (_count(db, Symptom), _count(db, MedicationDose)) == (SYMPTOMS_STORED, 5)
 
 
 def test_status_change_on_a_scheduled_dose_updates_in_place(db):
@@ -173,9 +185,9 @@ def test_rederive_backfills_from_archive(db):
         archive_raw(db, json.loads(body), hashlib.sha256(body).digest(), None)
     db.flush()
 
-    assert run_rederive_symptoms(db, dry_run=True).samples == 5
+    assert run_rederive_symptoms(db, dry_run=True).samples == SYMPTOMS_STORED
     assert _count(db, Symptom) == 0
-    assert (run_rederive_symptoms(db).samples, run_rederive_medications(db).samples) == (5, 5)
+    assert (run_rederive_symptoms(db).samples, run_rederive_medications(db).samples) == (SYMPTOMS_STORED, 5)
     run_rederive_symptoms(db)
     run_rederive_medications(db)
-    assert (_count(db, Symptom), _count(db, MedicationDose)) == (5, 5)  # re-run is a no-op
+    assert (_count(db, Symptom), _count(db, MedicationDose)) == (SYMPTOMS_STORED, 5)  # re-run is a no-op

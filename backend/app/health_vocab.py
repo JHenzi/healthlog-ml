@@ -59,24 +59,69 @@ BUILTIN_SYMPTOMS: dict[str, str] = {
     "vaginal dryness": "vaginal_dryness",
     "vomiting": "vomiting",
     "wheezing": "wheezing",
-    # German, confirmed by a real HAE export.
-    "kopfschmerzen": "headache",
-    "rückenschmerzen": "lower_back_pain",
+    # German, confirmed by a real HAE export (all 39 types). Note HAE's own
+    # spellings, e.g. "Sinuscongestion", and "Brustschmerzen" = breast pain
+    # (chest pain is "Druckgefühl oder Schmerzen in der Brust").
+    "akne": "acne",
+    "appetitveränderungen": "appetite_changes",
+    "atemnot": "shortness_of_breath",
+    "bauchkrämpfe": "abdominal_cramps",
+    "beckenschmerzen": "pelvic_pain",
+    "blähungen": "bloating",
+    "blasenschwäche": "bladder_incontinence",
+    "brustschmerzen": "breast_pain",
+    "druckgefühl oder schmerzen in der brust": "chest_tightness_or_pain",
+    "durchfall": "diarrhea",
+    "erbrechen": "vomiting",
+    "erschöpfung": "fatigue",
+    "fieber": "fever",
+    "gedächtnislücke": "memory_lapse",
+    "geruchssinnverlust": "loss_of_smell",
+    "geschmacksverlust": "loss_of_taste",
+    "haarausfall": "hair_loss",
+    "halsschmerzen": "sore_throat",
+    "hitzewallungen": "hot_flashes",
     "husten": "coughing",
+    "keuchen": "wheezing",
+    "kopfschmerzen": "headache",
+    "körperschmerzen": "generalized_body_ache",
+    "laufende nase": "runny_nose",
+    "nächtliche schweißausbrüche": "night_sweats",
+    "ohnmacht": "fainting",
+    "rückenschmerzen": "lower_back_pain",
+    "schlafänderungen": "sleep_changes",
+    "schnelles klopfen oder flattern des herzschlags": "rapid_pounding_or_fluttering_heartbeat",
+    "schüttelfrost": "chills",
+    "schwindel": "dizziness",
+    "sinuscongestion": "sinus_congestion",
+    "sodbrennen": "heartburn",
+    "stimmungsschwankungen": "mood_changes",
+    "trockene haut": "dry_skin",
+    "übelkeit": "nausea",
+    "übersprungener herzschlag": "skipped_heartbeat",
+    "vaginale trockenheit": "vaginal_dryness",
+    "verstopfung": "constipation",
 }
 
-# Symptom severity. "present" is the yes/no answer some symptom types use.
+# Symptom severity. "present" is the answer for a symptom logged without a
+# level; appetite changes also take a direction (no change/increased/decreased).
 BUILTIN_SEVERITIES: dict[str, str] = {
     "not present": "not_present",
     "nicht vorhanden": "not_present",
     "present": "present",
-    "vorhanden": "present",
+    "präsent": "present",
     "mild": "mild",
     "leicht": "mild",
     "moderate": "moderate",
     "mäßig": "moderate",
     "severe": "severe",
     "schwer": "severe",
+    "no change": "no_change",
+    "keine änderung": "no_change",
+    "increased": "increased",
+    "erhöht": "increased",
+    "decreased": "decreased",
+    "verringert": "decreased",
 }
 
 # Medication dose status (Apple Health Medications, iOS 26).
@@ -104,7 +149,8 @@ def canonical_symptom(name: object) -> str | None:
 
 
 def canonical_severity(severity: object) -> str | None:
-    """Localised symptom severity -> ``not_present|present|mild|moderate|severe`` or None."""
+    """Localised symptom severity -> ``not_present|present|mild|moderate|severe``,
+    ``no_change|increased|decreased`` (appetite changes) or None."""
     return _lookup(severity, BUILTIN_SEVERITIES)
 
 
