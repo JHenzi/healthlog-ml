@@ -199,7 +199,11 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
 - ~~Distributed lag models~~: done 2026-10-19 (analysis-engine.md, "Links
   spread over days"). Weather joins as an exposure when M3 lands.
 - ~~Adjusted re-check~~: done 2026-10-19 (sleep and steps; analysis-engine.md).
-  **Streaks and personal bests** as descriptive insights.
+- ~~Streaks and records~~: done 2026-10-20, "Worth noting" on the Overview
+  (`app/highlights.py`): tracker streaks (3+ days) and quiet runs (7+ recorded
+  days), and records over 60+ days of data. Records wait for 60 days, so the
+  first appear in mid-November for sleep. Later: a streak against your own
+  30-day median for key metrics, if the notes feel too sparse.
 - **M6 within-day:** event-locked responses (coffee → steps, HR, stress over
   −60…+180 min against time-matched control days). Tracker entries already
   have timestamps.

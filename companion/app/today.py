@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from . import outside, upstream
+from . import highlights, outside, upstream
 from .models import StateOfMindEntry
 from .timeutil import day_bounds
 from .upstream import SourceDay
@@ -253,6 +253,7 @@ class TodayView:
     sentences: list[str]
     problems: list[str]
     tiles: tuple[Tile, ...] = ()
+    notes: tuple[str, ...] = ()  # worth noting: a weather change, streaks, records
 
 
 def build_sentences(
@@ -351,6 +352,6 @@ def load_today(db: Session, zone: ZoneInfo, boundary: dt.time, today: dt.date) -
         lambda: outside.weather_note(outside.stored_hours(db, now - dt.timedelta(hours=60)), now),
         None,
     )
-    if note:
-        lines.append(note)
-    return TodayView(today, lines, problems, build_tiles(series, energy, mood_entries, today))
+    notes = [note] if note else []
+    notes += [n.text for n in _safe(db, problems, "highlights", lambda: highlights.load_highlights(db, today), [])]
+    return TodayView(today, lines, problems, build_tiles(series, energy, mood_entries, today), tuple(notes))

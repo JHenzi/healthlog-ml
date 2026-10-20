@@ -31,7 +31,7 @@ What works today (milestones M1, M2, M4 part 1 and M5 v1):
   Today, back-date from the tracker's page, and fill gaps in the **evening
   review**. Every tracker becomes daily series in the same analysis;
 - password sign-in, plus scoped API tokens for Shortcuts and scripts;
-- `GET /api/today` (a `read` token), the same sentences as JSON;
+- `GET /api/today` (a `read` token), the same sentences as JSON, plus `notes` (a weather change, streaks, records);
 - a startup and nightly check that HealthLog's tables still match what we
   read (`companion check-upstream`).
 

@@ -183,6 +183,8 @@ numbers so an empty list explains itself.
 
 ## Not yet
 
+- Streaks and records are descriptive, not tests: `app/highlights.py`
+  (no p-values, outside the FDR family).
 - **Day length and public holidays** as outside features (computed locally).
 - **Within-day** event-locked responses: M6.
 - **ML models**: M7.

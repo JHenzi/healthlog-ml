@@ -48,7 +48,12 @@ def get_today(db: Session = Depends(get_db), _token: ApiToken = Depends(require_
     settings = get_settings()
     day = current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
     view = today.load_today(db, settings.zone, settings.day_boundary, day)
-    return {"day": view.day.isoformat(), "sentences": view.sentences, "problems": view.problems}
+    return {
+        "day": view.day.isoformat(),
+        "sentences": view.sentences,
+        "notes": list(view.notes),
+        "problems": view.problems,
+    }
 
 
 @router.get("/insights")
