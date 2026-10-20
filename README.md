@@ -135,6 +135,7 @@ docker run -d \
   -e POSTGRES_USER=healthlog \
   -e POSTGRES_PASSWORD=change-me-strong \
   -e POSTGRES_DB=healthlog \
+  -e TIMESCALEDB_TELEMETRY=off \
   -v /mnt/user/appdata/healthlog-db:/var/lib/postgresql/data \
   --restart unless-stopped \
   timescale/timescaledb:2.17.2-pg16     # pin the exact tag — see Operations
@@ -358,6 +359,30 @@ this feature, replay them once (idempotent):
 
 ```bash
 docker exec healthlog healthlog rederive-state-of-mind
+```
+
+Apple Health **symptoms** and **medications** (iOS 26) work the same way: add one REST
+API automation each with Data type **Symptoms** / **Medications** (German UI: *Symptome* /
+*Medikamente*). Entries land in the `symptoms` and `medication_doses` tables with their
+localised names, severities and statuses mapped to canonical values (§4.12 of the
+architecture doc); unrecognised values are kept as-is. For payloads archived earlier, or
+after an update that recognises more values, replay them once (idempotent):
+
+```bash
+docker exec healthlog healthlog rederive-symptoms
+docker exec healthlog healthlog rederive-medications
+```
+
+Apple Watch **heart rate notifications** (high, low and irregular rhythm alerts) and
+**ECG** recordings are two more HAE data types, each with its own automation (Data type
+**Heart Rate Notifications** / **ECG**). Notifications land in `heart_rate_notifications`
+with the heart-rate samples behind each alert summarised; ECGs land in `ecg_recordings`
+as a summary only (classification, average heart rate), never the voltage waveform.
+For payloads archived earlier, replay them once (idempotent):
+
+```bash
+docker exec healthlog healthlog rederive-heart-notifications
+docker exec healthlog healthlog rederive-ecg
 ```
 
 ## Stress score
@@ -697,6 +722,22 @@ the engine under your data. Then update deliberately:
 
 The app image (`healthlog`) is decoupled and updates freely; keep the database
 version fixed until you deliberately move it, backup in hand.
+
+### Telemetry
+
+TimescaleDB sends an anonymous usage report to Timescale by default. The shipped
+compose file and the `docker run` example set `TIMESCALEDB_TELEMETRY=off`, which the
+image applies when it creates a new database volume. For a volume created earlier,
+the app's migration switches it off on the next start (it needs the database
+superuser, which the app is in the default setup; otherwise it logs the command to
+run). Check with:
+
+```bash
+docker exec -t healthlog-db psql -U healthlog -d healthlog -c "SHOW timescaledb.telemetry_level;"
+```
+
+Grafana phones home by default too; the
+[Grafana setup](grafana/README.md) turns that off.
 
 ## Reverse proxy
 

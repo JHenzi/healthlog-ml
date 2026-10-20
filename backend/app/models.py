@@ -195,6 +195,99 @@ class WorkoutRoutePoint(Base):
     speed_mps: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
+class Symptom(Base):
+    """Apple Health symptom entry (HAE ``symptoms``, migration 0024).
+
+    HAE ships no entry id, so the natural key is ``(start_time, name, source)``
+    on the **raw** localised name; ``symptom`` and ``severity`` are the canonical
+    slugs (``health_vocab.py``), refreshed on every replay so a map extension
+    reaches stored rows via ``healthlog rederive-symptoms``."""
+
+    __tablename__ = "symptoms"
+    __table_args__ = (UniqueConstraint("start_time", "name", "source", name="uq_symptoms"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    start_time: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    end_time: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    name: Mapped[str] = mapped_column(Text)
+    symptom: Mapped[str | None] = mapped_column(Text, nullable=True)
+    severity_raw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    severity: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(Text, default="")
+    user_entered: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    cycle_start: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
+
+class MedicationDose(Base):
+    """Apple Health medication dose event (HAE ``medications``, iOS 26, migration 0024).
+
+    HAE ships neither an entry id nor a source. A dose is identified by the
+    medication's display name and its ``dose_time``: the scheduled time for a
+    scheduled dose (so a status change updates it in place), else the logging
+    time (an as-needed dose)."""
+
+    __tablename__ = "medication_doses"
+    __table_args__ = (UniqueConstraint("medication", "dose_time", name="uq_medication_doses"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    medication: Mapped[str] = mapped_column(Text)
+    dose_time: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    start_time: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    end_time: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    scheduled_time: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status_raw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    dosage: Mapped[float | None] = mapped_column(Float, nullable=True)
+    scheduled_dosage: Mapped[float | None] = mapped_column(Float, nullable=True)
+    units: Mapped[str | None] = mapped_column(Text, nullable=True)
+    nickname: Mapped[str | None] = mapped_column(Text, nullable=True)
+    form: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_archived: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    codings: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+
+
+class HeartRateNotification(Base):
+    """Apple Watch heart rate notification (HAE ``heartRateNotifications``, migration 0026):
+    a high, low or irregular rhythm alert. No entry id is shipped, so the key is
+    ``(start_time, kind, source)``; ``kind`` is HAE's ``heartNotification`` value
+    (e.g. ``low_heart_rate_notification``). The heart-rate samples behind the alert
+    are summarised here; the raw archive keeps them."""
+
+    __tablename__ = "heart_rate_notifications"
+    __table_args__ = (UniqueConstraint("start_time", "kind", "source", name="uq_heart_rate_notifications"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    start_time: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    end_time: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    kind: Mapped[str] = mapped_column(Text)
+    threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source: Mapped[str] = mapped_column(Text, default="")
+    hr_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hr_avg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hr_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hr_samples: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class EcgRecording(Base):
+    """Apple Watch ECG recording (HAE ``ecg``, migration 0026), as a summary only.
+
+    The voltage waveform is not stored (ARCHITECTURE §10); the raw archive keeps
+    it. Keyed on ``(start_time, source)``. HAE reports an average heart rate of
+    0 for an inconclusive recording; that is stored as NULL."""
+
+    __tablename__ = "ecg_recordings"
+    __table_args__ = (UniqueConstraint("start_time", "source", name="uq_ecg_recordings"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    start_time: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    end_time: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    classification: Mapped[str | None] = mapped_column(Text, nullable=True)
+    average_heart_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sampling_frequency: Mapped[float | None] = mapped_column(Float, nullable=True)
+    voltage_samples: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source: Mapped[str] = mapped_column(Text, default="")
+
+
 class StateOfMind(Base):
     """Apple Health State of Mind entry (HAE ``stateOfMind``), keyed by HAE's
     stable UUID. ``valence`` is in [-1, 1]; ``labels`` (emotions) and
