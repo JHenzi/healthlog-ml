@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Metrics · Companion{% endblock %}
+{% block title %}My Metrics · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
 <section class="card">
   <p class="kicker">Library</p>
   <div class="row">
-    <h1>Metrics</h1>
+    <h1>My Metrics</h1>
     <form method="post" action="/refresh" class="inline">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <button type="submit" class="secondary">Rebuild now</button>

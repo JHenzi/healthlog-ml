@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_log_controls.html" import log_controls %}
 {% from "_day_tags.html" import day_tags_block %}
-{% block title %}Review · Companion{% endblock %}
+{% block title %}Capture · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
 <section class="card">
@@ -10,7 +10,7 @@
     <span>{% if reviewed %}<span class="tag">Reviewed</span>{% else %}<span class="tag tag-quiet">Not reviewed</span>{% endif %}</span>
     {% if next %}<a href="/review?day={{ next.isoformat() }}">{{ next.strftime("%a") }} ›</a>{% else %}<span></span>{% endif %}
   </div>
-  <h1>Log · {{ day.strftime("%a, %b %-d") }}</h1>
+  <h1>Capture · {{ day.strftime("%a, %b %-d") }}</h1>
   <p class="muted">Tap what applies, then mark the day reviewed. Once it's reviewed, anything you left empty counts as "none"; until then it stays unknown, so a forgotten entry never looks like zero.</p>
   {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
 </section>
