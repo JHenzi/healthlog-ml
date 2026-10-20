@@ -67,6 +67,7 @@ class TrackerSpec:
     options: tuple[str, ...] = ()
     always_logged: bool = False
     tags: tuple[str, ...] = ()  # display text; entries and features use tag_slug()
+    archived: bool = False
 
 
 def slugify(name: str) -> str:
@@ -227,11 +228,18 @@ class TrackerFeatures:
 
 
 def observed_days(spec: TrackerSpec, logged: set[dt.date], reviewed: set[dt.date], last_day: dt.date) -> set[dt.date]:
-    """Days on which an absence of entries means zero (R7)."""
+    """Days on which an absence of entries means zero (R7).
+
+    An archived tracker is no longer shown for review or logging, so its zeros stop at its last entry.
+    """
+    if spec.archived:
+        if not logged:
+            return set()
+        last_day = min(last_day, max(logged))
     if spec.always_logged and logged:
         first = min(logged)
         return {first + dt.timedelta(days=i) for i in range((last_day - first).days + 1)}
-    return logged | reviewed
+    return logged | {d for d in reviewed if d <= last_day}
 
 
 def daily_features(
@@ -306,6 +314,20 @@ def daily_features(
             label(f, f"{name}: {tag}", None, "count")
             for d in tag_days:
                 out.put(f, d, float(slug in tags_by_day.get(d, set())))
+    # A tag taken off the list keeps its history: 1 where it was picked, 0 on observed days up to its last use
+    # (after that it wasn't offered, so its absence says nothing). Purging the entries is a separate act.
+    current = {tag_slug(t) for t in spec.tags}
+    picked = {tag for tags in tags_by_day.values() for tag in tags}
+    if picked - current:
+        used = set(by_day) | set(tags_by_day)
+        seen = {d for d in observed_days(spec, used, reviewed, last_day) if d <= last_day} | set(tags_by_day)
+        for slug in sorted(picked - current):
+            on = {d for d, tags in tags_by_day.items() if slug in tags}
+            f = f"{base}.tag.{slug}"
+            label(f, f"{name}: {slug.replace('_', ' ')} (removed)", None, "count")
+            for d in seen:
+                if d <= max(on):
+                    out.put(f, d, float(d in on))
 
     if t in ("time",) or (t in ("count", "moment") and by_day):
         # Clock-time features: first (and for counts, last) time of the day.

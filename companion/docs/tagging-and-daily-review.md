@@ -307,6 +307,13 @@ is a real 0; on an unreviewed day it is NaN**. All tag statistics run only on
 reviewed days. This is the single most important reason to build the daily
 review, beyond convenience.
 
+**Removing never deletes.** Taking a tag off the list, or archiving a
+tracker, only stops it being offered. Its entries stay in the event log and
+in the analysis: a removed tag keeps its own feature ("… (removed)"), and
+the zeros of both stop at their last entry, since a review that no longer
+shows them says nothing about them. Deleting the entries themselves is a
+separate, explicit **purge** (plan M11, not built yet).
+
 ### 6.2 New finding kind: `tag_effect`
 
 For each tag with enough support (e.g. ≥ 8 tagged and ≥ 8 untagged reviewed
