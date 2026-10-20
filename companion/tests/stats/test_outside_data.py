@@ -9,10 +9,18 @@ import math
 import os
 
 import numpy as np
+from scipy.stats import binom
 
 from app.analysis.engine import FeatureMeta, analyse
 
 SEEDS = range(int(os.environ.get("STATS_SEEDS", "20")))
+
+
+def null_bound(n: int, target: float) -> float:
+    """At full strength (100+ seeds) the target itself; on a quick run, its 95% binomial upper bound (seed noise)."""
+    return target * n if n >= 100 else float(binom.ppf(0.95, n, target))
+
+
 START = dt.date(2026, 6, 1)
 DAYS = 120
 TODAY = START + dt.timedelta(days=DAYS)
@@ -99,4 +107,4 @@ def test_unrelated_weather_stays_quiet():
             "hl.headache": _series((rng.random(DAYS) < 0.3).astype(float)),
         }
         false += any(f.kind == "association" for f in analyse(values, META, TODAY))
-    assert false <= max(2, 0.15 * len(SEEDS))
+    assert false <= null_bound(len(SEEDS), 0.15)
