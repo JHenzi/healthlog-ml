@@ -830,4 +830,7 @@ Dependabot PRs pass the same `test.yml` gate as any other PR.
 - DB not publicly exposed; Grafana behind auth.
 - LLM purely local (Ollama, no API key, no network egress); the narration receives only
   statistical finding quantities, never raw values (`scrub_details()`).
-- Don't enable telemetry in any component.
+- Don't enable telemetry in any component. Upstream defaults that phone home are switched
+  off: TimescaleDB's usage report (`TIMESCALEDB_TELEMETRY=off` for new volumes, migration
+  0027 for existing ones) and, in the documented Grafana setup, usage stats, update
+  checks, the news feed, Gravatar and external snapshots.

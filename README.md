@@ -135,6 +135,7 @@ docker run -d \
   -e POSTGRES_USER=healthlog \
   -e POSTGRES_PASSWORD=change-me-strong \
   -e POSTGRES_DB=healthlog \
+  -e TIMESCALEDB_TELEMETRY=off \
   -v /mnt/user/appdata/healthlog-db:/var/lib/postgresql/data \
   --restart unless-stopped \
   timescale/timescaledb:2.17.2-pg16     # pin the exact tag — see Operations
@@ -721,6 +722,22 @@ the engine under your data. Then update deliberately:
 
 The app image (`healthlog`) is decoupled and updates freely; keep the database
 version fixed until you deliberately move it, backup in hand.
+
+### Telemetry
+
+TimescaleDB sends an anonymous usage report to Timescale by default. The shipped
+compose file and the `docker run` example set `TIMESCALEDB_TELEMETRY=off`, which the
+image applies when it creates a new database volume. For a volume created earlier,
+the app's migration switches it off on the next start (it needs the database
+superuser, which the app is in the default setup; otherwise it logs the command to
+run). Check with:
+
+```bash
+docker exec -t healthlog-db psql -U healthlog -d healthlog -c "SHOW timescaledb.telemetry_level;"
+```
+
+Grafana phones home by default too; the
+[Grafana setup](grafana/README.md) turns that off.
 
 ## Reverse proxy
 
