@@ -16,7 +16,7 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | Missing data | Days without data are hatched and never drawn as zero (R7). | `.coverage span.missing` |
 | Provenance | Every metric is tagged **Imported** (Apple Health via HealthLog), **Logged** (trackers) or **Derived** (stress, energy reserve). | `metrics_view.PROVENANCE` |
 | Confidence | Findings resting on fewer than 30 days carry a **Preliminary** tag. Strength (weak / moderate / strong) is always shown. | `insights.html`, `today.html` |
-| Navigation | Five sections: Overview, Discover, Log, Metrics, Trackers. A bottom tab bar on phones (≤ 720px), header links above that. | `_nav.html` |
+| Navigation | Five sections: Overview, Discovery, Capture, My Metrics, Trackers. A bottom tab bar on phones (≤ 720px), header links above that. | `_nav.html` |
 
 ## Wireframe screens → pages
 
