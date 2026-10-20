@@ -622,6 +622,54 @@ comparisons with sleep or stress are left to the analysis, where they get FDR co
 `healthlog rederive-state-of-mind` replays the raw archive into the table for
 payloads ingested before the table existed.
 
+### 4.12 Symptoms and medications (own tables)
+
+Apple Health **symptoms** (HAE `data.symptoms`) and **medication doses** (`data.medications`,
+iOS 26) are separate HAE data types, each with its own automation. Both differ from the
+other sources in two ways that shape the tables (migration `0024_symptoms_medications`):
+
+- **No entry id.** Symptoms are keyed on `(start_time, name, source)`; medication doses,
+  which carry no `source` either, on `(medication, dose_time)`, where `dose_time` is the
+  scheduled time for a scheduled dose (so logging it as taken or skipped updates the same
+  row) and the logging time for an as-needed dose. `medication` is the user's own display
+  name, so renaming a medication starts a new series.
+- **Localised values.** Symptom names, severities and dose statuses arrive in the phone's
+  language ("Kopfschmerzen", "Leicht", "Eingenommen"). As for workouts (§4.4), the raw value
+  is stored and a canonical slug sits next to it (`symptom`, `severity`, `status`; maps in
+  `health_vocab.py`). An unknown value maps to NULL and is never rejected (§4.0). The key
+  uses the raw name, so extending a map never re-keys rows: the slugs are coalesce-updated
+  on replay, and `healthlog rederive-symptoms` / `rederive-medications` fill them in for
+  stored rows. "Not present" is kept as a row (`severity = not_present`), an explicit "no"
+  rather than missing data. A symptom logged without a level is `present`; appetite changes
+  carry a direction instead (`no_change`, `increased`, `decreased`) in the same column.
+  Two entries of one symptom in the same minute share a key, so the last one wins.
+
+The German spellings in the maps are only those confirmed by a real HAE export
+(`backend/tests/fixtures/hae_*_de.json`); English keys follow Apple's display names. Entries
+without a name or start time are counted as `dropped_entries` and logged; the raw archive
+keeps them (§4.1). Like State of Mind, neither table feeds the analysis or the narration yet.
+
+### 4.13 Heart rate notifications and ECG summaries (own tables)
+
+Apple Watch **heart rate notifications** (HAE `data.heartRateNotifications`) and **ECG
+recordings** (`data.ecg`) are two more HAE data types without an entry id (migration
+`0026_heart_notifications_ecg`):
+
+- **Notifications** are keyed on `(start_time, kind, source)`, where `kind` is HAE's
+  `heartNotification` value (e.g. `low_heart_rate_notification`), already a stable
+  identifier rather than localised text. `threshold` is the alert's configured limit. The
+  heart-rate samples behind an alert (`heartRateData`) are summarised as
+  `hr_min`/`hr_avg`/`hr_max`/`hr_samples`; the raw archive keeps them. This section ships
+  `source` as `{name, identifier}`, not a string; the name is stored.
+- **ECG recordings** are keyed on `(start_time, source)` and stored as a **summary only**:
+  `classification` (raw text), `average_heart_rate`, `sampling_frequency` and the number
+  of voltage samples. The waveform stays in the raw archive (§10). HAE reports an average
+  heart rate of 0 for an inconclusive recording; that is stored as NULL.
+
+Entries without a start time (or a notification kind) are counted as `dropped_entries`.
+`healthlog rederive-heart-notifications` / `rederive-ecg` replay the raw archive. Neither
+table feeds the analysis or the narration yet.
+
 ## 5. Ingestion contract
 
 - **Idempotency/upsert:** on nightly exports HAE sends **overlapping windows**.
@@ -748,7 +796,8 @@ Dependabot PRs pass the same `test.yml` gate as any other PR.
 - **Raw payload archived verbatim** (`raw_ingest`, JSONB), retention permanent —
   kept cheap by the native compression policy (§4.1); a CA can replace the
   daily-aggregate view later without a schema break.
-- **ECG deliberately off** (raw waveforms, no analytical value, payload burden).
+- **ECG waveforms deliberately off** (no analytical value, payload burden): only a
+  per-recording summary is stored (§4.13); the waveform stays in the raw archive.
   GPS routes are stored **only** when the operator enables route export in HAE
   (`workout_route_points`, display-only — the analysis never uses location).
   The generic model (§4.0) tolerates further health categories (medications,
@@ -781,4 +830,7 @@ Dependabot PRs pass the same `test.yml` gate as any other PR.
 - DB not publicly exposed; Grafana behind auth.
 - LLM purely local (Ollama, no API key, no network egress); the narration receives only
   statistical finding quantities, never raw values (`scrub_details()`).
-- Don't enable telemetry in any component.
+- Don't enable telemetry in any component. Upstream defaults that phone home are switched
+  off: TimescaleDB's usage report (`TIMESCALEDB_TELEMETRY=off` for new volumes, migration
+  0027 for existing ones) and, in the documented Grafana setup, usage stats, update
+  checks, the news feed, Gravatar and external snapshots.
