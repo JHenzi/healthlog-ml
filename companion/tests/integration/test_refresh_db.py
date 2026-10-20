@@ -123,3 +123,12 @@ def test_invalid_edits_are_rejected(db, archive):
 
 def test_mood_sync_without_entries_is_a_no_op(db):
     assert mood.sync_from_raw(db).entries == 0
+
+
+def test_only_one_refresh_runs_at_a_time(db, companion_engine):
+    """A second refresh waits for the first instead of colliding on the feature table (seen live on a deploy)."""
+    jobs.refresh(db)  # holds the lock until this test's transaction ends
+    with companion_engine.connect() as other:
+        taken = other.execute(text("SELECT pg_try_advisory_xact_lock(:k)"), {"k": jobs.REFRESH_LOCK}).scalar_one()
+        other.rollback()
+    assert taken is False
