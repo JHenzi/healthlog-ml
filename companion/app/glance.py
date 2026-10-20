@@ -55,6 +55,47 @@ class Card:
     dots: int
 
 
+@dataclass(frozen=True)
+class Range:
+    """A finding's likely range drawn on a 0–200 axis: the span, the estimate and where "no effect" sits."""
+
+    lo_x: float
+    hi_x: float
+    est_x: float
+    zero_x: float
+    text: str  # the same range in words, for the caption and screen readers
+    clear: bool  # the whole range is on one side of "no effect"
+
+
+AXIS = (6.0, 194.0)
+
+
+def _x(v: float, lo: float, hi: float) -> float:
+    return round(AXIS[0] + (min(max(v, lo), hi) - lo) / (hi - lo) * (AXIS[1] - AXIS[0]), 1)
+
+
+def _signed(v: float, fmt: str) -> str:
+    return ("+" if v > 0 else "−" if v < 0 else "") + format(abs(v), fmt)
+
+
+def likely_range(i: Insight) -> Range | None:
+    """The 95% likely range of an association's strength (−1…+1) or of a change (in %), if the run stored one."""
+    details = i.details or {}
+    if i.kind == "association" and details.get("ci"):
+        lo, hi = details["ci"]
+        est, scale, words = i.effect, (-1.0, 1.0), "{} to {} (0 is no link)"
+        text = words.format(_signed(lo, ".2f"), _signed(hi, ".2f"))
+    elif i.kind == "change" and details.get("pct_ci"):
+        lo, hi = details["pct_ci"]
+        est = details.get("pct", 0.0)
+        bound = max(abs(lo), abs(hi), abs(est), 10.0) * 1.15
+        scale = (-bound, bound)
+        text = f"{_signed(lo, '.0f')}% to {_signed(hi, '.0f')}% (0 is no change)"
+    else:
+        return None
+    return Range(_x(lo, *scale), _x(hi, *scale), _x(est, *scale), _x(0.0, *scale), text, lo > 0 or hi < 0)
+
+
 def tag_colours(tags: Sequence[str]) -> dict[str, tuple[str, int]]:
     """Day tag slug → (its text, its colour index): by position in the list, so a tag keeps its colour."""
     return {tag_slug(t): (t, k % TAG_COLOURS) for k, t in enumerate(tags)}

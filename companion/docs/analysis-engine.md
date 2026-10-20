@@ -51,6 +51,23 @@ stress and energy reserve are computed from heart rate), and the mood series.
   strength word. A lint in the tests enforces both (R10, R13). The explain
   view shows the method, effect, raw and adjusted p, and effective n.
 
+## Likely ranges
+
+Every association and change carries a 95% **likely range**, drawn on
+Discoveries and the evidence page as a bar with a tick where "no effect"
+would be (design 1b/1c). A range that crosses the tick is drawn quieter.
+Each uses the same effective sample size as its test, so carry-over between
+days widens it:
+
+| Finding | Range |
+|---|---|
+| Spearman ρ | Fisher z with Fieller's variance 1.06 / (n − 3), on the effective n |
+| Cliff's δ (yes/no vs a measure) | through the AUC, Hanley-McNeil variance widened by n / effective n |
+| φ (two yes/no series) | Fisher z on n |
+| week / month change | the mean shift's t interval on the effective window sizes, as % of the earlier window |
+
+Weekday rhythms have no range. Stored in `insights.details` (`ci`, `pct_ci`).
+
 ## Validation (tests/stats)
 
 Seeded synthetic data, 100 days. The suite runs 20 seeds per check on every
@@ -67,6 +84,8 @@ push and 200 nightly (`STATS_SEEDS`).
 | two planted links among 10 AR(1) series: share of false reports | ≤ 15% on average |
 | weekly level shift found / flat data quiet | ≥ 90% / ≤ 10% |
 | weekday rhythm found | yes |
+| ρ range covers the planted value (independent / AR(1) φ = 0.6 days) | 90–99% / 88–99% of 400 datasets (measured: 95% / 96%; a range on the plain n covers only 79% on the AR(1) days) |
+| δ range and change range cover the planted value | ≥ 88% of 400 datasets |
 
 **What the suite caught (2026-10-17).** The first version flagged
 relationships in **35%** of pure-noise datasets. Measuring each test on null

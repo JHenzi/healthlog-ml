@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from .constants import NEFF_MAX_LAG, STRENGTH_BANDS, TREND_MIN_PERIODS, TREND_WINDOW_DAYS
+from .constants import INTERVAL_LEVEL, NEFF_MAX_LAG, STRENGTH_BANDS, TREND_MIN_PERIODS, TREND_WINDOW_DAYS
 
 
 def as_daily(values: dict) -> pd.Series:
@@ -74,8 +74,25 @@ def effective_n(n: int, acf_a: np.ndarray, acf_b: np.ndarray) -> float:
     return float(min(max(n / max(inflation, 1e-6), 3.0), n))
 
 
+@dataclass(frozen=True)
+class MeanShift:
+    diff: float  # recent mean minus base mean
+    se: float
+    df: float
+    p: float
+
+    def interval(self, level: float = INTERVAL_LEVEL) -> tuple[float, float]:
+        half = float(stats.t.isf((1 - level) / 2, self.df)) * self.se
+        return self.diff - half, self.diff + half
+
+
 def mean_shift_test(recent: np.ndarray, base: np.ndarray, r1: float) -> float:
-    """Two-sided p for a difference in means between two windows of an AR(1)-like series.
+    """Two-sided p for a difference in means between two windows of an AR(1)-like series."""
+    return mean_shift(recent, base, r1).p
+
+
+def mean_shift(recent: np.ndarray, base: np.ndarray, r1: float) -> MeanShift:
+    """Difference in means between two windows of an AR(1)-like series, with its standard error and p.
 
     Each window's n is shrunk by the variance inflation of the mean of m
     autocorrelated days, then a Welch-style t test runs on the effective sizes.
@@ -91,10 +108,11 @@ def mean_shift_test(recent: np.ndarray, base: np.ndarray, r1: float) -> float:
     ne_r, ne_b = n_eff(len(recent)), n_eff(len(base))
     var_r, var_b = float(np.var(recent, ddof=1)), float(np.var(base, ddof=1))
     se = math.sqrt(var_r / ne_r + var_b / ne_b)
+    diff = float(np.mean(recent)) - float(np.mean(base))
+    df = max(ne_r + ne_b - 2, 2)
     if se == 0:
-        return 1.0 if float(np.mean(recent)) == float(np.mean(base)) else 0.0
-    t = (float(np.mean(recent)) - float(np.mean(base))) / se
-    return float(2 * stats.t.sf(abs(t), df=max(ne_r + ne_b - 2, 2)))
+        return MeanShift(diff, 0.0, df, 1.0 if diff == 0 else 0.0)
+    return MeanShift(diff, se, df, float(2 * stats.t.sf(abs(diff / se), df=df)))
 
 
 def shift_days(s: pd.Series, days: int) -> pd.Series:
@@ -141,6 +159,7 @@ class GroupResult:
     p: float
     n_with: int
     n_without: int
+    n_eff: float
 
 
 def mann_whitney_eff(
@@ -153,10 +172,52 @@ def mann_whitney_eff(
     result = stats.mannwhitneyu(with_, without, alternative="two-sided", method="asymptotic")
     p_raw = float(result.pvalue)
     n = n1 + n2
-    scale = math.sqrt(effective_n(n, acf_resid, acf_flag) / n)
+    n_eff = effective_n(n, acf_resid, acf_flag)
+    scale = math.sqrt(n_eff / n)
     z = stats.norm.isf(p_raw / 2) if p_raw > 0 else 40.0
     p = float(2 * stats.norm.sf(abs(z) * scale))
-    return GroupResult(cliffs_delta(with_, without), p, n1, n2)
+    return GroupResult(cliffs_delta(with_, without), p, n1, n2, n_eff)
+
+
+# Likely ranges ("evidence intervals", design 1b/1c). Each uses the same effective sample size as its test, so
+# a range is as wide as day-to-day carry-over makes it; tests/stats checks their coverage.
+
+
+def _z(level: float) -> float:
+    return float(stats.norm.isf((1 - level) / 2))
+
+
+def rho_interval(rho: float, n_eff: float, level: float = INTERVAL_LEVEL) -> tuple[float, float]:
+    """Spearman's rho: Fisher z with Fieller's variance 1.06 / (n − 3), on the effective n."""
+    if n_eff <= 4:
+        return -1.0, 1.0
+    z = math.atanh(min(max(rho, -0.9999), 0.9999))
+    half = _z(level) * math.sqrt(1.06 / (n_eff - 3))
+    return math.tanh(z - half), math.tanh(z + half)
+
+
+def phi_interval(phi: float, n: int, level: float = INTERVAL_LEVEL) -> tuple[float, float]:
+    """The phi coefficient of a 2×2 table, through Fisher z (it is a Pearson r on 0/1 data)."""
+    if n <= 4:
+        return -1.0, 1.0
+    z = math.atanh(min(max(phi, -0.9999), 0.9999))
+    half = _z(level) / math.sqrt(n - 3)
+    return math.tanh(z - half), math.tanh(z + half)
+
+
+def delta_interval(
+    delta: float, n_with: int, n_without: int, n_eff: float, level: float = INTERVAL_LEVEL
+) -> tuple[float, float]:
+    """Cliff's delta via its AUC (P(with > without)): Hanley-McNeil variance, widened by n / n_eff."""
+    auc = min(max((delta + 1) / 2, 1e-6), 1 - 1e-6)
+    q1, q2 = auc / (2 - auc), 2 * auc * auc / (1 + auc)
+    var = (auc * (1 - auc) + (n_with - 1) * (q1 - auc * auc) + (n_without - 1) * (q2 - auc * auc)) / (
+        n_with * n_without
+    )
+    var *= (n_with + n_without) / max(n_eff, 1.0)
+    half = _z(level) * math.sqrt(max(var, 0.0))
+    lo, hi = max(auc - half, 0.0), min(auc + half, 1.0)
+    return 2 * lo - 1, 2 * hi - 1
 
 
 def benjamini_hochberg(pvalues: list[float]) -> list[float]:

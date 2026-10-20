@@ -18,6 +18,10 @@
 {# A discovery at a glance: "[icon] Sleep ▲ ↔ [icon] Productivity ▲", strength dots, days. #}
 {% macro side(s) %}<span class="side">{% if s.colour is not none %}<span class="tag-pill tc-{{ s.colour }}">{{ s.label }}</span>{% else %}{{ icon(s.icon) }}<span>{{ s.label }}</span>{% endif %}{{ arrow(s.arrow) }}</span>{% endmacro %}
 
+{% macro range_bar(r) %}{% if r %}<span class="likely">
+<svg class="range-bar" viewBox="0 0 200 16" role="img" aria-label="Likely range {{ r.text }}"><line class="axis" x1="6" y1="8" x2="194" y2="8"/><rect class="span{% if not r.clear %} unclear{% endif %}" x="{{ r.lo_x }}" y="4" width="{{ [r.hi_x - r.lo_x, 2]|max }}" height="8" rx="4"/><line class="zero" x1="{{ r.zero_x }}" y1="1" x2="{{ r.zero_x }}" y2="15"/><circle class="est" cx="{{ r.est_x }}" cy="8" r="3.5"/></svg>
+<span class="likely-text">likely {{ r.text }}</span></span>{% endif %}{% endmacro %}
+
 {% macro discovery_head(c, n, preliminary_days) %}
 <div class="pair">
   {{ side(c.a) }}

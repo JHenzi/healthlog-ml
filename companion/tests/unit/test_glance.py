@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.glance import card, icon_for
+from app.glance import card, icon_for, likely_range
 from app.models import FeatureDef, Insight
 
 
@@ -46,3 +46,18 @@ def test_day_tags_keep_their_colour_and_show_as_pills():
     assert tags["t6"][1] == 0  # eight colours, then they repeat
     c = card(_insight(feature_a="tracker.day_tags.tag.travel", effect=-0.3, strength="moderate"), DEFS, tags)
     assert (c.a.label, c.a.colour, c.a.arrow) == ("Travel", 1, "up") and c.b.colour is None
+
+
+def test_likely_range_marks_where_no_effect_sits():
+    r = likely_range(_insight(effect=-0.4, details={"ci": [-0.62, -0.18]}))
+    assert r.lo_x < r.est_x < r.hi_x < r.zero_x == 100.0
+    assert r.clear and r.text == "−0.62 to −0.18 (0 is no link)"
+    unclear = likely_range(_insight(effect=0.3, details={"ci": [-0.05, 0.55]}))
+    assert unclear.lo_x < unclear.zero_x < unclear.hi_x and not unclear.clear
+
+
+def test_change_range_is_in_percent_and_old_runs_have_none():
+    r = likely_range(_insight(kind="change", feature_b=None, details={"pct": 20.0, "pct_ci": [8.0, 31.0]}))
+    assert r.text == "+8% to +31% (0 is no change)" and r.zero_x == 100.0
+    assert likely_range(_insight(details={})) is None
+    assert likely_range(_insight(kind="weekday", feature_b=None, details={"high": 1, "low": 6})) is None
