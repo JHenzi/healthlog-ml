@@ -25,10 +25,14 @@ class IngestResponse(BaseModel):
     dropped_state_of_mind: int = 0  # State of Mind entries dropped for a missing id/start
     symptom_rows: int = 0
     medication_rows: int = 0
-    dropped_entries: int = 0  # symptom/medication entries dropped for a missing name/start
+    heart_notification_rows: int = 0
+    ecg_rows: int = 0
+    dropped_entries: int = 0  # symptom/medication/heart entries dropped for a missing name/start
     metric_new: int = 0
     sleep_new: int = 0
     workout_new: int = 0
     state_of_mind_new: int = 0
     symptom_new: int = 0
     medication_new: int = 0
+    heart_notification_new: int = 0
+    ecg_new: int = 0

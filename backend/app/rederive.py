@@ -14,7 +14,8 @@ sleep sessions, e.g. unaggregated stage segments archived before the parser
 folded them into nights (the sleep upsert never downgrades a fuller night).
 ``rederive-symptoms`` and ``rederive-medications`` replay Apple Health symptoms
 and medication doses; they also refresh the canonical slugs after an extension
-of ``health_vocab.py``.
+of ``health_vocab.py``. ``rederive-heart-notifications`` and ``rederive-ecg``
+replay Apple Watch heart rate notifications and ECG summaries.
 
 Usage (one-shot, typically via ``docker exec``)::
 
@@ -24,6 +25,8 @@ Usage (one-shot, typically via ``docker exec``)::
     healthlog rederive-sleep [--dry-run]
     healthlog rederive-symptoms [--dry-run]
     healthlog rederive-medications [--dry-run]
+    healthlog rederive-heart-notifications [--dry-run]
+    healthlog rederive-ecg [--dry-run]
 
 (equivalently ``python -m app rederive-workout-hr`` or ``python -m app.rederive``.)
 """
@@ -123,6 +126,22 @@ def run_rederive_medications(db: Session, dry_run: bool = False) -> RederiveSumm
     )
 
 
+def run_rederive_heart_notifications(db: Session, dry_run: bool = False) -> RederiveSummary:
+    """Replay every archived payload, upserting its heart rate notifications."""
+    return _replay(
+        db,
+        lambda p: p.heart_notification_rows,
+        ingest_svc.store_heart_notifications,
+        ("start_time", "kind", "source"),
+        dry_run,
+    )
+
+
+def run_rederive_ecg(db: Session, dry_run: bool = False) -> RederiveSummary:
+    """Replay every archived payload, upserting its ECG summaries."""
+    return _replay(db, lambda p: p.ecg_rows, ingest_svc.store_ecg_recordings, ("start_time", "source"), dry_run)
+
+
 def _log_summary(summary: RederiveSummary, dry_run: bool, command: str = "rederive-workout-hr") -> None:
     log.info(
         "%s%s done: payloads=%d rows=%d failures=%d",
@@ -185,6 +204,26 @@ def run_medications(args: argparse.Namespace) -> int:
         summary = run_rederive_medications(db, dry_run=args.dry_run)
 
     _log_summary(summary, args.dry_run, "rederive-medications")
+    return 1 if summary.failures else 0
+
+
+def run_heart_notifications(args: argparse.Namespace) -> int:
+    bootstrap()
+
+    with db_session() as db:
+        summary = run_rederive_heart_notifications(db, dry_run=args.dry_run)
+
+    _log_summary(summary, args.dry_run, "rederive-heart-notifications")
+    return 1 if summary.failures else 0
+
+
+def run_ecg(args: argparse.Namespace) -> int:
+    bootstrap()
+
+    with db_session() as db:
+        summary = run_rederive_ecg(db, dry_run=args.dry_run)
+
+    _log_summary(summary, args.dry_run, "rederive-ecg")
     return 1 if summary.failures else 0
 
 

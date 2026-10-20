@@ -647,6 +647,27 @@ The German spellings in the maps are only those confirmed by a real HAE export
 without a name or start time are counted as `dropped_entries` and logged; the raw archive
 keeps them (§4.1). Like State of Mind, neither table feeds the analysis or the narration yet.
 
+### 4.13 Heart rate notifications and ECG summaries (own tables)
+
+Apple Watch **heart rate notifications** (HAE `data.heartRateNotifications`) and **ECG
+recordings** (`data.ecg`) are two more HAE data types without an entry id (migration
+`0026_heart_notifications_ecg`):
+
+- **Notifications** are keyed on `(start_time, kind, source)`, where `kind` is HAE's
+  `heartNotification` value (e.g. `low_heart_rate_notification`), already a stable
+  identifier rather than localised text. `threshold` is the alert's configured limit. The
+  heart-rate samples behind an alert (`heartRateData`) are summarised as
+  `hr_min`/`hr_avg`/`hr_max`/`hr_samples`; the raw archive keeps them. This section ships
+  `source` as `{name, identifier}`, not a string; the name is stored.
+- **ECG recordings** are keyed on `(start_time, source)` and stored as a **summary only**:
+  `classification` (raw text), `average_heart_rate`, `sampling_frequency` and the number
+  of voltage samples. The waveform stays in the raw archive (§10). HAE reports an average
+  heart rate of 0 for an inconclusive recording; that is stored as NULL.
+
+Entries without a start time (or a notification kind) are counted as `dropped_entries`.
+`healthlog rederive-heart-notifications` / `rederive-ecg` replay the raw archive. Neither
+table feeds the analysis or the narration yet.
+
 ## 5. Ingestion contract
 
 - **Idempotency/upsert:** on nightly exports HAE sends **overlapping windows**.
@@ -773,7 +794,8 @@ Dependabot PRs pass the same `test.yml` gate as any other PR.
 - **Raw payload archived verbatim** (`raw_ingest`, JSONB), retention permanent —
   kept cheap by the native compression policy (§4.1); a CA can replace the
   daily-aggregate view later without a schema break.
-- **ECG deliberately off** (raw waveforms, no analytical value, payload burden).
+- **ECG waveforms deliberately off** (no analytical value, payload burden): only a
+  per-recording summary is stored (§4.13); the waveform stays in the raw archive.
   GPS routes are stored **only** when the operator enables route export in HAE
   (`workout_route_points`, display-only — the analysis never uses location).
   The generic model (§4.0) tolerates further health categories (medications,

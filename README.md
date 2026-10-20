@@ -372,6 +372,18 @@ docker exec healthlog healthlog rederive-symptoms
 docker exec healthlog healthlog rederive-medications
 ```
 
+Apple Watch **heart rate notifications** (high, low and irregular rhythm alerts) and
+**ECG** recordings are two more HAE data types, each with its own automation (Data type
+**Heart Rate Notifications** / **ECG**). Notifications land in `heart_rate_notifications`
+with the heart-rate samples behind each alert summarised; ECGs land in `ecg_recordings`
+as a summary only (classification, average heart rate), never the voltage waveform.
+For payloads archived earlier, replay them once (idempotent):
+
+```bash
+docker exec healthlog healthlog rederive-heart-notifications
+docker exec healthlog healthlog rederive-ecg
+```
+
 ## Stress score
 
 HealthLog derives a Garmin-style **stress score** (0–100) and intraday timeline

@@ -38,6 +38,8 @@ def test_every_subcommand_is_wired_to_a_runner():
         ["rederive-sleep"],
         ["rederive-symptoms"],
         ["rederive-medications"],
+        ["rederive-heart-notifications"],
+        ["rederive-ecg"],
         ["rederive-stress"],
         ["rederive-body-battery"],
         ["narrate"],
