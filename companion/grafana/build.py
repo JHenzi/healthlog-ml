@@ -108,8 +108,7 @@ line at 50 is a typical day. Ranking puts a long night and a big exercise day on
 the units, and one extreme day can't flatten the rest. Each date pairs
 {term("sleep", "the night that ended that morning")} with that day's
 {term("exercise", "exercise")} and {term("steps", "steps")}: the day after the night.</p>
-<p>Peaks and dips that line up are worth a look, not proof. The Companion's <i>Discoveries</i> test whether a link
-holds across all your days.</p></div>"""
+<p>Peaks and dips that line up are worth a look, not proof: over a few weeks, lines can match by chance.</p></div>"""
 
 
 def stat(title, sql, x, y, w, h, unit, decimals=1, fmt="table", colour=None, desc=""):
@@ -455,7 +454,7 @@ metrics = dashboard(
     "healthlog-all-metrics",
     "HealthLog – All Metrics",
     "Every metric as its own small chart, no dropdowns.",
-    [text_panel(GLOSSARY, 0, 0, 24, 6, "How to read this page"), repeated],
+    [text_panel(GLOSSARY, 0, 0, 24, 7, "How to read this page"), repeated],
     [TZ_VAR, METRIC_VAR],
 )
 
