@@ -200,9 +200,11 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
 
 Two extra dashboards are live since 2026-10-21 (`companion/grafana/`): Sleep &
 Activity, and All Metrics (no dropdowns). They read only HealthLog's own
-views. Once you've lived with them, offer them upstream as a PR from
-`upstream/dev` into `grafana/dashboards/`, framed as "a possible new Metrics
-page" plus a sleep page, without touching his three.
+views. Offered upstream on 2026-10-21 as an issue with screenshots from
+synthetic data (anym001/healthlog#121; images in `companion/grafana/screenshots/`).
+If the maintainer wants them, open a PR from `upstream/dev` adding the two JSON
+files to `grafana/dashboards/`, without touching his three; feedback on the
+issue goes into `build.py` first.
 
 ### 4.4 M5 follow-ups and M6
 
