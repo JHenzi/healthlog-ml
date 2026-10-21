@@ -3,7 +3,8 @@
 Sources so far: every HealthLog metric (``hl.<metric>``), sleep, stress, energy
 reserve, workouts, State of Mind, the user's own trackers
 (``tracker.<key>.*``), the weather (``weather.*``, M3) and the almanac
-(``almanac.*``: day length, moon, holidays). Assembly is
+(``almanac.*``: day length, moon, holidays), and the good-day score
+built from them (``goodday.score``). Assembly is
 pure (``assemble``); ``rebuild`` reads through the read contract and replaces
 the cache in one transaction, so new feature definitions apply to all history.
 
@@ -22,7 +23,7 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from . import almanac, mood, outside, trackers, upstream
+from . import almanac, goodday, mood, outside, trackers, upstream
 from .auth import now_utc
 from .capture import spec_of
 from .models import DailyFeature, DayReview, FeatureDef, MetricSetting, Observation, StateOfMindEntry, Tracker
@@ -275,6 +276,12 @@ def rebuild(
     for d in outside.DEFS:
         definition = Def(d.feature, d.label, d.unit, "weather", analyse=d.analyse, family="weather")
         fs.add(definition, weather.get(d.feature, {}))
+    # Complete days only: today's partial steps would rank as a poor day.
+    complete = {f: {d: v for d, v in fs.values.get(f, {}).items() if d <= last_day} for f in goodday.COMPONENTS}
+    fs.add(
+        Def(goodday.FEATURE, goodday.LABEL, None, goodday.SOURCE, family=goodday.FAMILY),
+        {day: s.score for day, s in goodday.scores(complete).items()},
+    )
     # The almanac covers the days the rest of the data does (it has a value for every date).
     first_day = min((day for values in fs.values.values() for day in values), default=None)
     if first_day is not None:

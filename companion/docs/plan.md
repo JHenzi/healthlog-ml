@@ -138,6 +138,7 @@ data immediately.
 - [x] Descriptive insights: weekday rhythms (Kruskal-Wallis); 30-day vs prior on the Metrics page. *(Streaks and bests: later.)*
 - [x] Adjusted re-check of every reported relationship for sleep and steps (partial Spearman; "holds", "weaker", "largely accounted for"), validated on planted confounders (2026-10-19).
 - [x] Likely ranges (95%, effective-n aware) on every association and change, with coverage checks (2026-10-19).
+- [x] **Good-day score** (2026-10-20): the user's definition (active, sleep, water, mood), each part ranked against their own history, equal weights, parts shown; analysed like any series but never against what it is built from. **Good days** page: best days (top quarter) and what they have in common. *(Goals as a setting, and M7 predicting the score: later.)*
 - [x] Sentence templates per method and type; **Insights** feed with an "explain" view (numbers, method, *n*, evidence); `GET /api/insights`.
 - [x] Nightly job at 04:15 (after HealthLog's 03:30 run), at the end of the refresh.
 - [x] Synthetic validation suite: planted same-day, lagged and yes/no effects found; weekday and trend confounders rejected; null calibration on autocorrelated noise. *(Curved effects come with the distributed lag models.)* It caught two miscalibrated tests before release ([`analysis-engine.md`](analysis-engine.md)).

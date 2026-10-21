@@ -1,0 +1,12 @@
+{# The good-day score's parts as bars (0–100, ranked against your own history); a missing part is "no data", never 0. #}
+{% macro parts_bars(parts) %}
+<ul class="goodday-parts">
+  {% for p in parts %}
+  <li{% if p.value is none %} class="missing"{% endif %}>
+    <span class="goodday-part">{{ p.label }}</span>
+    <span class="goodday-track" aria-hidden="true">{% if p.value is not none %}<span style="width: {{ p.value|round(1) }}%"></span>{% endif %}</span>
+    <span class="goodday-value">{% if p.value is not none %}{{ p.value|round|int }}{% else %}no data{% endif %}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}

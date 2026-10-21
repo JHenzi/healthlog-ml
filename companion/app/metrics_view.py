@@ -108,4 +108,5 @@ PROVENANCE = {
     "tracker": "Logged",
     "weather": "Outside",
     "almanac": "Computed",
+    "goodday": "Computed",
 }

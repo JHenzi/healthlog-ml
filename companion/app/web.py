@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from . import auth, capture, features, glance, jobs, metric_settings, metrics_view, today, upstream
+from . import auth, capture, features, glance, goodday, jobs, metric_settings, metrics_view, today, upstream
 from .analysis import run as analysis_run
 from .config import get_settings
 from .db import get_db
@@ -125,6 +125,7 @@ def today_page(
             "csrf": session.csrf_token,
             "capture": today_capture(db, day),
             "overview": _overview(db, day),
+            "goodday": goodday.load_view(db, day),
             "error": error[:200],
         },
     )
@@ -185,8 +186,9 @@ def _today() -> dt.date:
     return current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
 
 
-SOURCE_ORDER = ("tracker", "sleep", "healthlog", "stress", "energy", "workout", "mood", "weather", "almanac")
+SOURCE_ORDER = ("goodday", "tracker", "sleep", "healthlog", "stress", "energy", "workout", "mood", "weather", "almanac")
 SOURCE_TITLES = {
+    "goodday": "Good day",
     "tracker": "Your trackers",
     "sleep": "Sleep",
     "healthlog": "HealthLog metrics",
@@ -336,6 +338,31 @@ def refresh_now(
     jobs.refresh(db)
     db.commit()
     return RedirectResponse("/metrics", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# --- good days ----------------------------------------------------------------
+
+
+@router.get("/good-days", response_class=HTMLResponse)
+def good_days_page(
+    request: Request, session: WebSession | None = Depends(current_session), db: Session = Depends(get_db)
+) -> Response:
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    view = goodday.load_view(db, _today())
+    return templates.TemplateResponse(
+        request,
+        "good_days.html",
+        {
+            "g": view,
+            "cards": _cards(db, [c.insight for c in view.common]),
+            "fmt": metrics_view.fmt,
+            "min_parts": goodday.MIN_PARTS,
+            "min_scored": goodday.MIN_SCORED_DAYS,
+            "preliminary_days": PRELIMINARY_DAYS,
+            "csrf": session.csrf_token,
+        },
+    )
 
 
 # --- insights (M5) ----------------------------------------------------------

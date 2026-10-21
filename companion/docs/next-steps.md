@@ -16,8 +16,9 @@ risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 | Live HealthLog | `healthlog-local:c2131ca`, built from the fork (`deploy.sh healthlog build`), schema `0027_timescaledb_telemetry_off` |
 | Live Companion | `healthlog-companion` (web, `127.0.0.1:8020`) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis) |
 | Companion DB | schema `companion`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
-| Data | 87 daily series (2,109 day values since 2026-07-15); sleep since 2026-09-24 (that is all Apple Health has); 3 heart rate notifications, 6 ECGs; 0 symptoms, 0 medications, 0 workouts |
-| Insights | engine live and validated; 0 findings yet: 1,189 tests over 32 of 87 series, too few overlapping days. Sleep reaches 56 days (spread-over-days) in mid-November |
+| Data | 106 daily series since 2026-07-15, weather (Cincinnati, since 2026-07-15) and the almanac included; sleep since 2026-09-24 (that is all Apple Health has); 3 heart rate notifications, 6 ECGs; 0 symptoms, 0 medications, 0 workouts |
+| Insights | engine live and validated; 0 findings yet: 3,459 tests over 51 of 105 series on 2026-10-20 (R17 tests everything both ways). Sleep reaches 56 days (spread-over-days) in mid-November |
+| Good-day score | live since 2026-10-20 (Overview card, `/good-days`); scored days need two of active, sleep, water and mood, so they grow with sleep and mood |
 
 ## 2. Your to-dos (no code)
 
@@ -204,6 +205,14 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
   days), and records over 60+ days of data. Records wait for 60 days, so the
   first appear in mid-November for sleep. Later: a streak against your own
   30-day median for key metrics, if the notes feel too sparse.
+- ~~Good-day score and best days~~: done 2026-10-20 (`app/goodday.py`,
+  analysis-engine.md). Next for it:
+  - **Goals as a setting** (sleep hours, water): a part could then read
+    "met / not met" instead of a rank. Only when you set one; nothing is
+    guessed.
+  - **M7 predicts the score** (next-day, with the features that pushed the
+    prediction), once there are ~90 scored days.
+  - Mood is the thinnest part: State of Mind only arrives when you log one.
 - **M6 within-day:** event-locked responses (coffee → steps, HR, stress over
   −60…+180 min against time-matched control days). Tracker entries already
   have timestamps.

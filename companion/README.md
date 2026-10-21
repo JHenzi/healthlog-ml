@@ -24,6 +24,12 @@ What works today (milestones M1, M2, M4 part 1 and M5 v1):
   are held to 10%, and the engine is validated on synthetic data before it
   ships ([`docs/analysis-engine.md`](docs/analysis-engine.md));
 - `GET /api/insights` (a `read` token);
+- a **good-day score** on the Overview and a **Good days** page: one number
+  per day from four parts with equal weight (active, sleep, water, mood),
+  each ranked against your own history, shown next to the score. Your best
+  days (the top quarter) are listed, and the nightly analysis compares the
+  score with every other series, so the page shows what your best days have
+  in common once a link clears the bar ([`docs/analysis-engine.md`](docs/analysis-engine.md));
 - **your own trackers**: create anything you want to track (a count like
   coffee, a 1–5 productivity scale, yes/no, an amount with a unit, a
   duration, a time of day, a choice such as lunch at home / takeout /

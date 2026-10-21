@@ -60,6 +60,12 @@ class FeatureMeta:
     kind: str = "continuous"  # continuous | count
     family: str = "other"
     analyse: bool = True
+    built_from: tuple[str, ...] = ()  # the families a composite (the good-day score) is computed from
+
+
+def by_definition(a: FeatureMeta, b: FeatureMeta) -> bool:
+    """Two features linked by how they are made: one family, or a composite and a family it is built from."""
+    return a.family == b.family or a.family in b.built_from or b.family in a.built_from
 
 
 @dataclass(frozen=True)
@@ -130,8 +136,8 @@ def _group_test(flag: pd.Series, acf_flag: np.ndarray, cont: _Prepared, cont_raw
 def _associations(prepared: dict[str, _Prepared], meta: Mapping[str, FeatureMeta]) -> list[Finding]:
     out: list[Finding] = []
     for a, b in combinations(sorted(prepared), 2):
-        if meta[a].family == meta[b].family:
-            continue  # linked by definition (total and deep sleep, a tracker's count and its first time)
+        if by_definition(meta[a], meta[b]):
+            continue  # total and deep sleep, a tracker's count and its first time, the good-day score and its parts
         for x, y, lag in ((a, b, 0), (a, b, 1), (b, a, 1)):
             finding = _pair(x, y, lag, prepared[x], prepared[y])
             if finding is not None:
@@ -254,7 +260,7 @@ def _lag_curves(prepared: Mapping[str, _Prepared], meta: Mapping[str, FeatureMet
     """
     out: list[Finding] = []
     for x, y in combinations(sorted(prepared), 2):
-        if meta[x].family == meta[y].family:
+        if by_definition(meta[x], meta[y]):
             continue
         fits = []
         for a, b in ((x, y), (y, x)):
@@ -382,9 +388,12 @@ def _adjusted(
     """
     if f.kind != "association" or f.method in ("fisher", "distributed_lag") or f.b is None:
         return None
-    families = {meta[f.a].family, meta[f.b].family}
     la, lb = linked.get(f.a, {}), linked.get(f.b, {})
-    shared = [c for c in la.keys() & lb.keys() if c in prepared and meta[c].family not in families]
+    shared = [
+        c
+        for c in la.keys() & lb.keys()
+        if c in prepared and not by_definition(meta[c], meta[f.a]) and not by_definition(meta[c], meta[f.b])
+    ]
     drivers = sorted(shared, key=lambda c: (-min(la[c], lb[c]), c))[: C.ADJUST_MAX_DRIVERS]
     if not drivers:
         return None
