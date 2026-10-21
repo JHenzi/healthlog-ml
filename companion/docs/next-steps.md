@@ -214,8 +214,8 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
     shown only when it predicts better (analysis-engine.md, "Learned
     weights"). Needs the day-rating tracker (§2.6).
   - **Compare with others** (M12, roadmap B13): offline reference figures,
-    a share card you post yourself, and others' cards imported by hand
-    (privacy.md, *Planned*).
+    an anonymous summary, and others' to compare with. How summaries are
+    exchanged is an open question (privacy.md, *Planned*).
   - **Goals as a setting** (sleep hours, water): a part could then read
     "met / not met" instead of a rank. Only when you set one; nothing is
     guessed.
