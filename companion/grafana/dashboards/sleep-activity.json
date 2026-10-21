@@ -429,7 +429,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"font-size:15px;line-height:1.6\">\n<p><b>Reading the combined chart.</b> Hours of sleep, minutes of exercise and steps don't share a scale, so each line\nshows <b>where that day ranks among your own days</b> on screen: 100 is your highest, 0 your lowest, and the grey\nline at 50 is a typical day. Ranking puts a long night and a big exercise day on the same footing, however different\nthe units, and one extreme day can't flatten the rest. Each date pairs <b style=\"color:#5c7cfa\">the night that ended that morning</b> with that day's\n<b style=\"color:#2f9e44\">exercise</b> and <b style=\"color:#e8590c\">steps</b>: the day after the night.</p>\n<p>Peaks and dips that line up are worth a look, not proof. The Companion's <i>Discoveries</i> test whether a link\nholds across all your days.</p></div>"
+        "content": "<div style=\"font-size:15px;line-height:1.6\">\n<p><b>Reading the combined chart.</b> Hours of sleep, minutes of exercise and steps don't share a scale, so each line\nshows <b>where that day ranks among your own days</b> on screen: 100 is your highest, 0 your lowest, and the grey\nline at 50 is a typical day. Ranking puts a long night and a big exercise day on the same footing, however different\nthe units, and one extreme day can't flatten the rest. Each date pairs\n<b style=\"color:#5c7cfa\">the night that ended that morning</b> with that day's\n<b style=\"color:#2f9e44\">exercise</b> and <b style=\"color:#e8590c\">steps</b>: the day after the night.</p>\n<p>Peaks and dips that line up are worth a look, not proof. The Companion's <i>Discoveries</i> test whether a link\nholds across all your days.</p></div>"
       }
     },
     {
