@@ -157,6 +157,20 @@ def test_same_family_features_are_never_related():
     assert not any(f.kind == "association" for f in found)
 
 
+def test_a_composite_is_compared_with_everything_but_what_it_is_built_from():
+    rng = np.random.default_rng(11)
+    steps, hrv = rng.normal(size=DAYS), rng.normal(size=DAYS)
+    score = steps + hrv + 0.3 * rng.normal(size=DAYS)  # made from steps; linked to HRV through the data
+    meta = {
+        "steps": FeatureMeta("steps", family="activity"),
+        "hrv": FeatureMeta("hrv", family="vital"),
+        "score": FeatureMeta("score", family="goodday", built_from=("activity",)),
+    }
+    found = analyse({"steps": _series(steps), "hrv": _series(hrv), "score": _series(score)}, meta, TODAY)
+    assert _related(found, "score", "hrv", lag=0)
+    assert not _related(found, "score", "steps")
+
+
 def test_weekly_step_change_is_found_and_flat_data_is_not():
     def check(seed: int, jump: float) -> bool:
         rng = np.random.default_rng(8000 + seed)

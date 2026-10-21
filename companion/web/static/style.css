@@ -430,3 +430,16 @@ button.chip[class*="tc-"][aria-pressed="true"] { color: #fffaf1; background: var
 .lag-bars .bar.peak { fill: var(--color-accent); opacity: .85; }
 .lag-bars text { font-size: 10px; fill: var(--color-muted); text-anchor: middle; }
 .lag-bars + .muted.small { display: block; line-height: 1.45; }
+
+/* — the good-day score: one bar per part, 0–100 against your own history; a missing part is hatched, not empty */
+.goodday-score { margin: 0 0 var(--space-2); }
+.goodday-score strong { font-size: 2rem; }
+.goodday-parts { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: grid; gap: 4px; }
+.goodday-parts li { display: grid; grid-template-columns: 4.5rem 1fr 3.5rem; align-items: center; gap: var(--space-2); }
+.goodday-part, .goodday-value { font-size: .85rem; }
+.goodday-value { text-align: right; color: var(--color-muted); }
+.goodday-track { height: 8px; background: var(--color-divider); border-radius: 4px; overflow: hidden; }
+.goodday-track span { display: block; height: 100%; background: var(--color-accent); }
+.goodday-parts li.missing .goodday-track { background: repeating-linear-gradient(45deg, var(--color-divider) 0 3px, transparent 3px 6px); }
+.goodday-days { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1, 4px); }

@@ -22,6 +22,18 @@
   <p class="muted small">Days with something you logged yourself (trackers, mood). Hatched days are not recorded, never zero. Most comparisons need about {{ overview.preliminary_days }} logged days; until then, findings are preliminary.</p>
 </section>
 
+{% from "_good_day.html" import parts_bars %}
+<section class="card" aria-labelledby="goodday-h">
+  <div class="row"><h2 id="goodday-h">Good day</h2><a class="small" href="/good-days">Your best days ›</a></div>
+  {% if goodday.yesterday.score is not none %}
+  <p class="goodday-score"><strong>{{ goodday.yesterday.score|round|int }}</strong> <span class="muted">/ 100 yesterday</span>{% if goodday.yesterday.best %} <span class="tag">one of your best days</span>{% endif %}</p>
+  {{ parts_bars(goodday.yesterday.parts) }}
+  <p class="muted small">Higher than {{ goodday.rank }}% of your {{ goodday.scored }} scored days. Each part is ranked against your own history.</p>
+  {% else %}
+  <p class="muted small">No score for yesterday: a day needs at least two of active, sleep, water and mood, each with two weeks of history. {{ goodday.scored }} days scored so far.</p>
+  {% endif %}
+</section>
+
 {% if overview.top %}
 <section class="card">
   <div class="row"><h2>Worth exploring</h2><a class="small" href="/insights">All discoveries</a></div>

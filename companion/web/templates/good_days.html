@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_icons.html" import discovery_head %}
+{% from "_good_day.html" import parts_bars %}
+{% block title %}Good days · Companion{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="kicker">Discovery</p>
+  <h1>Good days</h1>
+  <p>A good day, as you defined it: active, not short on sleep or water, and a good mood. Each part is ranked against your own history (0 is your lowest day, 100 your highest) and the score is their plain average. A part without data is left out, never counted as zero; a day needs at least {{ min_parts }} parts.</p>
+  <p class="muted small">Parts with two weeks of data so far: {{ g.present|join(", ") if g.present else "none" }}. {{ g.scored }} days scored. Higher counts as better for every part; goals such as a sleep target come later.</p>
+</section>
+
+<section class="card">
+  <h2>What your best days have in common</h2>
+  {% if g.common %}
+  <p class="muted small">Series the analysis found linked to your good-day score, with their typical value on your best days (the top quarter) and on the rest. Activity, sleep, water and mood are left out: the score is made from them.</p>
+  {% for c in g.common %}
+  <a class="discovery glance" href="/insights/{{ c.insight.id }}">
+    {{ discovery_head(cards[c.insight.id], c.insight.n, preliminary_days) }}
+    <p class="detail-line">{{ c.insight.sentence }}</p>
+    {% if c.n_best and c.n_rest %}<p class="muted small">{{ c.label }}: median {{ fmt(c.best, c.unit) }} on best days ({{ c.n_best }}) vs {{ fmt(c.rest, c.unit) }} on the rest ({{ c.n_rest }}).</p>{% endif %}
+  </a>
+  {% endfor %}
+  {% else %}
+  <p class="tag tag-quiet">Nothing stands out yet</p>
+  <p>Every other series is compared with your good-day score in the nightly analysis, under the same false-discovery bar as every discovery. Nothing clears it yet; with {{ g.scored }} scored days, most links need more. Activity, sleep, water and mood are left out of the comparison: the score is made from them.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Your best days</h2>
+  {% if g.threshold is not none %}
+  <p class="muted small">The top quarter of your {{ g.scored }} scored days: a score of {{ g.threshold|round|int }} or more.</p>
+  <ul class="chips">{% for d in g.best %}<li class="tag">{{ d.strftime("%a, %b %-d") }}</li>{% endfor %}</ul>
+  {% else %}
+  <p class="muted small">Best days are the top quarter of your scored days; that needs at least {{ min_scored }} of them ({{ g.scored }} so far).</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>The last {{ g.recent|length }} days</h2>
+  <ul class="goodday-days">
+    {% for d in g.recent %}
+    <li>
+      <div class="row"><span>{{ d.day.strftime("%a, %b %-d") }}</span><strong>{% if d.score is not none %}{{ d.score|round|int }}{% if d.best %} · best{% endif %}{% else %}<span class="muted">not scored</span>{% endif %}</strong></div>
+      {% if d.score is not none %}{{ parts_bars(d.parts) }}{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

@@ -25,7 +25,9 @@ Only series of **different families** are related. Families group series
 that are linked by definition: steps, distance and energy (activity), sleep
 and its stages, heart rate with HRV, stress and energy reserve (vital, since
 stress and energy reserve are computed from heart rate), and the mood series.
-"Steps go with distance" is true but tells you nothing.
+"Steps go with distance" is true but tells you nothing. A composite is
+linked by definition to the families it is built from: the good-day score
+(below) is never related to activity, sleep, water or mood series.
 
 ## Guardrails
 
@@ -147,6 +149,38 @@ little of it for the day-level tests; its week/month changes are real and
 reported. Holidays mostly fall on Mondays, so a holiday finding can overlap
 the weekday rhythm; the explain view shows both.
 
+## The good-day score
+
+An outcome the user defined, not a theory the engine holds (R17): a good day
+is active, not short on sleep or water, and has a good mood. `app/goodday.py`
+builds it from four parts with equal weight:
+
+| Part | Components |
+|---|---|
+| Active | steps, exercise minutes, active energy (their mean) |
+| Sleep | total sleep, the night before the day |
+| Water | water logged |
+| Mood | mean State of Mind valence |
+
+Each component is ranked against your own history (percentile among all
+recorded days, ties sharing a rank; a component needs 14 days). The score is
+the mean of the parts present that day, with at least two of them. A part
+without data is left out, never counted as 0 (R7). Higher counts as better for
+every part, because that is the definition; goals (a sleep or water target)
+are a later setting. Ranks use the whole history, so a day's score can shift a
+little as days arrive. Only complete days are scored (today's partial steps
+would read as a poor day).
+
+`goodday.score` is a daily feature analysed like every other series, in the
+same FDR family: relationships in both time orders, spread over days,
+week/month changes and weekday rhythm. It is not tested against the families
+it is built from (activity, sleep, nutrition, mood): those links hold by
+construction. The **Good days** page lists the best days (top quarter of
+scored days, from 12 scored days on) and, for each reported link with the
+score, the other series' median on best days and on the rest. That
+comparison is descriptive: it adds no tests, the finding above it is the
+evidence.
+
 ## Validation (tests/stats)
 
 Seeded synthetic data, 100 days. The suite runs 20 seeds per check on every
@@ -176,6 +210,7 @@ push and 200 nightly (`STATS_SEEDS`).
 | planted weather → next-night sleep link, found with weather first | ≥ 80% (measured: 100% of 200) |
 | headaches the day before a pressure rise, found with headaches first | ≥ 80% (measured: 92.5% of 200) |
 | unrelated weather with a season: datasets reporting any relationship | ≤ 15% (measured: 13% of 200; 8.5% before R17 added the second time order) |
+| a composite against a series it is built from / a series linked through the data | never tested / found |
 | planted moon → sleep link (±0.3 h), found | ≥ 80% (measured: 86% of 200) |
 | the moon and holidays against unrelated series: datasets reporting a calendar link | ≤ 15% (measured: 1.5% of 200) |
 

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from .. import features
+from .. import features, goodday
 from ..auth import now_utc
 from ..models import FeatureDef, Insight, Setting
 from .constants import FDR_Q, MIN_PAIRED_DAYS
@@ -22,9 +22,13 @@ STATS_KEY = "analysis_last_run"
 
 
 def load_meta(db: Session) -> dict[str, FeatureMeta]:
+    defs = list(db.execute(sa.select(FeatureDef)).scalars())
+    parts = goodday.built_from({d.feature: d.family for d in defs})
     return {
-        d.feature: FeatureMeta(d.label, d.unit, d.kind, d.family, d.analyse)
-        for d in db.execute(sa.select(FeatureDef)).scalars()
+        d.feature: FeatureMeta(
+            d.label, d.unit, d.kind, d.family, d.analyse, parts if d.feature == goodday.FEATURE else ()
+        )
+        for d in defs
     }
 
 

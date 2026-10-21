@@ -195,3 +195,35 @@ def test_the_almanac_follows_latitude_and_country(db, archive, monkeypatch):
         }
     finally:
         get_settings.cache_clear()
+
+
+def test_the_good_day_score_is_a_feature_of_complete_days(db, admin_engine):
+    from app.analysis.run import load_meta
+    from app.auth import now_utc
+    from app.config import get_settings
+    from app.goodday import FEATURE, MIN_COMPONENT_DAYS
+    from app.timeutil import current_day
+
+    settings = get_settings()
+    today = current_day(now_utc(), settings.zone, settings.day_boundary)
+    days = [today - dt.timedelta(days=k) for k in range(MIN_COMPONENT_DAYS + 1)]  # yesterday back, and today
+    with admin_engine.begin() as conn:
+        for k, day in enumerate(days):
+            noon = dt.datetime.combine(day, dt.time(12), tzinfo=settings.zone)
+            conn.execute(
+                text(
+                    "INSERT INTO metric_samples (time, metric, source, unit, qty) VALUES "
+                    "(:t, 'step_count', '', 'count', :s), (:t, 'dietary_water', '', 'mL', :w)"
+                ),
+                {"t": noon, "s": 1000 + 100 * k, "w": 2000 - 50 * k},
+            )
+    try:
+        jobs.refresh(db)
+        score = features.series(db, FEATURE)
+        assert today not in score and len(score) == MIN_COMPONENT_DAYS
+        assert all(0 <= v <= 100 for v in score.values())
+        meta = load_meta(db)[FEATURE]
+        assert meta.family == "goodday" and "activity" in meta.built_from and meta.analyse
+    finally:
+        with admin_engine.begin() as conn:
+            conn.execute(text("DELETE FROM metric_samples"))
