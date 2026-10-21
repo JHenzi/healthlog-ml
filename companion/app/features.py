@@ -23,7 +23,7 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from . import almanac, goodday, mood, outside, trackers, upstream
+from . import almanac, dayrating, goodday, mood, outside, trackers, upstream
 from .auth import now_utc
 from .capture import spec_of
 from .models import DailyFeature, DayReview, FeatureDef, MetricSetting, Observation, StateOfMindEntry, Tracker
@@ -234,6 +234,8 @@ def tracker_features(
     """Each tracker is its own family: its total and its first time are linked by definition."""
     out = FeatureSet()
     for spec, obs in specs:
+        if dayrating.is_built_in(spec.key):
+            continue  # the day rating has its own features (``rating.*``)
         tf = trackers.daily_features(spec, obs, reviewed, last_day, zone, boundary)
         for feature, values in tf.values.items():
             label, unit, kind = tf.labels[feature]
@@ -272,6 +274,9 @@ def rebuild(
     )
     fs.defs |= tracked.defs
     fs.values |= tracked.values
+    rated = dayrating.daily({spec.key: obs for spec, obs in specs}, last_day)
+    for feature, label in dayrating.DEFS:
+        fs.add(Def(feature, label, None, dayrating.SOURCE, family=dayrating.FAMILY), rated[feature])
     weather = outside.weather_features(outside.stored_hours(db), zone, boundary, now_utc())
     for d in outside.DEFS:
         definition = Def(d.feature, d.label, d.unit, "weather", analyse=d.analyse, family="weather")

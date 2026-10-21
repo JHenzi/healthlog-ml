@@ -30,6 +30,11 @@ What works today (milestones M1, M2, M4 part 1 and M5 v1):
   days (the top quarter) are listed, and the nightly analysis compares the
   score with every other series, so the page shows what your best days have
   in common once a link clears the bar ([`docs/analysis-engine.md`](docs/analysis-engine.md));
+- a built-in **day rating**: "How was today?" (1–10) each evening and
+  "Looking back, how was yesterday?" the next morning, both on the Overview
+  and in Capture. Nothing to set up and nothing to delete. The two ratings
+  and the change between them are daily series like any other, and they are
+  what the personal good-day weights will learn from;
 - **your own trackers**: create anything you want to track (a count like
   coffee, a 1–5 productivity scale, yes/no, an amount with a unit, a
   duration, a time of day, a choice such as lunch at home / takeout /
@@ -145,6 +150,8 @@ curl -X POST -H "Authorization: Bearer hlc_…" -H "Content-Type: application/js
 - A Shortcut can speak the reply's `message`, so a misheard entry is caught
   right away.
 - `GET /api/trackers` (a `read` token) lists trackers.
+- `POST /api/log/day_rating` logs tonight's day rating without any setup. The
+  next-morning look back is about the day before, so it's logged on the pages.
 - `DELETE /api/entries/<client_id>` (scope `all`) removes an entry.
 
 **Missing is not zero.** An unlogged count or yes/no tracker counts as 0

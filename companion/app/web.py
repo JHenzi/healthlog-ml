@@ -132,7 +132,7 @@ def today_page(
 
 
 # Self-logged features: HealthLog measures every day, so coverage is about what you log yourself.
-LOGGED_PREFIXES = ("tracker.%", "mood.%")
+LOGGED_PREFIXES = ("tracker.%", "mood.%", "rating.%")
 PRELIMINARY_DAYS = 30  # wireframe 1a: "most comparisons need about 30 logged days"
 
 
@@ -186,9 +186,22 @@ def _today() -> dt.date:
     return current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
 
 
-SOURCE_ORDER = ("goodday", "tracker", "sleep", "healthlog", "stress", "energy", "workout", "mood", "weather", "almanac")
+SOURCE_ORDER = (
+    "goodday",
+    "rating",
+    "tracker",
+    "sleep",
+    "healthlog",
+    "stress",
+    "energy",
+    "workout",
+    "mood",
+    "weather",
+    "almanac",
+)
 SOURCE_TITLES = {
     "goodday": "Good day",
+    "rating": "Day rating",
     "tracker": "Your trackers",
     "sleep": "Sleep",
     "healthlog": "HealthLog metrics",

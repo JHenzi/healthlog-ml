@@ -2,6 +2,7 @@
 {% from "_log_controls.html" import log_controls %}
 {% from "_day_tags.html" import day_tags_block %}
 {% from "_icons.html" import icon, arrow, discovery_head %}
+{% from "_day_rating.html" import evening_row, lookback_row %}
 {% block title %}Overview · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
@@ -9,6 +10,13 @@
   <p class="kicker">{{ view.day.strftime("%A, %B %-d") }}</p>
   <h1>Overview</h1>
   {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
+</section>
+
+<section class="card" aria-labelledby="rating-h">
+  <h2 id="rating-h">Your day</h2>
+  {{ evening_row(capture.rating_today, csrf, "/", capture.new_id, "How was today?") }}
+  {{ lookback_row(capture.rating_yesterday, csrf, "/", capture.new_id, "Looking back, how was yesterday?") }}
+  <p class="muted small">Rate each evening, then look back the next morning. Both are kept, and so is the change between them: they're your own measure of a good day.</p>
 </section>
 
 <section class="card" aria-labelledby="coverage-h">

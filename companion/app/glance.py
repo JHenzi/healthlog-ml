@@ -15,6 +15,7 @@ from .trackers import tag_slug
 # Feature prefix → icon name (see web/templates/_icons.html). First match wins.
 ICONS = (
     ("goodday.", "smile"),
+    ("rating.", "smile"),
     ("sleep.", "moon"),
     ("hl.step_count", "steps"),
     ("hl.heart_rate_variability", "wave"),

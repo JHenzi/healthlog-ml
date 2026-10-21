@@ -1,0 +1,16 @@
+{# The day rating (app/dayrating.py): "How was today?" in the evening and, once the day is over, a look back the
+   next morning. Both are kept; the change between them is measured too. #}
+{% from "_log_controls.html" import log_controls %}
+{% macro evening_row(r, csrf, back, new_id, label) %}
+<div class="tracker-row rating-row">
+  <span class="tracker-name">{{ label }}</span>
+  {{ log_controls(r.evening, csrf, back, new_id, day=r.day, state=r.evening_state) }}
+</div>
+{% endmacro %}
+{% macro lookback_row(r, csrf, back, new_id, label) %}
+<div class="tracker-row rating-row">
+  <span class="tracker-name">{{ label }}</span>
+  <span class="muted small">{% if r.evening_state %}That evening you said <strong>{{ "%g"|format(r.evening_state.num) }}</strong>.{% else %}No evening rating that day.{% endif %}</span>
+  {{ log_controls(r.lookback, csrf, back, new_id, day=r.day, state=r.lookback_state) }}
+</div>
+{% endmacro %}

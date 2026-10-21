@@ -149,6 +149,26 @@ little of it for the day-level tests; its week/month changes are real and
 reported. Holidays mostly fall on Mondays, so a holiday finding can overlap
 the weekday rhythm; the explain view shows both.
 
+## The day rating
+
+The Companion's own measure of the day, built in (`app/dayrating.py`): a 1–10
+"How was today?" each evening and "Looking back, how was yesterday?" the next
+morning, stored on the day it is about. It can't be removed or archived, so
+it's always there to be answered, and an unanswered day is missing, never a
+default (R7). Three daily series come from it, one family (linked by
+definition, never tested against each other):
+
+| Feature | What |
+|---|---|
+| `rating.evening` | the evening rating |
+| `rating.lookback` | the next-morning rating |
+| `rating.shift` | next morning minus evening, on days with both |
+
+It's a measurement, not a theory (R17): the engine tests all three against
+everything, the good-day score included, so "does the computed score agree
+with how the day felt?" is answered by the data. It is the anchor for the
+learned good-day weights below.
+
 ## The good-day score
 
 An outcome the user defined, not a theory the engine holds (R17): a good day
@@ -194,8 +214,8 @@ The weights have to be learned from something other than the score itself,
 or they only learn the score's own formula back. What anchors them, in order
 of preference:
 
-1. **Your own rating of the day.** A 1–10 "How was today?" tracker (a scale
-   tracker, available today). The weights are the mix of parts that best
+1. **Your own rating of the day.** The built-in day rating (above): the
+   evening rating and the next-morning look back. The weights are the mix of parts that best
    predicts your rating on later days. This is the most direct: "good" as you
    felt it, not as we computed it.
 2. **What carries over.** A part counts more when it goes before the other
@@ -223,8 +243,8 @@ How it has to behave:
 - **Shown side by side.** The page shows both scores, the learned weights
   next to the equal ones, the days behind them (R13), and how much better
   the learned score predicts the anchor.
-- **Needs** about 60–90 days with the anchor. A rating tracker started now
-  is ready around January.
+- **Needs** about 60–90 days with the anchor. Ratings started in late
+  October are enough around January.
 
 ## Validation (tests/stats)
 

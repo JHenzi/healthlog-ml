@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_log_controls.html" import log_controls %}
 {% from "_day_tags.html" import day_tags_block %}
+{% from "_day_rating.html" import evening_row, lookback_row %}
 {% block title %}Capture · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
@@ -13,6 +14,11 @@
   <h1>Capture · {{ day.strftime("%a, %b %-d") }}</h1>
   <p class="muted">Tap what applies, then mark the day reviewed. Once it's reviewed, anything you left empty counts as "none"; until then it stays unknown, so a forgotten entry never looks like zero.</p>
   {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
+</section>
+<section class="card" aria-labelledby="rating-h">
+  <h2 id="rating-h">Your day</h2>
+  {{ evening_row(rating, csrf, "/review?day=" ~ day.isoformat(), new_id, "How was " ~ day.strftime("%A") ~ "?") }}
+  {% if rating.ask_lookback %}{{ lookback_row(rating, csrf, "/review?day=" ~ day.isoformat(), new_id, "Looking back, how was " ~ day.strftime("%A") ~ "?") }}{% endif %}
 </section>
 <section class="card">
   <div class="row"><h2>{{ day.strftime("%A") }} was…</h2></div>

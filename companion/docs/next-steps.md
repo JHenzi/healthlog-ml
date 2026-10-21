@@ -57,12 +57,13 @@ In order of how much they unblock:
    - **Workouts**: HealthLog has 0 today.
    - **State of Mind**: today mood only arrives with manual exports. The
      last one landed on Oct 16.
-6. **Create a few trackers** at `/trackers`. First a 1–10 **"How was
-   today?"** rating, logged each evening: it is what the personal good-day
-   weights will learn from (60–90 days). Then coffee, productivity, or
-   whatever you're curious about, pin them for one-tap logging, and do the
-   evening review at `/review`. Self-tracked data only starts counting once
-   it exists.
+6. **Rate each day** on the Overview: "How was today?" in the evening and
+   the look back the next morning (built in since 2026-10-21, nothing to
+   create). It is what the personal good-day weights will learn from (60–90
+   days). Then **create a few trackers** at `/trackers` (coffee,
+   productivity, whatever you're curious about), pin them for one-tap
+   logging, and do the evening review at `/review`. Self-tracked data only
+   starts counting once it exists.
 7. **Optional, HealthLog recompute after the time-zone change** (plan M0,
    unverified):
    ```bash
@@ -222,7 +223,10 @@ issue goes into `build.py` first.
   - **Personal weights** (M7): equal weights are the standard; a learned
     score, anchored on your own rating of the day, sits next to it and is
     shown only when it predicts better (analysis-engine.md, "Learned
-    weights"). Needs the day-rating tracker (§2.6).
+    weights"). Anchored on the built-in day rating (since 2026-10-21).
+  - **Day rating follow-ups:** show it next to the score on `/good-days`
+    (does the computed score agree with how the day felt?); an evening
+    Shortcut for `POST /api/log/day_rating`; a reminder once M11 has push.
   - **Compare with others** (M12, roadmap B13): offline reference figures,
     an anonymous summary, and others' to compare with. How summaries are
     exchanged is an open question (privacy.md, *Planned*).

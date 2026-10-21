@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from . import auth, capture
+from . import auth, capture, dayrating
 from .config import get_settings
 from .db import get_db
 from .models import ApiToken, Observation, Tracker, WebSession
@@ -141,8 +141,8 @@ def trackers_page(
         request,
         "trackers.html",
         {
-            "trackers": [t for t in rows if not t.archived and t.key != DAY_TAGS_KEY],
-            "archived": [t for t in rows if t.archived and t.key != DAY_TAGS_KEY],
+            "trackers": [t for t in rows if not t.archived and not _built_in(t.key)],
+            "archived": [t for t in rows if t.archived and not _built_in(t.key)],
             "day": day,
             "tagged": capture.tags_for_day(db, _today()).get(day.id, set()) if day else set(),
             "type_labels": TYPE_LABELS,
@@ -182,6 +182,8 @@ def create_tracker(
         # tracker shows up in Quick add and the daily log. Which way is "better" is left to the data.
         if type == "tags" or slugify(name) == DAY_TAGS_KEY:
             raise TrackerInputError("tags belong to the day: add them under Day tags")
+        if dayrating.is_built_in(slugify(name)):
+            raise TrackerInputError("the day rating is built in: it's on the Overview and in Capture")
         tracker = capture.create_tracker(
             db,
             key=slugify(name),
@@ -203,6 +205,14 @@ def create_tracker(
 
 def _tracker_or_404(db: Session, key: str) -> Tracker | None:
     return db.execute(sa.select(Tracker).where(Tracker.key == key)).scalar_one_or_none()
+
+
+def _built_in(key: str) -> bool:
+    """Day tags and the day rating have their own place on the pages, not in the tracker lists."""
+    return key == DAY_TAGS_KEY or dayrating.is_built_in(key)
+
+
+BUILT_IN_FIXED = "the day rating is built in and can't be changed"
 
 
 @router.get("/trackers/{key}", response_class=HTMLResponse)
@@ -298,6 +308,8 @@ def edit_tracker(
     tracker = _tracker_or_404(db, key)
     if tracker is None:
         return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
+    if dayrating.is_built_in(key):
+        return _render_detail(key, request, session, db, error=BUILT_IN_FIXED)
     try:
         capture.update_tracker(
             db,
@@ -398,6 +410,8 @@ def version_tracker(
     tracker = _tracker_or_404(db, key)
     if tracker is None:
         return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
+    if dayrating.is_built_in(key):
+        return _render_detail(key, request, session, db, error=BUILT_IN_FIXED)
     changes: dict = {"unit": unit.strip() or None}
     try:
         if tracker.type == "scale":
@@ -496,7 +510,7 @@ def quick_log(
         return redirect
     if not _csrf_ok(session, csrf):
         return _forbidden()
-    tracker = _tracker_or_404(db, key)
+    tracker = dayrating.ensure(db, key) if dayrating.is_built_in(key) else _tracker_or_404(db, key)
     if tracker is None:
         return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
     settings = get_settings()
@@ -506,6 +520,8 @@ def quick_log(
         cid = uuid.UUID(client_id) if client_id else None
         if the_day > _today():
             raise TrackerInputError("that day is in the future")
+        if key == dayrating.LOOKBACK_KEY and the_day >= _today():
+            raise TrackerInputError("look back once the day is over")
         raw = value if value != "" else None
         how = dict(
             observed_at=_when(the_day, at),
@@ -663,10 +679,11 @@ def review_page(
             "day": the_day,
             "prev": the_day - dt.timedelta(days=1),
             "next": the_day + dt.timedelta(days=1) if the_day < today else None,
-            "trackers": [t for t in rows if t.key != DAY_TAGS_KEY],
+            "trackers": [t for t in rows if not _built_in(t.key)],
             "state": day_state(db, the_day),
             "tagged": capture.tags_for_day(db, the_day),
             "reviewed": capture.is_reviewed(db, the_day),
+            "rating": rating_card(db, the_day),
             "csrf": session.csrf_token,
             "error": error,
             "new_id": lambda: str(uuid.uuid4()),
@@ -702,13 +719,30 @@ def _active(db: Session) -> list[Tracker]:
     return list(db.execute(sa.select(Tracker).where(Tracker.archived.is_(False)).order_by(Tracker.name)).scalars())
 
 
+def rating_card(db: Session, day: dt.date) -> dict:
+    """The day rating for ``day``: the evening rating and, once the day is over, the next-morning look back."""
+    ts = dayrating.trackers(db)
+    evening, lookback = ts[dayrating.EVENING_KEY], ts[dayrating.LOOKBACK_KEY]
+    state = day_state(db, day)
+    return {
+        "day": day,
+        "evening": evening,
+        "lookback": lookback,
+        "evening_state": state.get(evening.id) if evening.id else None,
+        "lookback_state": state.get(lookback.id) if lookback.id else None,
+        "ask_lookback": day < _today(),
+    }
+
+
 def today_capture(db: Session, day: dt.date) -> dict:
     """Trackers, the day's tags and today's entries, for the Overview page."""
     rows = _active(db)
     return {
-        "trackers": [t for t in rows if t.key != DAY_TAGS_KEY],
+        "trackers": [t for t in rows if not _built_in(t.key)],
         "day_tags": next((t for t in rows if t.key == DAY_TAGS_KEY), None),
         "state": day_state(db, day),
         "tagged": capture.tags_for_day(db, day),
+        "rating_today": rating_card(db, day),
+        "rating_yesterday": rating_card(db, day - dt.timedelta(days=1)),
         "new_id": lambda: str(uuid.uuid4()),
     }
