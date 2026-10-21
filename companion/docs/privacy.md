@@ -46,13 +46,13 @@ milestone.
 
 ## Planned: comparing with others (M12, roadmap B13)
 
-Nothing here is built. These are the rules it will be built to:
+Nothing here is built, and **how summaries are exchanged is not decided**.
+These are the rules any design has to meet:
 
-- **Nothing is sent by the Companion.** A share card is a file shown on
-  screen and saved locally. You decide whether and where to post it. Posting
-  it publishes it: paste sites are public, scraped and permanent, even after
-  you delete the paste.
-- **What a card may hold:** coarse aggregates only:
+- **Nothing leaves without your explicit action**, and the Companion makes
+  no hidden calls (R5). Whatever channel is chosen gets its own privacy
+  review first: once health data is published, it may not be recallable.
+- **What a summary may hold:** coarse aggregates only:
   - medians over 30 or 90 days, banded (steps to the nearest 500, sleep to
     15 minutes), with extremes capped
   - learned good-day weights rounded to 0.05
@@ -60,22 +60,18 @@ Nothing here is built. These are the rules it will be built to:
   - the kinds of links found, only between standard series (such as
     "sleep ↔ mood, same day, moderate")
   - optionally an age band, only if you add it
-- **What a card never holds:**
+- **What a summary never holds:**
   - dates or time zone
   - location or weather
   - device or source names
-  - ids of any kind (so two cards can't be linked by an id)
+  - ids of any kind (so two summaries can't be linked by an id)
   - free text, tracker names, tag names, mood labels or associations
     (names you chose can identify you)
-- **Before you post**, the page marks each value that is unusual enough to
-  narrow you down, and lets you drop any field.
+- **You see every field before anything goes out.** Values unusual enough
+  to narrow you down are marked, and any field can be dropped.
 - **Reference figures** (published population averages) ship inside the
   image with their sources, so comparing with them needs no network.
-- **Others' cards come in by hand** (a file or a paste). Fetching them
-  automatically would be a separate opt-in sidecar with its own allowlist,
-  like the weather collector (R5).
-- **Honest limits:** one person's card can't be made anonymous in a strict
+- **Honest limits:** one person's summary can't be made anonymous in a strict
   (k-anonymity) sense; banding makes re-identification unlikely, not
-  impossible. People who share cards are a self-selected group, so "others"
-  is not "everyone".
-
+  impossible. People who share are a self-selected group, so "others" is not
+  "everyone".

@@ -168,7 +168,7 @@ data immediately.
 | M8 Diary | entries, embeddings (pgvector), concepts with confirm/reject tuning, themes, evidence views (§3) | M5 |
 | M9 Experiments | n-of-1 interventions with baselines and confounder checks (§4.5) | M5 |
 | M10 Imports & interop | CSV import from other tracking apps; export (§5) | M4 |
-| M12 Compare (opt-in, anonymous) | your figures against others': built-in published reference figures (offline); a **share card** you review and post yourself (the Companion never sends it); importing others' cards by hand to compare good-day weights and typical values (roadmap B13) | M7 for the weights; privacy review (risks.md E7, G6) |
+| M12 Compare (opt-in, anonymous) | your figures against others': built-in published reference figures (offline); an anonymous summary you review field by field, and others' summaries to compare good-day weights and typical values against (roadmap B13). How summaries are exchanged is not decided | M7 for the weights; privacy review (risks.md E7, G6) |
 | M11 Polish | reminders (web push), weekly summary, `proxy_header` auth, optional native iOS app; **purge** a tracker's or tag's entries on request (redacts the event log too, risks.md E5; removing or archiving keeps history) | — |
 
 Throughout: anything generic about getting Apple Health data in becomes an
