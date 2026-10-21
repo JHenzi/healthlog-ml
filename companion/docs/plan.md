@@ -138,7 +138,7 @@ data immediately.
 - [x] Descriptive insights: weekday rhythms (Kruskal-Wallis); 30-day vs prior on the Metrics page. *(Streaks and bests: later.)*
 - [x] Adjusted re-check of every reported relationship for sleep and steps (partial Spearman; "holds", "weaker", "largely accounted for"), validated on planted confounders (2026-10-19).
 - [x] Likely ranges (95%, effective-n aware) on every association and change, with coverage checks (2026-10-19).
-- [x] **Good-day score** (2026-10-20): the user's definition (active, sleep, water, mood), each part ranked against their own history, equal weights, parts shown; analysed like any series but never against what it is built from. **Good days** page: best days (top quarter) and what they have in common. *(Goals as a setting, and M7 predicting the score: later.)*
+- [x] **Good-day score** (2026-10-20): the user's definition (active, sleep, water, mood), each part ranked against their own history, equal weights, parts shown; analysed like any series but never against what it is built from. **Good days** page: best days (top quarter) and what they have in common. *(Equal weights are the standard; personal learned weights side by side come with M7 (analysis-engine.md, "Learned weights"). Goals as a setting: later.)*
 - [x] Sentence templates per method and type; **Insights** feed with an "explain" view (numbers, method, *n*, evidence); `GET /api/insights`.
 - [x] Nightly job at 04:15 (after HealthLog's 03:30 run), at the end of the refresh.
 - [x] Synthetic validation suite: planted same-day, lagged and yes/no effects found; weekday and trend confounders rejected; null calibration on autocorrelated noise. *(Curved effects come with the distributed lag models.)* It caught two miscalibrated tests before release ([`analysis-engine.md`](analysis-engine.md)).
@@ -164,10 +164,11 @@ data immediately.
 | Milestone | Scope (design ref.) | Needs |
 |---|---|---|
 | M6 Within-day effects | event-locked responses, e.g. coffee → steps/HR/stress over the next hours, vs time-matched baselines (§4.3) | M4 events + minute-level data |
-| M7 ML models | next-day prediction with feature importance, day types, change points, multivariate anomalies; time-ordered CV; must beat a naive baseline (§4.7) | M5 feature table + ~90 days |
+| M7 ML models | next-day prediction with feature importance, day types, change points, multivariate anomalies; time-ordered CV; must beat a naive baseline (§4.7). **Personal good-day weights**, learned from your own day rating (or, without one, from which parts go before the others), shown next to the equal-weight standard and reported only when they predict better on later days | M5 feature table + ~90 days (60–90 days of a day rating for the weights) |
 | M8 Diary | entries, embeddings (pgvector), concepts with confirm/reject tuning, themes, evidence views (§3) | M5 |
 | M9 Experiments | n-of-1 interventions with baselines and confounder checks (§4.5) | M5 |
 | M10 Imports & interop | CSV import from other tracking apps; export (§5) | M4 |
+| M12 Compare (opt-in, anonymous) | your figures against others': built-in published reference figures (offline); a **share card** you review and post yourself (the Companion never sends it); importing others' cards by hand to compare good-day weights and typical values (roadmap B13) | M7 for the weights; privacy review (risks.md E7, G6) |
 | M11 Polish | reminders (web push), weekly summary, `proxy_header` auth, optional native iOS app; **purge** a tracker's or tag's entries on request (redacts the event log too, risks.md E5; removing or archiving keeps history) | — |
 
 Throughout: anything generic about getting Apple Health data in becomes an
