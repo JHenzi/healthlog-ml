@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from . import auth, capture, today
+from . import auth, capture, dayrating, today
 from .auth import TRACKER_KEY_RE
 from .config import get_settings
 from .db import get_db
@@ -121,7 +121,13 @@ def log_entry(key: str, body: LogRequest, request: Request, response: Response, 
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such tracker")
     if not auth.scope_allows(token.scope, f"log:{key}"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "token scope does not allow logging this tracker")
-    tracker = db.execute(sa.select(Tracker).where(Tracker.key == key)).scalar_one_or_none()
+    if key == dayrating.LOOKBACK_KEY:
+        # An entry lands on the day of its time; the look back is about the day before, so it's logged on the pages.
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "log the look back on the Overview")
+    if key == dayrating.EVENING_KEY:
+        tracker = dayrating.ensure(db, key)
+    else:
+        tracker = db.execute(sa.select(Tracker).where(Tracker.key == key)).scalar_one_or_none()
     if tracker is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such tracker")
     settings = get_settings()
