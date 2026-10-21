@@ -196,6 +196,14 @@ Regenerate the review page after UI changes with
 `companion/scripts/design_preview/run.sh <dir>` (`SKIN=modernist` for the
 old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7pG.
 
+### 4.3c Grafana extras
+
+Two extra dashboards are live since 2026-10-21 (`companion/grafana/`): Sleep &
+Activity, and All Metrics (no dropdowns). They read only HealthLog's own
+views. Once you've lived with them, offer them upstream as a PR from
+`upstream/dev` into `grafana/dashboards/`, framed as "a possible new Metrics
+page" plus a sleep page, without touching his three.
+
 ### 4.4 M5 follow-ups and M6
 
 - ~~Distributed lag models~~: done 2026-10-19 (analysis-engine.md, "Links
