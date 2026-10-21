@@ -171,6 +171,13 @@ are a later setting. Ranks use the whole history, so a day's score can shift a
 little as days arrive. Only complete days are scored (today's partial steps
 would read as a poor day).
 
+**Equal weights are the standard, not the end state.** The parts don't
+matter equally for everyone: for one person sleep may go before a good mood
+and an active day, for another it may not. The plan is a **personal, learned
+score shown side by side with the standard one** (below, *Learned weights*).
+The standard stays: it is the fixed reference the learned one has to beat,
+and it doesn't move when the model is refitted.
+
 `goodday.score` is a daily feature analysed like every other series, in the
 same FDR family: relationships in both time orders, spread over days,
 week/month changes and weekday rhythm. It is not tested against the families
@@ -180,6 +187,44 @@ scored days, from 12 scored days on) and, for each reported link with the
 score, the other series' median on best days and on the rest. That
 comparison is descriptive: it adds no tests, the finding above it is the
 evidence.
+
+### Learned weights (planned, with M7)
+
+The weights have to be learned from something other than the score itself,
+or they only learn the score's own formula back. What anchors them, in order
+of preference:
+
+1. **Your own rating of the day.** A 1–10 "How was today?" tracker (a scale
+   tracker, available today). The weights are the mix of parts that best
+   predicts your rating on later days. This is the most direct: "good" as you
+   felt it, not as we computed it.
+2. **What carries over.** A part counts more when it goes before the other
+   parts on the next days, such as sleep going before mood and activity. The
+   engine already measures these lagged links (day-level lags and the
+   spread-over-days curves). The wording stays associative (R10): "goes
+   before", never "drives".
+3. **Shared variation** (the first principal component): parts that move
+   together count more. This needs no anchor, but it rewards parts that
+   overlap, so it is a fallback only.
+
+How it has to behave:
+
+- **The data picks the weights (R17).** The parts come from your definition;
+  only their mix is learned. Weights are non-negative and add up to 1. The
+  parts' components (steps against exercise minutes inside *active*) can be
+  learned the same way.
+- **Shrunk toward equal.** With little data the learned score equals the
+  standard one and moves away only as the evidence grows. Twenty days don't
+  get to say that mood doesn't matter.
+- **Time-ordered validation (R9).** The model is fitted on earlier days and
+  scored on later ones. It is shown only if it beats the standard score at
+  predicting the anchor on held-out days; otherwise the page says "not yet
+  different from the standard". It never sees days after the one it scores.
+- **Shown side by side.** The page shows both scores, the learned weights
+  next to the equal ones, the days behind them (R13), and how much better
+  the learned score predicts the anchor.
+- **Needs** about 60–90 days with the anchor. A rating tracker started now
+  is ready around January.
 
 ## Validation (tests/stats)
 

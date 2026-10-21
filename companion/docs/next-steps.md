@@ -57,8 +57,10 @@ In order of how much they unblock:
    - **Workouts**: HealthLog has 0 today.
    - **State of Mind**: today mood only arrives with manual exports. The
      last one landed on Oct 16.
-6. **Create a few trackers** at `/trackers` (coffee, a 1–5 productivity scale,
-   whatever you're curious about), pin them for one-tap logging, and do the
+6. **Create a few trackers** at `/trackers`. First a 1–10 **"How was
+   today?"** rating, logged each evening: it is what the personal good-day
+   weights will learn from (60–90 days). Then coffee, productivity, or
+   whatever you're curious about, pin them for one-tap logging, and do the
    evening review at `/review`. Self-tracked data only starts counting once
    it exists.
 7. **Optional, HealthLog recompute after the time-zone change** (plan M0,
@@ -207,6 +209,13 @@ old look), then republish it to https://claude.ai/artifact/5YEQVBwdtnxZx2SHLCD7p
   30-day median for key metrics, if the notes feel too sparse.
 - ~~Good-day score and best days~~: done 2026-10-20 (`app/goodday.py`,
   analysis-engine.md). Next for it:
+  - **Personal weights** (M7): equal weights are the standard; a learned
+    score, anchored on your own rating of the day, sits next to it and is
+    shown only when it predicts better (analysis-engine.md, "Learned
+    weights"). Needs the day-rating tracker (§2.6).
+  - **Compare with others** (M12, roadmap B13): offline reference figures,
+    a share card you post yourself, and others' cards imported by hand
+    (privacy.md, *Planned*).
   - **Goals as a setting** (sleep hours, water): a part could then read
     "met / not met" instead of a rank. Only when you set one; nothing is
     guessed.

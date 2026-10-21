@@ -87,6 +87,7 @@ be handled when the relevant milestone is built.
 | E3 | Outside-data requests reveal too much | location tracking | coarse fixed location (~10 km), date ranges only, batched daily | unit: the request builder rounds coordinates and sends no other parameters (`test_collector.py`); the collector has its own network and no DB credentials |
 | E4 | Diary text reaches an LLM prompt or logs | sensitive text exposure | diary excluded from narration unless opted in; never logged | unit: narration context builder contains no diary text by default; log capture contains no entry text |
 | E5 | "Deleted" diary text survives in the event log and backups | can't truly delete | **purge** operation: redact payloads in the event log and every derived table; backups age out by retention (14 days) | purge test: after purge, the text appears nowhere in the DB (`pg_dump` grep) |
+| E7 | *design* (M12): a share card re-identifies its author (a rare combination of values, or several cards over time) | health data tied to a person, permanently public | the card holds banded, capped, dateless aggregates only, with no ids, names or free text; unusual values are flagged and every field can be dropped; the Companion never posts it (R5); the docs say plainly that anonymity is not guaranteed (privacy.md) | unit: the card builder emits only allowlisted fields, every value banded; a fixture with tracker names, dates and labels produces a card with none of them |
 | E6 | Backup disk holds secrets + diary in clear | exposure if the disk leaves the house | `0600`/`0700` perms (done); encrypt any off-site copy (restic) | `backup.sh` check: output dir mode 700 |
 
 ## F. Operations
@@ -107,6 +108,7 @@ be handled when the relevant milestone is built.
 | G2 | Insight overload or noise | ranking, minimum support, "not enough data yet" states |
 | G3 | Medical overreach | association wording (R10); "discuss with a clinician" where health-relevant; no diagnoses |
 | G5 | Built-in theories (curated exposures, one-direction rules, hand-picked windows) hide real patterns and favour our guesses | R17: every analysed series on both sides of every test; confounders picked by the data; `grep` for curated lists in review; stats tests plant effects in the "unexpected" direction (`test_outside_data.py`) |
+| G6 | *design* (M12): comparing with others misleads: self-selected sharers, different devices and definitions, "average" read as "target" | wrong conclusions about yourself | reference figures carry their source and population; imported cards are shown with their count and the caveat; comparisons are descriptive, never a verdict (R10) |
 | G4 | Scope creep | milestones ship usable slices; M6+ only when the data asks (plan.md) |
 
 ---
