@@ -12,6 +12,9 @@ are.
 - **All Metrics** (`healthlog-all-metrics`): every metric with data in the
   last 180 days as its own small chart, grouped by category, with no dropdowns.
 
+Screenshots (synthetic data, R4): [Sleep & Activity](screenshots/sleep-activity.png),
+[All Metrics](screenshots/all-metrics.png).
+
 **One scale for different units.** The combined chart ranks each day among
 your own days in the range shown (percentile: 100 = your highest, 50 =
 typical). A percentage of the average was tried first, but it flattened
