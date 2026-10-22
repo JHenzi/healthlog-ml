@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from . import auth, capture, features, glance, goodday, jobs, metric_settings, metrics_view, today, upstream
+from . import auth, capture, features, glance, goodday, jobs, metric_settings, metrics_view, pwa, today, upstream
 from .analysis import run as analysis_run
 from .config import get_settings
 from .db import get_db
@@ -28,6 +28,8 @@ log = logging.getLogger("companion.web")
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "web" / "templates"
 templates = Jinja2Templates(env=jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR), autoescape=True))
 templates.env.filters["tag_slug"] = tag_slug
+templates.env.globals["rendered_at"] = pwa.rendered_at
+templates.env.globals["static_v"] = pwa.static_version()
 
 router = APIRouter()
 

@@ -10,6 +10,7 @@ milestone.
 | HealthLog's health data | HealthLog's schema `public`, read-only to us | no |
 | Your password | argon2 hash in `companion.users` | no |
 | Session cookies, API tokens | SHA-256 hashes only (`companion.sessions`, `companion.api_tokens`) | no |
+| Saved page copies (installed app, `web/static/sw.js`) | the phone's service-worker cache, only for a signed-in session; deleted on sign-out or when the session ends | no (never the API, sign-in or form posts) |
 | Today sentences | computed on request, not stored | only to your browser or token holder |
 | State of Mind entries (valence, labels, associations) | copied into `companion.mood_entries` | no |
 | Daily features (one number per day per series) | `companion.daily_features`, rebuilt nightly | no |

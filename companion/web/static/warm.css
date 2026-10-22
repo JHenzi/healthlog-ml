@@ -130,3 +130,27 @@ label.kind:has(input:checked) span { opacity: 1; color: var(--color-muted); }
 .tile { border-radius: var(--radius-sm); background: var(--color-bg); border-color: var(--color-hairline); }
 .tile.dir-up, .tile.dir-down { background: var(--color-accent-tint); border-color: transparent; }
 .tile-value strong, .pair .side { font-family: var(--font-display); font-weight: 600; }
+
+/* — installed app (app/pwa.py) — */
+/* Full screen on the Home Screen: keep the header below the status bar. */
+.bar { padding-top: calc(var(--space-3) + env(safe-area-inset-top)); }
+@media (max-width: 720px) {
+  .nav .tabs { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+}
+/* Loading bar: a thin moss line along the top while the next page or a save is on its way. */
+html.is-loading::before {
+  content: ""; position: fixed; z-index: 30; top: env(safe-area-inset-top); left: 0; height: 3px; width: 40%;
+  background: var(--color-accent); border-radius: 0 3px 3px 0; animation: loading 1.1s ease-in-out infinite;
+}
+@keyframes loading { 0% { left: -40%; } 100% { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { html.is-loading::before { animation: none; width: 100%; opacity: .6; } }
+/* How old a saved copy is, until the fresh one arrives. */
+.freshness {
+  position: fixed; z-index: 20; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--tabbar-h, 0px) + env(safe-area-inset-bottom) + var(--space-3));
+  padding: 6px 14px; border-radius: 999px; border: 1px solid var(--color-rule);
+  background: var(--color-tile); color: var(--color-muted); font: inherit; font-size: 13px; white-space: nowrap;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+.freshness:not(:disabled) { color: var(--color-accent-strong); font-weight: 700; cursor: pointer; }
+@media (min-width: 721px) { .freshness { bottom: var(--space-4); } }
