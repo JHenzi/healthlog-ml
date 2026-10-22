@@ -220,13 +220,17 @@ files to `grafana/dashboards/`, without touching his three; feedback on the
 issue goes into `build.py` first.
 
 - **An overlap dashboard** (asked 2026-10-21): Sleep & Activity, expanded.
-  A real dashboard of the things that overlap in a day: sleep, activity,
-  mood, the day rating and the good-day score on one timeline, each ranked
-  against your own days so they share a scale (as Sleep & Activity does).
-  A **handful of lines, not everything**: All Metrics already covers
-  everything. Best in the Companion itself (it has the rating, mood and
-  trackers, which Grafana doesn't see), as the default view of the Explore
-  page, with a way to swap one line for any other series.
+  **Sleep is the base line**, and a dropdown overlays **any other series**:
+  steps, exercise, mood, the day rating, the good-day score, weather, and
+  your own trackers and tags. Both lines are on one timeline, each ranked
+  against your own days so they share a scale (as Sleep & Activity does),
+  with the next day lined up after each night. It's two lines you choose,
+  not everything at once: All Metrics covers everything. Sleep as the base
+  is a presentation choice (R17 allows that), not an analysis assumption;
+  the engine still tests every pair. It belongs in the Companion, not
+  Grafana, because Grafana can't see the rating, mood or trackers. It's the
+  default view of the Explore page (§6), and it may be worth letting the
+  base line be swapped too.
 
 ### 4.4 M5 follow-ups and M6
 
