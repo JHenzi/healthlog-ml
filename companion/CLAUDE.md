@@ -66,6 +66,13 @@ pipeline; the Companion owns its own schema, engine and UI.
 - **Every state-changing web request is CSRF-protected; every template
   autoescapes; identity headers are trusted only from `TRUSTED_PROXIES`.**
 
+### Interfaces
+
+- **R18: Every API route is documented.** A route under `/api` is added,
+  changed or removed together with its entry in [`docs/api.md`](docs/api.md):
+  method, path, token scope, body and reply, so it can be fed straight into a
+  Shortcut or script. `tests/contract/test_api_docs.py` checks both ways.
+
 ### Analysis
 
 - **R8: No method ships without its validation suite.** It must find
