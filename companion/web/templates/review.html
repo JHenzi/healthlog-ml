@@ -16,7 +16,7 @@
   {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
 </section>
 <section class="card" aria-labelledby="rating-h">
-  <h2 id="rating-h">Your day</h2>
+  <div class="row"><h2 id="rating-h">Your day</h2><a class="small" href="/reminders">Reminders ›</a></div>
   {{ evening_row(rating, csrf, "/review?day=" ~ day.isoformat(), new_id, "How was " ~ day.strftime("%A") ~ "?") }}
   {% if rating.ask_lookback %}{{ lookback_row(rating, csrf, "/review?day=" ~ day.isoformat(), new_id, "Looking back, how was " ~ day.strftime("%A") ~ "?") }}{% endif %}
 </section>

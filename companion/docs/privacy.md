@@ -18,6 +18,7 @@ milestone.
 | Your trackers and every entry (values, times, device source) | `companion.trackers`, `events` (append-only), `observations` | no |
 | Home location (if weather is on) | `.env` only (`WEATHER_LATITUDE`, `WEATHER_LONGITUDE`), given to the collector container | rounded to 0.1° (~10 km), to Open-Meteo |
 | Hourly weather and air quality | the collector's file, then `companion.weather_hours` | no (it came from outside) |
+| Reminder subscriptions (if reminders are on) | `companion.push_subscriptions`: each device's push-service URL and its public encryption key | each reminder, encrypted for the device, to its push service (Apple's for an iPhone) |
 | Latitude (if set) and holiday country | `.env`; the Companion uses the latitude, rounded to 0.1°, for day length | no: day length, moon and holidays are computed here |
 
 - **No outbound network calls from the Companion.** It contains no HTTP
@@ -31,6 +32,17 @@ milestone.
   connects to nothing but Open-Meteo's two hosts. It writes a CSV file that
   the Companion reads read-only and validates in full; a file with any bad
   line is ignored (`tests/unit/test_collector.py`, `test_outside.py`).
+- **A second opt-in exception: reminders** (`companion-courier`, idle until
+  `PUSH_ENABLED=true` and the VAPID keys are set). The Companion seals each
+  reminder for your phone (RFC 8291 encryption, a VAPID signature) and
+  leaves it in a folder. The courier, built from the collector's image with
+  the same isolation, posts it to the phone's push service and nothing else.
+  The text is a fixed prompt ("How was today?"), never your values. Apple
+  (or Google, Mozilla, Microsoft for other browsers) learns only that a
+  message went to your device, and when. Only those services' hosts are
+  accepted, on subscribing and in the courier; redirects aren't followed;
+  messages older than 4 hours are dropped (`tests/unit/test_push.py`,
+  risks.md E8).
 - **No telemetry**, no model downloads at runtime (`HF_HUB_OFFLINE=1` in the image).
 - **Never logged:** the password (correct or not), session cookies, API tokens.
 - **A deleted entry stays in the event log** as a log event followed by a

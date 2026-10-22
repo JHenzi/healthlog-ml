@@ -5,6 +5,8 @@
   ``refresh`` (seed metric settings, copy new State of Mind entries, load
   the collector's weather file, rebuild the daily feature table, run the
   insight engine).
+- every minute, when reminders are on: seal the reminders that are due for the courier, and read its reports
+  (``app/reminders.py``).
 """
 
 from __future__ import annotations
@@ -16,9 +18,10 @@ from dataclasses import dataclass
 import sqlalchemy as sa
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 
-from . import features, metric_settings, mood, outside, upstream
+from . import features, metric_settings, mood, outside, reminders, upstream
 from .analysis import run as analysis
 from .config import get_settings
 from .db import session_scope
@@ -82,11 +85,24 @@ def nightly_refresh() -> None:
         refresh(db)
 
 
+def reminder_tick() -> None:
+    settings = get_settings()
+    try:
+        with session_scope() as db:
+            reminders.apply_results(db, settings)
+            reminders.run_due(db, settings, dt.datetime.now(dt.UTC))
+    except Exception:
+        log.exception("reminders: tick failed")
+
+
 def run() -> int:
     settings = get_settings()
     scheduler = BlockingScheduler(timezone=settings.zone)
     scheduler.add_job(contract_check, CronTrigger(hour=4, minute=10, timezone=settings.zone), id="contract_check")
     scheduler.add_job(nightly_refresh, CronTrigger(hour=4, minute=15, timezone=settings.zone), id="refresh")
+    if settings.push_on:
+        scheduler.add_job(reminder_tick, IntervalTrigger(minutes=1), id="reminders")
+        log.info("reminders on (outbox %s)", settings.push_dir)
     log.info("jobs scheduler started (TZ=%s)", settings.tz)
     if contract_check() == 0:
         nightly_refresh()  # so a fresh install has features without waiting for the night

@@ -84,3 +84,39 @@ self.addEventListener("fetch", (event) => {
   }
   if (request.mode === "navigate") event.respondWith(page(event, url));
 });
+
+// Reminders (app/reminders.py): the message arrives encrypted to this device; the browser decrypts it.
+self.addEventListener("push", (event) => {
+  let m = {};
+  try {
+    m = event.data ? event.data.json() : {};
+  } catch {
+    m = {};
+  }
+  event.waitUntil(
+    self.registration.showNotification(m.title || "Companion", {
+      body: m.body || "",
+      icon: "/static/icons/icon-192.png",
+      badge: "/static/icons/icon-192.png",
+      data: { url: m.url || "/" },
+      tag: m.title || "companion",
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      freshUntil = Date.now() + AFTER_CHANGE_MS; // open on the latest, not a saved copy
+      for (const client of await self.clients.matchAll({ type: "window", includeUncontrolled: true })) {
+        if ("focus" in client) {
+          await client.navigate(url).catch(() => {});
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })(),
+  );
+});

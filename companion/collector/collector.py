@@ -1,4 +1,4 @@
-"""Weather collector: the Companion's one outbound path (R5; next-steps.md §4.2).
+"""Weather collector and reminder courier: the Companion's only outbound paths (R5; next-steps.md §4.2, §4.3).
 
 It runs in its own container, which has network access but no database credentials and no health data. It
 sends Open-Meteo a home location rounded to 0.1° (about 10 km) and a date range, nothing else (risks.md E3).
@@ -8,6 +8,11 @@ validates the whole file and loads it (``app/outside.py``); it never makes a req
   collector run                       # backfill if there's no file yet, then refresh the last days every night
   collector backfill [--since DATE]   # fetch every hour since DATE (default WEATHER_SINCE) and merge it in
   collector once                      # refresh the last REFRESH_DAYS days now
+  collector deliver                   # the courier: post sealed reminders from the outbox (when PUSH_ENABLED)
+
+The courier delivers reminders the Companion has already encrypted for the phone (``app/push.py``): it reads
+one JSON file per message from the outbox, posts it to the phone's push service (allowlisted hosts only, a fixed
+set of headers), writes the status to ``results/`` and deletes the file. It can't read the messages.
 
 Standard library only, so the image needs no package downloads.
 """
@@ -15,6 +20,7 @@ Standard library only, so the image needs no package downloads.
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
 import datetime as dt
 import json
@@ -26,8 +32,9 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.parse import urlencode, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 from zoneinfo import ZoneInfo
 
 log = logging.getLogger("collector")
@@ -247,6 +254,89 @@ def run(cfg: Config | None) -> int:
         time.sleep(max(wait, 60))
 
 
+# --- the courier (reminders) ---------------------------------------------------------
+
+PUSH_HOSTS = frozenset({"web.push.apple.com", "fcm.googleapis.com", "updates.push.services.mozilla.com"})
+PUSH_HOST_SUFFIXES = (".notify.windows.com", ".push.apple.com")  # keep in step with app/push.py
+PUSH_HEADERS = frozenset({"Authorization", "Content-Encoding", "Content-Type", "TTL", "Urgency"})
+PUSH_POLL_SECONDS = 15
+PUSH_MAX_AGE = dt.timedelta(hours=4)  # older than this, a reminder isn't worth showing
+PUSH_MAX_BODY = 8192
+
+
+def push_host_allowed(url: str) -> bool:
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    return parsed.scheme == "https" and (host in PUSH_HOSTS or host.endswith(PUSH_HOST_SUFFIXES))
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    """A redirect could lead off the allowlist: report it as the status instead of following it."""
+
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+_push_opener = build_opener(_NoRedirect)
+
+
+def post_push(url: str, headers: dict[str, str], body: bytes) -> int:
+    """POST one sealed message; returns the HTTP status (0 when the service couldn't be reached)."""
+    request = Request(url, data=body, method="POST", headers=headers)
+    try:
+        with _push_opener.open(request, timeout=TIMEOUT_SECONDS) as response:
+            return response.status
+    except HTTPError as exc:
+        return exc.code
+    except OSError:
+        return 0
+
+
+def deliver_once(push_dir: Path, now: dt.datetime, post: Callable[[str, dict, bytes], int] = post_push) -> int:
+    """Deliver every message in the outbox; returns how many were posted."""
+    outbox, results = push_dir / "outbox", push_dir / "results"
+    if not outbox.is_dir():
+        return 0
+    results.mkdir(exist_ok=True)
+    posted = 0
+    for path in sorted(outbox.glob("*.json")):
+        try:
+            entry = json.loads(path.read_text())
+            endpoint = str(entry["endpoint"])
+            created = dt.datetime.fromisoformat(entry["created"])
+            headers = {k: str(v) for k, v in entry["headers"].items() if k in PUSH_HEADERS}
+            body = base64.b64decode(entry["body"])
+        except (ValueError, KeyError, TypeError, AttributeError):
+            log.warning("push: dropped a malformed outbox file")
+            path.unlink(missing_ok=True)
+            continue
+        if not push_host_allowed(endpoint) or len(body) > PUSH_MAX_BODY:
+            status = -1  # refused: not a push service, or not a reminder
+        elif now - created > PUSH_MAX_AGE:
+            status = -2  # too old to be useful
+        else:
+            status = post(endpoint, headers, body)
+            posted += 1
+        log.info("push: %s -> %d", urlparse(endpoint).hostname, status)
+        (results / path.name).write_text(json.dumps({"endpoint": endpoint, "status": status}))
+        path.unlink(missing_ok=True)
+    return posted
+
+
+def deliver(push_dir: Path, enabled: bool) -> int:
+    if not enabled:
+        log.warning("reminders are off: set PUSH_ENABLED=true (and the VAPID keys for the Companion) to deliver")
+        while True:
+            time.sleep(86400)
+    log.info("courier: delivering reminders from %s", push_dir / "outbox")
+    while True:
+        try:
+            deliver_once(push_dir, dt.datetime.now(dt.UTC))
+        except Exception:
+            log.exception("push: delivery pass failed")
+        time.sleep(PUSH_POLL_SECONDS)
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     parser = argparse.ArgumentParser(prog="collector", description=__doc__.split("\n\n")[0])
@@ -255,7 +345,11 @@ def main(argv: list[str] | None = None) -> int:
     back = sub.add_parser("backfill", help="fetch every hour since a date and merge it into the file")
     back.add_argument("--since", type=dt.date.fromisoformat, help="first date (default: WEATHER_SINCE)")
     sub.add_parser("once", help="refresh the last days now")
+    sub.add_parser("deliver", help="the courier: deliver sealed reminders from the outbox")
     args = parser.parse_args(argv)
+    if args.command == "deliver":
+        enabled = os.environ.get("PUSH_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
+        return deliver(Path(os.environ.get("PUSH_DIR", "/push")), enabled)
     cfg = config_from_env(dict(os.environ))
     if args.command == "run":
         return run(cfg)

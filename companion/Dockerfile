@@ -9,7 +9,8 @@ ENV PYTHONUNBUFFERED=1 \
     # No model or hub downloads at runtime, ever (R5).
     HF_HUB_OFFLINE=1
 
-RUN groupadd -g 1000 companion && useradd -u 1000 -g 1000 -d /app -s /usr/sbin/nologin companion
+RUN groupadd -g 1000 companion && useradd -u 1000 -g 1000 -d /app -s /usr/sbin/nologin companion \
+    && mkdir /push && chown 1000:1000 /push
 
 WORKDIR /app
 COPY requirements.txt .
