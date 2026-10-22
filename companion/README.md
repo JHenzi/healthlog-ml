@@ -130,6 +130,20 @@ Then open `https://<host>.<tailnet>.ts.net:8443` from any device on your
 tailnet. Nothing is exposed to the internet. nginx or Caddy work the same way:
 proxy to `127.0.0.1:8020` and set `X-Forwarded-For`.
 
+## On your iPhone
+
+Open the Companion in Safari, tap **Share → Add to Home Screen**, then open
+it from the Home Screen and sign in once. It then runs full screen, with no
+Safari toolbar, and the tabs sit along the bottom.
+
+- **Pages open at once.** The phone keeps a saved copy of each page and
+  shows it straight away. Until the fresh one arrives, a note at the bottom
+  says *Saved 9:42 · checking for updates…*. The page then swaps itself in,
+  or offers *Newer numbers ready · tap to show* if you're scrolling or typing.
+- **Right after you log something**, pages come from the server, so you see
+  your entry.
+- **Signing out deletes the saved copies.** So does an expired session.
+
 ## Logging from Shortcuts, NFC tags and scripts
 
 **Every API route, with its token scope, body and reply, is in

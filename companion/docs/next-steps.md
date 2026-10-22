@@ -163,10 +163,22 @@ need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
   and speaks `message`. Share it via an iCloud link and document the import
   questions. **Test from the Watch**: does it route through the phone's
   Tailscale?
-- **Installable web app:** `manifest.webmanifest`, a service worker, and an
-  offline queue. Entries already carry device-generated `client_id`s, so
-  retries are safe. The CSP allows only `script-src 'self'`, so the JS goes
-  in `web/static/`.
+- ~~**Installable web app**~~: done 2026-10-21 (`app/pwa.py`,
+  `web/static/sw.js`, README *On your iPhone*): full screen from the Home
+  Screen, saved page copies with a "Saved 9:42 · checking for updates…" note,
+  a loading bar, and versioned static files. Still to do: an **offline
+  queue** for entries logged without a connection (entries already carry
+  `client_id`s, so retries are safe).
+- **Reminders at 10 AM and 7 PM** (asked 2026-10-21): 7 PM for "How was
+  today?" and the evening log, 10 AM for the look back. Web Push works for a
+  Home Screen app on iOS 16.4 and later, and Tailscale doesn't stand in the
+  way, because the push goes server → Apple → phone. But the server has to
+  reach Apple's push service: a new outbound call, so it's **opt-in** like
+  the weather (R5, privacy.md), and it needs VAPID keys in `.env`, a
+  permission tap inside the installed app, and a job that sends at the
+  times set. Until then, an iPhone Shortcuts automation at those times
+  (*Ask for Number* → `POST /api/log/day_rating`, docs/api.md) works with no
+  server change.
 - **Spans** (vacation, sick, travel): a table plus a 0/1 daily mask; the
   engine excludes span days by default.
 - The Apple Health *Log Health Sample* recipes doc. (Ideas on the Trackers
@@ -207,6 +219,15 @@ If the maintainer wants them, open a PR from `upstream/dev` adding the two JSON
 files to `grafana/dashboards/`, without touching his three; feedback on the
 issue goes into `build.py` first.
 
+- **An overlap dashboard** (asked 2026-10-21): Sleep & Activity, expanded.
+  A real dashboard of the things that overlap in a day: sleep, activity,
+  mood, the day rating and the good-day score on one timeline, each ranked
+  against your own days so they share a scale (as Sleep & Activity does).
+  A **handful of lines, not everything**: All Metrics already covers
+  everything. Best in the Companion itself (it has the rating, mood and
+  trackers, which Grafana doesn't see), as the default view of the Explore
+  page, with a way to swap one line for any other series.
+
 ### 4.4 M5 follow-ups and M6
 
 - ~~Distributed lag models~~: done 2026-10-19 (analysis-engine.md, "Links
@@ -236,6 +257,13 @@ issue goes into `build.py` first.
   - **M7 predicts the score** (next-day, with the features that pushed the
     prediction), once there are ~90 scored days.
   - Mood is the thinnest part: State of Mind only arrives when you log one.
+  - **The parts are hand-picked** (raised 2026-10-21). Active, sleep,
+    water and mood are this user's definition, coded in. Someone else's
+    best days, or this user's later on, may hinge on a tracker or a metric
+    that isn't a part. Planned: the **day rating is the outcome**, and the
+    engine already tests it against every series. The score's parts become
+    a setting (default: these four), and M7's learned score may draw on any
+    series that predicts the rating, not only the four.
 - **M6 within-day:** event-locked responses (coffee → steps, HR, stress over
   −60…+180 min against time-matched control days). Tracker entries already
   have timestamps.

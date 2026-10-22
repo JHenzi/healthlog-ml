@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
-from . import api, upstream, web, web_trackers
+from . import api, pwa, upstream, web, web_trackers
 from .db import session_scope
 
 log = logging.getLogger("companion")
@@ -61,10 +61,16 @@ def create_app(*, check_on_startup: bool = True) -> FastAPI:
         response = await call_next(request)
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
+        if request.url.path.startswith("/static/"):
+            # Pages link static files with ?v=<version> (app/pwa.py), so a new deploy gets new URLs.
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable" if "v" in request.query_params else "public, max-age=86400"
+            )
         return response
 
     app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
     app.include_router(api.router)
+    app.include_router(pwa.router)
     app.include_router(web.router)
     app.include_router(web_trackers.router)
     return app
