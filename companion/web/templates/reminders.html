@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Reminders · Companion{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="kicker"><a href="/review">‹ Capture</a></p>
+  <h1>Reminders</h1>
+  <p class="muted">A nudge in the morning to look back on yesterday, and one in the evening to rate today. A reminder whose question you've already answered isn't sent.</p>
+  {% if note %}<p role="status">{{ note }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
+</section>
+
+{% if not on %}
+<section class="card">
+  <h2>Off on this server</h2>
+  <p>Reminders are opt-in. They go from your server through your phone's push service (Apple's, on an iPhone), sealed so only your phone can read them. To turn them on, run this on the server and add the two lines it prints to <code>.env</code>, then redeploy:</p>
+  <pre><code>docker exec healthlog-companion companion push keys</code></pre>
+</section>
+{% else %}
+<section class="card" id="push-device" data-public-key="{{ public_key }}" data-csrf="{{ csrf }}">
+  <h2>This phone</h2>
+  <p class="muted small" data-push-status>Checking…</p>
+  <p class="push-actions">
+    <button type="button" data-push-on hidden>Turn on reminders</button>
+    <button type="button" class="secondary" data-push-off hidden>Turn off on this phone</button>
+  </p>
+  <p class="muted small" data-push-install hidden>On an iPhone, reminders work only in the installed app: in Safari, tap <strong>Share → Add to Home Screen</strong>, then open the Companion from the Home Screen and come back here.</p>
+</section>
+
+<section class="card">
+  <h2>When</h2>
+  <form method="post" action="/reminders" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% for k in kinds %}{% set at = times[k.key] %}
+    <div class="tracker-row">
+      <label class="tracker-name"><input type="checkbox" name="{{ k.key }}_on" value="on"{% if at %} checked{% endif %}> {{ k.label }}</label>
+      <span class="muted small">{{ k.body }}</span>
+      <input class="time" type="time" name="{{ k.key }}" value="{{ (at or k.default).strftime('%H:%M') }}" aria-label="{{ k.label }} reminder time">
+    </div>
+    {% endfor %}
+    <button type="submit">Save times</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Devices</h2>
+  {% if devices %}
+  <ul class="plain">{% for d in devices %}<li>{{ d.endpoint.split('/')[2] }} · since {{ d.created_at.strftime('%b %-d') }}{% if d.last_status %} · last reply {{ d.last_status }}{% endif %}</li>{% endfor %}</ul>
+  <form method="post" action="/push/test" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="secondary">Send a test</button></form>
+  {% else %}<p class="muted">No phone has turned reminders on yet.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

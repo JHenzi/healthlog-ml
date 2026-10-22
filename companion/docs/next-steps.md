@@ -169,7 +169,9 @@ need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
   a loading bar, and versioned static files. Still to do: an **offline
   queue** for entries logged without a connection (entries already carry
   `client_id`s, so retries are safe).
-- **Reminders at 10 AM and 7 PM** (asked 2026-10-21): 7 PM for "How was
+- ~~**Reminders at 10 AM and 7 PM**~~: built 2026-10-22 (`app/push.py`,
+  `app/reminders.py`, the courier in `collector/collector.py`, README
+  *Reminders*). Original notes: 7 PM for "How was
   today?" and the evening log, 10 AM for the look back. Web Push works for a
   Home Screen app on iOS 16.4 and later, and Tailscale doesn't stand in the
   way, because the push goes server → Apple → phone. But the server has to

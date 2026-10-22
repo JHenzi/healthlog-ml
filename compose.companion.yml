@@ -29,9 +29,15 @@ services:
       # The almanac, computed here: day length from the latitude alone; holidays by country (default from TZ).
       WEATHER_LATITUDE: ${WEATHER_LATITUDE:-}
       HOLIDAYS_COUNTRY: ${HOLIDAYS_COUNTRY:-}
+      # Reminders (opt-in): keys from `companion push keys`. Unset, nothing is sealed and the courier stays idle.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:companion@localhost}
     volumes:
       # The collector's weather file; read-only here, the Companion itself never fetches (R5).
       - companion-outside:/outside:ro
+      # Sealed reminders for the courier, and its delivery reports. The Companion itself never sends (R5).
+      - companion-push:/push
     restart: unless-stopped
 
   companion-jobs:
@@ -44,6 +50,7 @@ services:
     environment: *companion-env
     volumes:
       - companion-outside:/outside:ro
+      - companion-push:/push
     # No HTTP server in this process; the image's web health check doesn't apply.
     healthcheck:
       disable: true
@@ -75,8 +82,31 @@ services:
     mem_limit: 128m
     restart: unless-stopped
 
+  # Reminders (opt-in): the courier posts reminders the Companion has already encrypted for your phone to its
+  # push service (Apple's, for an iPhone). Same image and isolation as the collector: no database, no health
+  # data, and it can't read the messages. Idle until PUSH_ENABLED=true.
+  companion-courier:
+    image: healthlog-companion-collector:dev
+    container_name: healthlog-companion-courier
+    command: ["deliver"]
+    depends_on:
+      companion-collector:
+        condition: service_started
+    environment:
+      PUSH_ENABLED: ${PUSH_ENABLED:-false}
+    volumes:
+      - companion-push:/push
+    networks:
+      - outside
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 64m
+    restart: unless-stopped
+
 volumes:
   companion-outside:
+  companion-push:
 
 networks:
   outside:

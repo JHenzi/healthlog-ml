@@ -7,6 +7,7 @@ companion token create NAME --scope all|read|log:<tracker_key>
 companion token list
 companion token revoke ID
 companion refresh                        # seed metric settings, sync mood, rebuild daily features
+companion push keys                      # print a new VAPID key pair for .env (reminders)
 companion web                            # migrate, then serve on :8000
 companion jobs                           # run the nightly job scheduler
 """
@@ -114,6 +115,16 @@ def _refresh(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _push_keys(_args: argparse.Namespace) -> int:
+    from .push import generate_keys
+
+    public, private = generate_keys()
+    print("Add these to .env to turn reminders on, then redeploy. The private key is a secret (R11).")
+    print(f"VAPID_PUBLIC_KEY={public}")
+    print(f"VAPID_PRIVATE_KEY={private}")
+    return 0
+
+
 def _web(args: argparse.Namespace) -> int:
     import uvicorn
 
@@ -153,6 +164,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("refresh", help="seed metric settings, sync mood, rebuild daily features").set_defaults(
         func=_refresh
     )
+
+    push = sub.add_parser("push", help="reminders (web push)")
+    push_sub = push.add_subparsers(dest="push_command", required=True)
+    push_sub.add_parser("keys", help="print a new VAPID key pair for .env").set_defaults(func=_push_keys)
 
     web = sub.add_parser("web", help="migrate, then serve the web app")
     web.add_argument("--port", type=int, default=8000)

@@ -54,8 +54,11 @@ pipeline; the Companion owns its own schema, engine and UI.
 ### Privacy and security
 
 - **R5: No hidden network calls.** At runtime, the only outbound requests
-  are opt-in, allowlisted, fetch-only outside-data sources. Models are baked
-  into the image (`HF_HUB_OFFLINE=1`). No telemetry.
+  are opt-in and allowlisted, and they leave from the isolated collector
+  image (no database, no health data), never from the Companion itself:
+  fetches from outside-data sources, and reminders the Companion has already
+  encrypted for the phone, posted to its push service by the courier. Models
+  are baked into the image (`HF_HUB_OFFLINE=1`). No telemetry.
 - **R6: Capture is structured.** No language model in any capture path.
   Values come from typed inputs; unparseable text becomes a note, never a
   guess.

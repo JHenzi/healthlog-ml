@@ -13,7 +13,7 @@
 </section>
 
 <section class="card" aria-labelledby="rating-h">
-  <h2 id="rating-h">Your day</h2>
+  <div class="row"><h2 id="rating-h">Your day</h2><a class="small" href="/reminders">Reminders ›</a></div>
   {{ evening_row(capture.rating_today, csrf, "/", capture.new_id, "How was today?") }}
   {{ lookback_row(capture.rating_yesterday, csrf, "/", capture.new_id, "Looking back, how was yesterday?") }}
   <p class="muted small">Rate each evening, then look back the next morning. Both are kept, and so is the change between them: they're your own measure of a good day.</p>

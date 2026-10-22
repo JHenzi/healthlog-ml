@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     latitude: float | None = Field(default=None, alias="WEATHER_LATITUDE")
     # Public holidays: a country code (US, CA, GB, DE), "none" to turn them off, or empty to go by TZ.
     holidays_country: str = Field(default="", alias="HOLIDAYS_COUNTRY")
+    # Reminders (web push, opt-in): VAPID keys from `companion push keys`. Unset: no reminders are prepared.
+    vapid_public_key: str = Field(default="", alias="VAPID_PUBLIC_KEY")
+    vapid_private_key: str = Field(default="", alias="VAPID_PRIVATE_KEY")
+    vapid_subject: str = Field(default="mailto:companion@localhost", alias="VAPID_SUBJECT")
+    # Sealed reminders go here for the courier to deliver (shared volume). The Companion never sends (R5).
+    push_dir: Path = Field(default=Path("/push"), alias="PUSH_DIR")
 
     @field_validator("tz")
     @classmethod
@@ -71,6 +77,10 @@ class Settings(BaseSettings):
         if self.holidays_country == "NONE":
             return None
         return self.holidays_country or country_for_zone(self.tz)
+
+    @property
+    def push_on(self) -> bool:
+        return bool(self.vapid_public_key and self.vapid_private_key)
 
     @property
     def zone(self) -> ZoneInfo:

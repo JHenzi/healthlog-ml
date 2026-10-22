@@ -239,3 +239,17 @@ class WeatherHourRow(Base):
     pm10: Mapped[float | None] = mapped_column(Float, nullable=True)
     us_aqi: Mapped[float | None] = mapped_column(Float, nullable=True)
     loaded_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PushSubscription(Base):
+    """A phone (or browser) that asked for reminders: where its push service is, and its encryption keys."""
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    endpoint: Mapped[str] = mapped_column(Text, unique=True)
+    p256dh: Mapped[str] = mapped_column(Text)
+    auth: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_status: Mapped[int | None] = mapped_column(Integer, nullable=True)  # the push service's last reply
+    last_sent_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
