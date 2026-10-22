@@ -98,6 +98,7 @@ be handled when the relevant milestone is built.
 | F2 | Our migrations fail on a populated DB | downtime | migrations tested up **and** down, on empty and populated DBs | migration suite: `upgrade head` → `downgrade base` → `upgrade head` with fixture data |
 | F3 | Job ordering vs upstream (03:30) and backups (04:30) | stale reads, contention | 04:15 after upstream's completion marker (A7); `pg_dump` is snapshot-consistent anyway | — |
 | F4 | iOS updates break the Shortcut | capture silently fails | the Shortcut reports "Not saved" on failure; manual checklist after each iOS release | manual test checklist (docs) |
+| F6 | An API route exists only in the code | Shortcuts and scripts can't be built without reading the source; docs drift | R18: `docs/api.md` lists every `/api` route with scope, body and reply, updated in the same change | contract: every served `/api` route is documented and every documented one is served (`test_api_docs.py`) |
 | F5 | Silent job failures | stale insights | job outcome notifications (reuse Gotify/PushBits like upstream); "last run" shown in the UI | unit: a failed job emits a notification and marks the run failed |
 
 ## G. Product and scope
@@ -119,7 +120,7 @@ be handled when the relevant milestone is built.
 companion/tests/
 ├── unit/           pure functions: type system, features, time/DST, wording lint      (every commit)
 ├── integration/    real TimescaleDB: API, auth, migrations, event-log rebuild          (every commit)
-├── contract/       upstream coupling: no-dependency, role permissions, read contract   (every commit)
+├── contract/       upstream coupling (no-dependency, roles, read contract); API docs (R18)
 ├── security/       auth, CSRF, XSS, token scope matrix, injection, proxy spoofing      (every commit)
 ├── privacy/        egress block, log scrubbing, purge, repo scan                        (every commit)
 ├── stats/          planted-effect, null-calibration, confounding, stability, leakage   (nightly; seeded, slow)

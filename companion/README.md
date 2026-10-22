@@ -132,6 +132,9 @@ proxy to `127.0.0.1:8020` and set `X-Forwarded-For`.
 
 ## Logging from Shortcuts, NFC tags and scripts
 
+**Every API route, with its token scope, body and reply, is in
+[`docs/api.md`](docs/api.md)** (rule R18). In short:
+
 Every tracker has its own endpoint, `POST /api/log/<key>`. Its **Set up**
 panel creates a token that can log only that tracker, so a leaked coffee
 token can log coffee and nothing else.
