@@ -32,7 +32,7 @@ services:
       # Reminders (opt-in): keys from `companion push keys`. Unset, nothing is sealed and the courier stays idle.
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
-      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:companion@localhost}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-https://github.com/JHenzi/healthlog-ml}
     volumes:
       # The collector's weather file; read-only here, the Companion itself never fetches (R5).
       - companion-outside:/outside:ro

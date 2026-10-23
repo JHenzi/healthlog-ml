@@ -287,6 +287,8 @@ def post_push(url: str, headers: dict[str, str], body: bytes) -> int:
         with _push_opener.open(request, timeout=TIMEOUT_SECONDS) as response:
             return response.status
     except HTTPError as exc:
+        # The service says why it refused (Apple: {"reason": "BadJwtToken"}); it never echoes the message.
+        log.warning("push: refused by %s: %s", urlparse(url).hostname, exc.read(200).decode("utf-8", "replace"))
         return exc.code
     except OSError:
         return 0

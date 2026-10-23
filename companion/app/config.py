@@ -41,7 +41,8 @@ class Settings(BaseSettings):
     # Reminders (web push, opt-in): VAPID keys from `companion push keys`. Unset: no reminders are prepared.
     vapid_public_key: str = Field(default="", alias="VAPID_PUBLIC_KEY")
     vapid_private_key: str = Field(default="", alias="VAPID_PRIVATE_KEY")
-    vapid_subject: str = Field(default="mailto:companion@localhost", alias="VAPID_SUBJECT")
+    # Apple refuses a subject at localhost (403 BadJwtToken), so the default is the project's page.
+    vapid_subject: str = Field(default="https://github.com/JHenzi/healthlog-ml", alias="VAPID_SUBJECT")
     # Sealed reminders go here for the courier to deliver (shared volume). The Companion never sends (R5).
     push_dir: Path = Field(default=Path("/push"), alias="PUSH_DIR")
 
