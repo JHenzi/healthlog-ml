@@ -757,7 +757,7 @@
     {
       "id": 15,
       "type": "timeseries",
-      "title": "Respiratory rate",
+      "title": "Respiratory rate (breaths/min)",
       "description": "Only from watches that measure it (some need a newer model or a setting turned on).",
       "datasource": {
         "uid": "healthlog-db"
@@ -776,7 +776,7 @@
           },
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "SELECT (day::timestamp AT TIME ZONE '$tz') AS time, avg AS \"Respiratory rate\" FROM daily_metrics WHERE metric = 'respiratory_rate' AND $__timeFilter((day::timestamp AT TIME ZONE '$tz')) ORDER BY day",
+          "rawSql": "SELECT (day::timestamp AT TIME ZONE '$tz') AS time, avg AS \"Respiratory rate (breaths/min)\" FROM daily_metrics WHERE metric = 'respiratory_rate' AND $__timeFilter((day::timestamp AT TIME ZONE '$tz')) ORDER BY day",
           "format": "time_series"
         }
       ],
@@ -805,7 +805,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Respiratory rate"
+              "options": "Respiratory rate (breaths/min)"
             },
             "properties": [
               {

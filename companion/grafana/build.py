@@ -352,7 +352,7 @@ P.append(row("Overnight measures", 37))
 for k, (metric, name, unit, agg) in enumerate(
     (
         ("apple_sleeping_wrist_temperature", "Sleeping wrist temperature", "celsius", "avg"),
-        ("respiratory_rate", "Respiratory rate", "none", "avg"),
+        ("respiratory_rate", "Respiratory rate (breaths/min)", "none", "avg"),
         ("breathing_disturbances", "Breathing disturbances", "none", "sum"),
     )
 ):
@@ -384,9 +384,10 @@ _id = 0
 GLOSSARY = f"""<div style="font-size:15px;line-height:1.6">
 <p>Every measure your devices sent in the last six months, one chart each, grouped by kind. Nothing to choose:
 a measure your watch doesn't record simply isn't listed, and older watches report fewer.</p>
-<p>The <b style="color:{C["sleep"]}">bars</b> are each day's value: a total for things that add up (steps, exercise
-minutes, energy), an average for things that are measured (heart rate, walking speed), the lowest reading for resting
-heart rate. The <b style="color:{C["avg"]}">dashed line</b> is the 7-day average, which shows the trend under the
+<p><b>Totals</b> are things that add up (steps, exercise minutes, energy): each day is a
+<b style="color:{C["sleep"]}">bar</b> from zero. <b>Measurements</b> are things that are measured (heart rate, walking
+speed): each day is a <b style="color:{C["sleep"]}">point on a line</b>, the day's average, or the lowest reading for
+resting heart rate. The <b style="color:{C["avg"]}">dashed line</b> is the 7-day average, which shows the trend under the
 day-to-day noise.</p>
 <p><b style="color:#c2255c">Heart rate variability</b> (HRV) is how much the time between heartbeats varies; it runs
 higher when you're rested and is very personal, so compare it with your own history, not other people's.
@@ -394,68 +395,103 @@ higher when you're rested and is very personal, so compare it with your own hist
 <b style="color:#1971c2">Walking asymmetry</b> and <b style="color:#1971c2">double support</b> come from the iPhone in
 your pocket: how evenly you step, and how much of each stride both feet are on the ground.</p></div>"""
 
-METRIC_VAR = {
-    "name": "metric",
-    "type": "query",
-    "label": "Metric",
-    "hide": 2,
-    "datasource": {"uid": "healthlog-db"},
-    "description": "Hidden: every metric with data in the last 180 days, in category order. The page repeats one "
-    "chart per metric.",
-    "query": "SELECT initcap(COALESCE(NULLIF(r.category, 'unknown'), 'other')) || ' · ' || COALESCE(r.display_name, "
-    "m.metric) || COALESCE(' (' || NULLIF(r.unit_canonical, '') || ')', '') AS __text, m.metric AS __value "
-    "FROM (SELECT DISTINCT metric FROM daily_metrics WHERE day > current_date - 180) m "
-    "LEFT JOIN metric_registry r USING (metric) "
-    "ORDER BY COALESCE(NULLIF(r.category, 'unknown'), 'zz'), 1",
-    "refresh": 1,
-    "sort": 0,
-    "multi": True,
-    "includeAll": True,
-    "current": {"selected": True, "text": ["All"], "value": ["$__all"]},
-    "options": [],
-}
-METRIC_SQL = f"""SELECT {DAY} AS time,
-  CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END
-    AS "Daily",
-  AVG(CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax
-      ELSE d.avg END) OVER (ORDER BY d.day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS "7-day average"
-FROM daily_metrics d LEFT JOIN metric_registry r USING (metric)
-WHERE d.metric = '$metric' AND $__timeFilter({DAY})
-ORDER BY d.day"""
-repeated = series(
-    "$metric",
-    METRIC_SQL,
-    0,
-    9,
-    8,
-    7,
-    "short",
-    [
-        fixed("Daily", C["sleep"]),
-        fixed(
-            "7-day average",
-            C["avg"],
-            [
-                {"id": "custom.drawStyle", "value": "line"},
-                {"id": "custom.lineWidth", "value": 2},
-                {"id": "custom.fillOpacity", "value": 0},
-                {"id": "custom.showPoints", "value": "never"},
-                {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}},
-            ],
-        ),
-    ],
-    draw="bars",
-    desc="Each day's value (bars) and the 7-day average (dashed).",
+# Titles show readable units (bpm, °C) instead of the registry's canonical ones (count/min, degC).
+UNIT = (
+    "CASE r.unit_canonical WHEN 'degC' THEN '°C' WHEN 'dBASPL' THEN 'dB' WHEN 'km/hr' THEN 'km/h' "
+    "WHEN 'count/min' THEN CASE m.metric WHEN 'respiratory_rate' THEN 'breaths/min' ELSE 'bpm' END "
+    "WHEN 'count' THEN NULL ELSE NULLIF(r.unit_canonical, '') END"
 )
-repeated["fieldConfig"]["defaults"]["custom"]["fillOpacity"] = 60
-repeated["options"]["legend"]["showLegend"] = False
-repeated.update({"repeat": "metric", "repeatDirection": "h", "maxPerRow": 3})
+AGG = "COALESCE(r.agg_default, 'avg')"
+
+
+def metric_var(name, kind):
+    """A hidden variable listing every metric of one kind with data in the last 180 days, in category order."""
+    return {
+        "name": name,
+        "type": "query",
+        "label": "Metric",
+        "hide": 2,
+        "datasource": {"uid": "healthlog-db"},
+        "description": "Hidden: every metric of this kind with data in the last 180 days, in category order. The "
+        "page repeats one chart per metric.",
+        "query": "SELECT initcap(COALESCE(NULLIF(r.category, 'unknown'), 'other')) || ' · ' || COALESCE(r.display_name, "
+        f"m.metric) || COALESCE(' (' || {UNIT} || ')', '') AS __text, m.metric AS __value "
+        "FROM (SELECT DISTINCT metric FROM daily_metrics WHERE day > current_date - 180) m "
+        "LEFT JOIN metric_registry r USING (metric) "
+        f"WHERE {kind} "
+        "ORDER BY COALESCE(NULLIF(r.category, 'unknown'), 'zz'), 1",
+        "refresh": 1,
+        "sort": 0,
+        "multi": True,
+        "includeAll": True,
+        "current": {"selected": True, "text": ["All"], "value": ["$__all"]},
+        "options": [],
+    }
+
+
+# Totals (steps, minutes, energy) are bars from zero; measured values (heart rate, HRV) are lines, because bars on an
+# axis that doesn't start at zero exaggerate small changes.
+KINDS = (
+    ("total", "Totals", f"{AGG} = 'sum'", "bars"),
+    ("measured", "Measurements", f"{AGG} <> 'sum'", "line"),
+)
+
+
+def metric_panel(name, draw, y):
+    sql = f"""SELECT {DAY} AS time,
+  CASE {AGG} WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END AS "Daily",
+  AVG(CASE {AGG} WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END)
+    OVER (ORDER BY d.day RANGE BETWEEN INTERVAL '6 days' PRECEDING AND CURRENT ROW) AS "7-day average"
+FROM daily_metrics d LEFT JOIN metric_registry r USING (metric)
+WHERE d.metric = '${name}' AND $__timeFilter({DAY})
+ORDER BY d.day"""
+    panel = series(
+        f"${name}",
+        sql,
+        0,
+        y,
+        8,
+        7,
+        "short",
+        [
+            fixed("Daily", C["sleep"]),
+            fixed(
+                "7-day average",
+                C["avg"],
+                [
+                    {"id": "custom.drawStyle", "value": "line"},
+                    {"id": "custom.lineWidth", "value": 2},
+                    {"id": "custom.fillOpacity", "value": 0},
+                    {"id": "custom.showPoints", "value": "never"},
+                    {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}},
+                ],
+            ),
+        ],
+        draw=draw,
+        desc=f"Each day's value ({'bars' if draw == 'bars' else 'solid line'}) and the 7-day average (dashed).",
+    )
+    custom = panel["fieldConfig"]["defaults"]["custom"]
+    if draw == "bars":
+        custom["fillOpacity"] = 60
+        custom["axisSoftMin"] = 0
+    else:
+        custom["showPoints"] = "always"
+        custom["pointSize"] = 4
+    panel["options"]["legend"]["showLegend"] = False
+    panel.update({"repeat": name, "repeatDirection": "h", "maxPerRow": 3})
+    return panel
+
+
+metric_panels, metric_vars = [], []
+for i, (name, title, kind, draw) in enumerate(KINDS):
+    metric_panels += [row(title, 7 + 8 * i), metric_panel(name, draw, 8 + 8 * i)]
+    metric_vars.append(metric_var(name, kind))
 metrics = dashboard(
     "healthlog-all-metrics",
     "HealthLog – All Metrics",
     "Every metric as its own small chart, no dropdowns.",
-    [text_panel(GLOSSARY, 0, 0, 24, 7, "How to read this page"), repeated],
-    [TZ_VAR, METRIC_VAR],
+    [text_panel(GLOSSARY, 0, 0, 24, 7, "How to read this page"), *metric_panels],
+    [TZ_VAR, *metric_vars],
 )
 
 for name, d in (("sleep-activity.json", sleep), ("all-metrics.json", metrics)):
