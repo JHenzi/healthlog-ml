@@ -109,7 +109,7 @@ and `TZ` set in `.env` (the Companion refuses to start without it).
 | `WEATHER_LATITUDE`, `WEATHER_LONGITUDE` | *(off)* | your home area, for weather. The collector rounds both to 0.1° (~10 km) before anything is sent. Leave unset to keep weather off |
 | `WEATHER_SINCE` | 92 days ago | first day of the automatic backfill, e.g. `2026-07-15` (your first HealthLog day) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | *(off)* | reminders: the key pair from `companion push keys`. The private key is a secret |
-| `VAPID_SUBJECT` | `mailto:companion@localhost` | a contact the push services may use (a `mailto:` or `https:` URL) |
+| `VAPID_SUBJECT` | `https://github.com/JHenzi/healthlog-ml` | a contact the push services may use (a `mailto:` or `https:` URL; Apple refuses one at `localhost`) |
 | `PUSH_ENABLED` | `false` | lets the courier deliver reminders; set `true` together with the keys |
 | `HOLIDAYS_COUNTRY` | from `TZ` | public holidays for the almanac: `US`, `CA`, `GB` or `DE`, or `none`. A US, Canadian, UK or German time zone picks its country |
 
