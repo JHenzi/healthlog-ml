@@ -17,6 +17,7 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | Provenance | Every metric is tagged **Imported** (Apple Health via HealthLog), **Logged** (trackers) or **Derived** (stress, energy reserve). | `metrics_view.PROVENANCE` |
 | Confidence | Findings resting on fewer than 30 days carry a **Preliminary** tag. Strength (weak / moderate / strong) is always shown. | `insights.html`, `today.html` |
 | Navigation | Five sections: Overview, Discovery, Capture, My Metrics, Trackers. On phones (≤ 720px) a row of tabs under the brand in a sticky header, never at the bottom (the home bar and Safari's toolbar cover it); header links above that. | `_nav.html` |
+| Saving | A form post updates the page in place: no reload, same scroll position, a double tap posts once. Sign-in and sign-out navigate normally. | `app.js` |
 
 ## Wireframe screens → pages
 

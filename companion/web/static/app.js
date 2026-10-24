@@ -17,7 +17,7 @@
   // How old is this copy?
   const meta = document.querySelector('meta[name="rendered-at"]');
   const rendered = meta ? new Date(meta.content) : null;
-  const saved = rendered && Date.now() - rendered.getTime() > OLD_AFTER_MS;
+  let saved = rendered && Date.now() - rendered.getTime() > OLD_AFTER_MS;
 
   function when(d) {
     const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -45,6 +45,12 @@
   }
 
   if (saved) say(`Saved ${when(rendered)} · checking for updates…`);
+  // A form post just put the server's page in place: it's fresh, so a late "fresh" message mustn't reload it.
+  document.addEventListener("companion:swap", () => {
+    saved = false;
+    if (pill) pill.remove();
+    pill = null;
+  });
 
   if (!("serviceWorker" in navigator)) return;
   navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -60,8 +66,98 @@
   });
 })();
 
-// Reminders page: turn push on or off for this device (app/web_reminders.py).
+// Form posts without a page reload. The post goes in the background and the page the server answers with takes
+// this one's place (header and main), at the same scroll position when it's the same page. The answer is saved
+// for the service worker too, so the next visit doesn't show the copy from before. Sign-in and sign-out, and a
+// post that can't be sent, fall back to a normal submit.
 (() => {
+  const root = document.documentElement;
+  const NATIVE = new Set(["/login", "/logout"]);
+  let sending = false;
+  let shown = location.pathname + location.search; // the page on screen, to tell a jump within it from Back
+
+  async function save(url, html) {
+    try {
+      const cache = await caches.open("pages"); // the service worker's page cache (sw.js)
+      await cache.put(url, new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } }));
+    } catch {
+      // no Cache API (private window): the service worker fetches a fresh copy anyway
+    }
+  }
+
+  function swap(doc) {
+    for (const sel of ["header.bar", "main", 'meta[name="rendered-at"]']) {
+      const here = document.querySelector(sel);
+      const next = doc.querySelector(sel);
+      if (here && next) here.replaceWith(next);
+    }
+    document.title = doc.title;
+    document.dispatchEvent(new Event("companion:swap"));
+  }
+
+  function problem(text) {
+    const main = document.querySelector("main");
+    if (!main) return;
+    main.querySelector(".post-problem")?.remove();
+    const p = document.createElement("p");
+    p.className = "card warn post-problem";
+    p.setAttribute("role", "alert");
+    p.textContent = text;
+    main.prepend(p);
+    p.scrollIntoView({ block: "nearest" });
+  }
+
+  document.addEventListener("submit", async (e) => {
+    const form = e.target;
+    if (e.defaultPrevented || form.method !== "post" || "native" in form.dataset) return;
+    const action = new URL(form.getAttribute("action") || location.href, location.href);
+    if (action.origin !== location.origin || NATIVE.has(action.pathname)) return;
+    e.preventDefault();
+    if (sending) return; // a double tap posts once
+    sending = true;
+    const body = new FormData(form);
+    if (e.submitter && e.submitter.name) body.append(e.submitter.name, e.submitter.value);
+    try {
+      let r;
+      try {
+        r = await fetch(action, { method: "POST", body, credentials: "same-origin" });
+      } catch {
+        form.dataset.native = ""; // couldn't reach the server: let the browser try, and show what it gets
+        form.requestSubmit(e.submitter);
+        return;
+      }
+      const landed = new URL(r.url);
+      if (NATIVE.has(landed.pathname)) return void (location.href = landed.href); // signed out
+      if (!(r.headers.get("content-type") || "").startsWith("text/html")) {
+        const detail = (await r.json().catch(() => ({}))).detail;
+        return problem(typeof detail === "string" ? detail : `Couldn't save (error ${r.status}). Try again.`);
+      }
+      const html = await r.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const samePage = landed.pathname === location.pathname;
+      const y = window.scrollY;
+      swap(doc);
+      const target = landed.pathname + landed.search;
+      if (target === location.pathname + location.search) history.replaceState(null, "", target);
+      else history[samePage ? "replaceState" : "pushState"](null, "", target);
+      shown = target;
+      window.scrollTo(0, samePage ? y : 0);
+      if (r.ok) save(landed.href, html);
+    } finally {
+      sending = false;
+      root.classList.remove("is-loading");
+    }
+  });
+
+  // Back and forward over a page put in place: load it properly (a #jump on the same page is left alone).
+  window.addEventListener("popstate", () => {
+    if (location.pathname + location.search !== shown) location.reload();
+  });
+})();
+
+// Reminders page: turn push on or off for this device (app/web_reminders.py). Runs again when a form post puts
+// the reminders page in place.
+function pushDevice() {
   const box = document.getElementById("push-device");
   if (!box) return;
   const status = box.querySelector("[data-push-status]");
@@ -138,4 +234,6 @@
   });
 
   refresh();
-})();
+}
+pushDevice();
+document.addEventListener("companion:swap", pushDevice);
