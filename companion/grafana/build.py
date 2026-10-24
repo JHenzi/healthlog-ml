@@ -386,9 +386,9 @@ GLOSSARY = f"""<div style="font-size:15px;line-height:1.6">
 a measure your watch doesn't record simply isn't listed, and older watches report fewer.</p>
 <p><b>Totals</b> are things that add up (steps, exercise minutes, energy): each day is a
 <b style="color:{C["sleep"]}">bar</b> from zero. <b>Measurements</b> are things that are measured (heart rate, walking
-speed): each day is a <b style="color:{C["sleep"]}">point on a line</b>, the day's average, or the lowest reading for
-resting heart rate. The <b style="color:{C["avg"]}">dashed line</b> is the 7-day average, which shows the trend under the
-day-to-day noise.</p>
+speed): each day is a <b style="color:{C["sleep"]}">point on a line</b>, the day's average, or the lowest reading
+for resting heart rate. The <b style="color:{C["avg"]}">dashed line</b> is the 7-day average, which shows the trend
+under the day-to-day noise.</p>
 <p><b style="color:#c2255c">Heart rate variability</b> (HRV) is how much the time between heartbeats varies; it runs
 higher when you're rested and is very personal, so compare it with your own history, not other people's.
 <b style="color:#e8590c">Resting heart rate</b> is the lowest steady rate of the day.
@@ -414,8 +414,8 @@ def metric_var(name, kind):
         "datasource": {"uid": "healthlog-db"},
         "description": "Hidden: every metric of this kind with data in the last 180 days, in category order. The "
         "page repeats one chart per metric.",
-        "query": "SELECT initcap(COALESCE(NULLIF(r.category, 'unknown'), 'other')) || ' · ' || COALESCE(r.display_name, "
-        f"m.metric) || COALESCE(' (' || {UNIT} || ')', '') AS __text, m.metric AS __value "
+        "query": "SELECT initcap(COALESCE(NULLIF(r.category, 'unknown'), 'other')) || ' · ' || "
+        f"COALESCE(r.display_name, m.metric) || COALESCE(' (' || {UNIT} || ')', '') AS __text, m.metric AS __value "
         "FROM (SELECT DISTINCT metric FROM daily_metrics WHERE day > current_date - 180) m "
         "LEFT JOIN metric_registry r USING (metric) "
         f"WHERE {kind} "
