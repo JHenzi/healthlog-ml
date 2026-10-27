@@ -377,9 +377,9 @@ def _workout_with_source(source):
 def test_workout_source_object_is_flattened_to_name():
     # HAE >= 2025 sends the workout source as an object; the Text column
     # must still receive a string or the whole payload fails to store.
-    payload = _workout_with_source({"name": "Apple Watch von Thomas", "identifier": "com.apple.health.ABC"})
+    payload = _workout_with_source({"name": "Apple Watch", "identifier": "com.apple.health.ABC"})
     parsed = parse_payload(payload)
-    assert parsed.workout_rows[0]["source"] == "Apple Watch von Thomas"
+    assert parsed.workout_rows[0]["source"] == "Apple Watch"
 
 
 def test_workout_source_string_and_missing_unchanged():
