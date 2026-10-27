@@ -422,7 +422,7 @@ def _parse_workout(w: dict, out: ParsedPayload, type_map: dict[str, str] | None 
             "elevation_up_m": _qty_of(w.get("elevationUp")),
             "temperature_c": _qty_of(w.get("temperature")),
             "humidity_pct": _qty_of(w.get("humidity")),
-            "source": _source_name(w.get("source")),
+            "source": _source_name(w.get("source")) or None,
         }
     )
 
@@ -535,9 +535,9 @@ def _parse_medication(entry: dict, out: ParsedPayload) -> None:
 
 def _source_name(value) -> str:
     """HAE ships ``source`` as a plain string in most sections, but as
-    ``{name, identifier}`` in heart rate notifications."""
+    ``{name, identifier}`` in heart rate notifications and workouts."""
     if isinstance(value, dict):
-        value = value.get("name")
+        value = value.get("name") or value.get("identifier")
     return value.strip() if isinstance(value, str) else ""
 
 
@@ -595,24 +595,6 @@ def _parse_ecg(entry: dict, out: ParsedPayload) -> None:
             "source": _source_name(entry.get("source")),
         }
     )
-
-
-def _source_name(src) -> str | None:
-    """Workout ``source`` as a string for the Text column.
-
-    Recent Health Auto Export versions send it as an object
-    (``{"name": "Apple Watch", "identifier": "com.apple.health.…"}``) in both
-    the REST payload and the file export; older ones send a plain string.
-    Passing the dict through made every payload containing a workout fail
-    with ``psycopg.ProgrammingError: cannot adapt type 'dict'``.
-    """
-    if src is None:
-        return None
-    if isinstance(src, dict):
-        return src.get("name") or src.get("identifier") or json.dumps(src, sort_keys=True)
-    if isinstance(src, list | tuple):
-        return ", ".join(s for s in (_source_name(x) for x in src) if s) or None
-    return str(src)
 
 
 def parse_payload(payload: dict, type_map: dict[str, str] | None = None) -> ParsedPayload:
