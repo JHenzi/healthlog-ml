@@ -751,8 +751,7 @@ server {
     listen 443 ssl;
     server_name health.example.com;
 
-    # HAE payloads easily exceed nginx's 1 MB default; match MAX_PAYLOAD_BYTES.
-    client_max_body_size 32m;
+    client_max_body_size 32m;   # nginx default: 1 MB; matches MAX_PAYLOAD_BYTES
 
     location / {
         proxy_pass         http://localhost:8000;
@@ -764,18 +763,9 @@ server {
 }
 ```
 
-**Request size.** nginx rejects bodies over 1 MB by default with its own
-`413 Request Entity Too Large` page (an HTML page signed "nginx", which HAE shows in
-its activity log). A manual export or a sync that includes workouts with heart-rate
-and route data is often larger. Set `client_max_body_size` to match
-`MAX_PAYLOAD_BYTES` (32 MiB by default); a 413 from HealthLog itself comes as JSON
-(`"Payload exceeds … bytes."`). nginx-based proxies have the same default:
-
-- **Nginx Proxy Manager:** proxy host → *Advanced* → `client_max_body_size 32m;`
-- **SWAG:** add the line to the app's `proxy-confs/*.conf` inside `server { … }`
-
-For anything larger than `MAX_PAYLOAD_BYTES`, use the
-[backfill CLI](#bulk-backfill-full-history) instead of raising both limits.
+Without `client_max_body_size`, nginx-based proxies (SWAG, Nginx Proxy Manager)
+answer larger syncs with their own `413 Request Entity Too Large`. Bigger imports
+belong in the [backfill CLI](#bulk-backfill-full-history).
 
 ## Logging
 
