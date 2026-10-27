@@ -422,7 +422,7 @@ def _parse_workout(w: dict, out: ParsedPayload, type_map: dict[str, str] | None 
             "elevation_up_m": _qty_of(w.get("elevationUp")),
             "temperature_c": _qty_of(w.get("temperature")),
             "humidity_pct": _qty_of(w.get("humidity")),
-            "source": w.get("source"),
+            "source": _source_name(w.get("source")) or None,
         }
     )
 
@@ -535,9 +535,9 @@ def _parse_medication(entry: dict, out: ParsedPayload) -> None:
 
 def _source_name(value) -> str:
     """HAE ships ``source`` as a plain string in most sections, but as
-    ``{name, identifier}`` in heart rate notifications."""
+    ``{name, identifier}`` in heart rate notifications and workouts."""
     if isinstance(value, dict):
-        value = value.get("name")
+        value = value.get("name") or value.get("identifier")
     return value.strip() if isinstance(value, str) else ""
 
 
