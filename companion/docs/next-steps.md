@@ -20,7 +20,7 @@ risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 | Live HealthLog | `healthlog-local:c2131ca`, built from the fork (`deploy.sh healthlog build`), schema `0027_timescaledb_telemetry_off` |
 | Live Companion | `healthlog-companion` (web, `127.0.0.1:8020`) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis) |
 | Companion DB | schema `companion`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
-| Data | 106 daily series since 2026-07-15, weather (Cincinnati, since 2026-07-15) and the almanac included; sleep since 2026-09-24 (that is all Apple Health has); 3 heart rate notifications, 6 ECGs; 0 symptoms, 0 medications, 0 workouts |
+| Data | 106 daily series since 2026-07-15, weather (Cincinnati, since 2026-07-15) and the almanac included; sleep since 2026-09-24 (that is all Apple Health has); 3 heart rate notifications, 6 ECGs; 0 symptoms, 0 medications; workouts since 2026-10-28 (an HAE Workouts automation with workout metrics and route data on) |
 | Insights | engine live and validated; 0 findings yet: 3,459 tests over 51 of 105 series on 2026-10-20 (R17 tests everything both ways). Sleep reaches 56 days (spread-over-days) in mid-November |
 | Good-day score | live since 2026-10-20 (Overview card, `/good-days`); scored days need two of active, sleep, water and mood, so they grow with sleep and mood |
 
@@ -149,6 +149,12 @@ need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
   (classification text is probably localised) and any heart rate
   notification other than `low_heart_rate_notification`. Only when one turns
   up in a real export.
+- **Workout names (#126, open):** HAE's English "Outdoor Cycling" and
+  "Indoor Cycling" weren't in his built-in type map, so rides had no type.
+  Mapped in our `config.yaml` meanwhile (`workouts.type_map`). The PR also
+  asks whether an unmapped name should fall back to Apple's own label
+  rather than no type, since a hand-kept list breaks silently whenever
+  Apple or HAE renames something.
 - **Medications:** his #116 keys doses on `(medication, dose_time)`. Nothing
   to do until we log any.
 
@@ -156,6 +162,8 @@ need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
 
 - ~~**Day length and public holidays**~~: done 2026-10-20 as the almanac
   (`app/almanac.py`), with the moon and days until the next holiday (R17: no run-up window).
+- **Weather along the workout route** (roadmap B14, plan M13): planned,
+  with the privacy trade-off to debate first.
 - **Weather on the Metrics pages** gets the same glance treatment as the
   rest once that lands (§4.3b).
 

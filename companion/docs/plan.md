@@ -169,6 +169,7 @@ data immediately.
 | M9 Experiments | n-of-1 interventions with baselines and confounder checks (§4.5) | M5 |
 | M10 Imports & interop | CSV import from other tracking apps; export (§5) | M4 |
 | M12 Compare (opt-in, anonymous) | your figures against others': built-in published reference figures (offline); an anonymous summary you review field by field, and others' summaries to compare good-day weights and typical values against (roadmap B13). How summaries are exchanged is not decided | M7 for the weights; privacy review (risks.md E7, G6) |
+| M13 Weather along the route | per-workout weather and air quality from the GPS track, coarse grid, per hour, opt-in (roadmap B14; the privacy trade-off is debated first) | workouts with routes (on since 2026-10-28); M3 collector |
 | M11 Polish | reminders (web push), weekly summary, `proxy_header` auth, optional native iOS app; **purge** a tracker's or tag's entries on request (redacts the event log too, risks.md E5; removing or archiving keeps history) | — |
 
 Throughout: anything generic about getting Apple Health data in becomes an
