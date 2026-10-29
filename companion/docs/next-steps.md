@@ -7,6 +7,10 @@ risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 
 *Last updated 2026-10-20.*
 
+> **Paused for vacation until 10/29 or later.** The Companion stays in daily use meanwhile. Before
+> anything else, read the notes from the road:
+> [#45](https://github.com/JHenzi/healthlog-ml/issues/45) (`gh issue view 45 --comments`).
+
 ## 1. Where things stand
 
 | Piece | State |
