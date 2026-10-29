@@ -11,8 +11,13 @@ are.
   overnight measures.
 - **All Metrics** (`healthlog-all-metrics`): every metric with data in the
   last 180 days as its own small chart, grouped by category, with no dropdowns.
+  Totals (steps, minutes, energy) are bars from zero; measurements (heart
+  rate, HRV, temperature) are lines, since bars on an axis that doesn't start
+  at zero exaggerate small changes. The dashed 7-day average covers 7 calendar
+  days, so days without data don't stretch it. Titles show readable units
+  (bpm, °C).
 
-Screenshots (synthetic data, R4): [Sleep & Activity](screenshots/sleep-activity.png),
+Screenshots (synthetic data, R4; taken before totals and measurements were split): [Sleep & Activity](screenshots/sleep-activity.png),
 [All Metrics](screenshots/all-metrics.png).
 
 **One scale for different units.** The combined chart ranks each day among
