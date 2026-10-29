@@ -751,14 +751,21 @@ server {
     listen 443 ssl;
     server_name health.example.com;
 
+    client_max_body_size 32m;   # nginx default: 1 MB; matches MAX_PAYLOAD_BYTES
+
     location / {
         proxy_pass         http://localhost:8000;
         proxy_set_header   Host              $host;
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;   # large payloads take a while to store
     }
 }
 ```
+
+Without `client_max_body_size`, nginx-based proxies (SWAG, Nginx Proxy Manager)
+answer larger syncs with their own `413 Request Entity Too Large`. Bigger imports
+belong in the [backfill CLI](#bulk-backfill-full-history).
 
 ## Logging
 
