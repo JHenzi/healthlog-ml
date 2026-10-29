@@ -5,18 +5,18 @@ set up a machine to work on it, and the work queue in order. Strategy is in
 [`roadmap.md`](roadmap.md), the milestone checklist in [`plan.md`](plan.md),
 risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 
-*Last updated 2026-10-20.*
+*Last updated 2026-10-29.*
 
-> **Paused for vacation until 10/29 or later.** The Companion stays in daily use meanwhile. Before
-> anything else, read the notes from the road:
-> [#45](https://github.com/JHenzi/healthlog-ml/issues/45) (`gh issue view 45 --comments`).
+> **Back from the vacation pause on 2026-10-29.** The notes from the road are in
+> [#45](https://github.com/JHenzi/healthlog-ml/issues/45) (`gh issue view 45 --comments`); what's
+> still open from them is in §4.1 and §4.5.
 
 ## 1. Where things stand
 
 | Piece | State |
 |---|---|
-| Fork `main` (`JHenzi/healthlog-ml`) | upstream `dev` as of #120 (merged 2026-10-20, fork PR #24) + the Companion through the distributed-lag and refresh-lock slices (fork PRs #1–#23, CI green) |
-| Upstream PRs | all ours merged: #104, #105, #108, #111 (State of Mind), #113, #117 (caffeine, HRV RMSSD), #118 (heart rate notifications, ECG). His #116 (symptoms, medications), #119 (German symptom names) and #120 (telemetry off) are in too |
+| Fork `main` (`JHenzi/healthlog-ml`) | upstream `dev` as of #127 (synced 2026-10-29) + the Companion through reminders, the installable app and in-place forms (fork PRs #1–#50, CI green) |
+| Upstream PRs | all ours merged: #104, #105, #108, #111 (State of Mind), #113, #117 (caffeine, HRV RMSSD), #118 (heart rate notifications, ECG), #126 (Outdoor/Indoor Cycling names). His #116 (symptoms, medications), #119 (German symptom names) #120 (telemetry off), #122 (workout `source` as an object, by marciotoze) and #127 (`rederive-workout-types`) are in too |
 | Live HealthLog | `healthlog-local:c2131ca`, built from the fork (`deploy.sh healthlog build`), schema `0027_timescaledb_telemetry_off` |
 | Live Companion | `healthlog-companion` (web, `127.0.0.1:8020`) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis) |
 | Companion DB | schema `companion`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
@@ -46,7 +46,7 @@ In order of how much they unblock:
    docker exec healthlog-healthlog-1 healthlog backfill /config/import/<file>.json
    docker exec healthlog-companion companion refresh
    ```
-4. **Turn on weather.** Add your area to `.env` (it's rounded to ~10 km
+4. ~~**Turn on weather.**~~ Done (Cincinnati, since 2026-07-15). For reference: add your area to `.env` (it's rounded to ~10 km
    before anything is sent; `WEATHER_SINCE` is your first HealthLog day):
    ```bash
    WEATHER_LATITUDE=40.7
@@ -58,7 +58,7 @@ In order of how much they unblock:
    backfill --since 2026-07-15` repeats it by hand.
 5. **Add two HAE automations** (REST API, same URL and secret as the Health
    Metrics one):
-   - **Workouts**: HealthLog has 0 today.
+   - ~~**Workouts**~~: done 2026-10-28, with workout metrics and route data on.
    - **State of Mind**: today mood only arrives with manual exports. The
      last one landed on Oct 16.
 6. **Rate each day** on the Overview: "How was today?" in the evening and
@@ -149,12 +149,13 @@ need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
   (classification text is probably localised) and any heart rate
   notification other than `low_heart_rate_notification`. Only when one turns
   up in a real export.
-- **Workout names (#126, open):** HAE's English "Outdoor Cycling" and
-  "Indoor Cycling" weren't in his built-in type map, so rides had no type.
-  Mapped in our `config.yaml` meanwhile (`workouts.type_map`). The PR also
-  asks whether an unmapped name should fall back to Apple's own label
-  rather than no type, since a hand-kept list breaks silently whenever
-  Apple or HAE renames something.
+- ~~**Workout names (#126)**~~: merged 2026-10-29, synced into the fork the
+  same day. He keeps the hand-kept map, no fallback to Apple's label (a
+  slugged label would split series when the phone language changes);
+  `healthlog audit` lists unmapped names under "Unmapped workouts". His #127
+  adds `healthlog rederive-workout-types`, run once after the deploy so the
+  first two rides stop showing as "Other" in Grafana. The two lines in our
+  `config/config.yaml` (`workouts.type_map`) are now redundant and harmless.
 - **Medications:** his #116 keys doses on `(medication, dose_time)`. Nothing
   to do until we log any.
 
@@ -289,6 +290,12 @@ issue goes into `build.py` first.
   refresh today. Watch it as trackers and weather add series (risks.md F1).
 
 ### 4.5 Found along the way (do when convenient)
+
+- **Negative water samples (#45):** 2026-10-23 sums to a negative total
+  because HAE sent a negative sample, probably a Water Llama correction.
+  Open question for the owner: treat negatives as corrections (keep the
+  sum) or drop them? Either way it belongs in HealthLog's daily sum, so a
+  fix is an upstream question; the Companion only reads the total.
 
 - **Purge a tracker or tag (plan M11):** removing a tag or archiving a
   tracker keeps its history (fixed 2026-10-20: removed tags used to vanish
