@@ -61,6 +61,8 @@ BUILTIN_WORKOUT_TYPES: dict[str, str] = {
     "cycling": "cycling",
     "outdoor cycle": "cycling",
     "indoor cycle": "cycling",
+    "outdoor cycling": "cycling",
+    "indoor cycling": "cycling",
     "rad outdoor": "cycling",
     "rad indoor": "cycling",
     "radfahren": "cycling",
