@@ -336,6 +336,14 @@ whether `TZ` matches the UTC offsets Health Auto Export stamps on your data:
 docker exec healthlog healthlog audit
 ```
 
+Workout types are resolved when a workout is ingested. After you extend
+`workouts.type_map` (or an update maps more names), recompute them so the dashboards
+regroup past workouts (idempotent; `--dry-run` lists the changes):
+
+```bash
+docker exec healthlog healthlog rederive-workout-types
+```
+
 Zone-based (Edwards) training load needs the intra-workout HR series; check whether
 the raw archive carries it:
 
