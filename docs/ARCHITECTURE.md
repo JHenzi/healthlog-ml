@@ -241,6 +241,10 @@ workout_route_points (workout_hae_id UUID REFERENCES workouts ON DELETE CASCADE,
 units, workout types need normalisation (mapping localised→canonical), otherwise
 types fragment across language switches. `app/workout_types.py` handles this (built-in
 DE+EN map → canonical slug, extensible via `workouts.type_map` in `config.yaml`).
+The slug is stored in `workouts.canonical_type` at ingest, which the Grafana panels
+group by; the analysis re-resolves from `name` on every run. After a map change,
+`healthlog rederive-workout-types` recomputes the stored column from `name`, so
+both agree again.
 `duration` in seconds, energy in `kJ` (→ normalise to kcal, §4.5).
 
 Two **SQL functions** (`workout_trimp(p_tz, p_hr_max, p_since)` per session,
