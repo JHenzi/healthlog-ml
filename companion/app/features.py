@@ -97,6 +97,10 @@ def pick_metric_value(rows: list[MetricDayRow], rule: MetricRule) -> float | Non
     value = getattr(chosen, rule.aggregation)
     if value is None:
         return None
+    if rule.aggregation == "sum" and value < 0:
+        # A logged amount can't go below zero. Undo entries arrive as negative samples (a water app's
+        # correction) and can outnumber what the day kept, so the day's total stops at 0.
+        value = 0.0
     if rule.min_value is not None and value < rule.min_value:
         return None
     if rule.max_value is not None and value > rule.max_value:
