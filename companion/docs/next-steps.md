@@ -291,11 +291,12 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
-- **Negative water samples (#45):** 2026-10-23 sums to a negative total
-  because HAE sent a negative sample, probably a Water Llama correction.
-  Open question for the owner: treat negatives as corrections (keep the
-  sum) or drop them? Either way it belongs in HealthLog's daily sum, so a
-  fix is an upstream question; the Companion only reads the total.
+- ~~**Negative water samples (#45)**~~: done 2026-10-29. They are undo
+  entries from Water Llama (−142 mL cancels a 142 mL logged that morning),
+  so summing them is right; a day whose undos outweigh what it kept (10/23:
+  −47 mL) now stops at 0 for every summed metric (`pick_metric_value`).
+  HealthLog's own daily sum (Grafana) still shows the negative; an upstream
+  question if it bothers anyone.
 
 - **Purge a tracker or tag (plan M11):** removing a tag or archiving a
   tracker keeps its history (fixed 2026-10-20: removed tags used to vanish

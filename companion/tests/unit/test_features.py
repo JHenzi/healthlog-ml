@@ -36,6 +36,12 @@ def test_aggregation_choice():
     assert [pick_metric_value(rows, MetricRule(a)) for a in ("sum", "avg", "min", "max")] == [100.0, 10.0, 1.0, 20.0]
 
 
+def test_a_negative_sum_stops_at_zero():
+    rows = [_row("", s=-47.0, a=-11.75, lo=-166.0)]
+    assert pick_metric_value(rows, MetricRule("sum")) == 0.0
+    assert pick_metric_value(rows, MetricRule("avg")) == -11.75  # only a total is floored
+
+
 def test_bounds_make_a_day_missing_not_clipped():
     rows = [_row("", a=250.0)]
     assert pick_metric_value(rows, MetricRule("avg", max_value=220)) is None
