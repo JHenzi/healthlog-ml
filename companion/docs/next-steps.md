@@ -126,8 +126,13 @@ contract check and a refresh. HealthLog upgrades, rehearsals and rollback:
 ### Working agreement
 
 - **Branches and PRs:** a branch per slice (`feature/companion-…`), PR into
-  the fork's `main`, merge when CI is green. Upstream work branches from
-  `upstream/dev` and gets a PR there.
+  the fork's `main` with auto-merge on (`gh pr merge --auto --merge`):
+  GitHub merges it once CI is green and deletes the branch. `main` is
+  protected: the required checks are `companion: check paths`,
+  `companion: tests`, `companion: image` and upstream's `lint-backend`,
+  `test`, `smoke` (set 2026-10-30). Deploy after the merge; for a UI
+  change, deploy the working tree first so it can be looked at live.
+  Upstream work branches from `upstream/dev` and gets a PR there.
 - **Docs:** updated in the same PR. When a milestone moves, update `plan.md`
   (checkboxes + a **Status** line), `roadmap.md`, and this file.
 - **Syncing upstream:** merge `upstream/dev` on a branch, rehearse, PR,

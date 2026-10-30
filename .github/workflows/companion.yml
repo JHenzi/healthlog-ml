@@ -3,14 +3,16 @@ name: companion
 on:
   push:
     paths: ["companion/**", "compose.companion.yml", ".github/workflows/companion*.yml"]
+  # Every PR, not only companion ones: these are required checks for auto-merge into main, and a required
+  # check that never starts would hold a PR forever.
   pull_request:
-    paths: ["companion/**", "compose.companion.yml", ".github/workflows/companion*.yml"]
 
 permissions:
   contents: read
 
 jobs:
   check-paths:
+    name: "companion: check paths"
     # R1 / risks.md A6: companion branches leave upstream-owned files alone.
     runs-on: ubuntu-latest
     steps:
@@ -22,6 +24,7 @@ jobs:
       - run: sh companion/scripts/check_paths.sh upstream/dev
 
   test:
+    name: "companion: tests"
     runs-on: ubuntu-latest
     services:
       db:
@@ -52,6 +55,7 @@ jobs:
       - run: python -m pytest -q
 
   image:
+    name: "companion: image"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
