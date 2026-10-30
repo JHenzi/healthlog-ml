@@ -1,6 +1,6 @@
 # Reflection and prediction over time
 
-*Research and options, 2026-10-30. Nothing here is decided or built.*
+*Research and options, 2026-10-30; the owner's decisions are in §0. Nothing is built yet.*
 Roadmap B16, plan M7. The owner's brief, in short:
 
 - The day rating is a **reflection**: "how do you *now* think the day went?"
@@ -14,6 +14,31 @@ Roadmap B16, plan M7. The owner's brief, in short:
 This page collects what the research says, the measures and models worth
 considering, and the issues each one brings. The choices are listed at the
 end as open questions.
+
+## 0. Decisions (owner, 2026-10-30)
+
+1. **The look-back is blind.** "Looking back, how was yesterday?" no
+   longer shows the evening answer, so the shift isn't pulled toward 0
+   (§5, risks.md C10). Log the date of the change.
+2. **A weekly look-back on Sunday:** "How was last week?", 1–10, asked at
+   18:00 by default and changeable like the other reminders (Reminders
+   page). Picking the best and worst day is **optional, decided later**.
+3. **Your judgement belongs in the good-day picture.** The day rating isn't
+   mood: it's your overall verdict on the day, which may be "productive",
+   "I exercised", or "I did what I meant to do". Apple's State of Mind
+   arrives unreliably (exist.io records mood on top), and nothing objective
+   says how a day went, so the ratings (evening, next morning, weekly) are
+   **inputs to the good-day score, not left out**. **How much** each one
+   counts, next to activity, sleep, water and mood, isn't known. It is
+   explored as data comes in, with the methods in §4c, and never fixed by
+   hand.
+4. **No extra built-in questions.** Your own trackers and day tags cover
+   the other dimensions. Next work item: export the exist.io history
+   (including its mood) and rebuild those metrics here as trackers, with
+   their history, so the engine learns from them (roadmap B9).
+5. **No "today will be…" forecast.** Readiness is **shelved** as a note
+   (§4b): define it later from data and tags, or lean on the Apple Watch
+   rather than copying it.
 
 ## 1. What exists today
 
@@ -132,12 +157,11 @@ or week, and the design rule is few choices with good defaults
 | Measure | What it captures | Cost / issue |
 |---|---|---|
 | Evening rating (have) | the day as it ends | none new |
-| Next-morning look-back (have) | the day after a night's sleep; the shift | **anchored** on the evening answer while it's shown (§5) |
-| **Blind** look-back | the same without the anchor | small UI change; the shift becomes cleaner but noisier |
+| Next-morning look-back (have) | the day after a night's sleep; the shift | **decided: blind** (§0.1); until then anchored on the evening answer |
 | **Later look-backs** (day +2, +3) | how a day keeps getting re-judged | more prompts; likely low response. Better covered by the weekly look-back |
-| **Weekly look-back** (e.g. Sunday evening) | "How was this week?" on 1–10, plus **pick the best and the worst day** | one prompt a week. Picking days avoids scale drift (a ranking, not a number). Draws on belief more than memory (§2.1) |
+| **Weekly look-back** (decided §0.2: Sunday, 18:00 by default) | "How was last week?" on 1–10; optionally **pick the best and the worst day** | one prompt a week. Picking days avoids scale drift (a ranking, not a number). Draws on belief more than memory (§2.1) |
 | Monthly look-back | slow-moving well-being | belief-heavy; mostly for the long view |
-| A few extra dimensions (energy, stress, satisfaction) | "different things show different signs" | each one adds a daily tap. Some already exist passively (HRV, sleep, stress proxy) or as trackers you can create |
+| A few extra dimensions (energy, stress, satisfaction) | "different things show different signs" | **not as built-in questions** (§0.4): your own trackers and tags, and the exist.io history rebuilt as trackers, cover them |
 | Re-rate any past day | revisions as they happen | a "change my mind" button; every revision kept with its time (event log) |
 
 ## 4. Models worth considering (from simple to rich)
@@ -170,6 +194,91 @@ Each needs its validation suite before it ships (R8). None says *causes*
    anchor becomes the latent state or a combination of ratings rather than
    one evening number.
 
+## 4b. Readiness and the morning (shelved, a note)
+
+Readiness isn't defined yet; it should come from data and tags, not a
+formula guessed up front. Notes for later:
+
+- **Apple already does a lot of this**, at a cost we can't match: the
+  Apple Watch has overnight vitals checks, a sleep score and training load
+  (feature names vary by watchOS version). The owner finds these **don't
+  always show up**. Worth a look: whether Health Auto Export can deliver
+  them, and when they go missing (an Apple shortcoming the Companion might
+  cover by noticing the gap, §4e).
+- **Reflection before data** (the Stoic habit: don't let the news decide
+  your day; spend the first minutes alone, deciding for yourself): the
+  morning screen asks first and shows numbers after, so the app's figures
+  don't write your judgement for you. This stands on its own, readiness or
+  not, and keeps the ratings free of the anchor (C10, C13).
+- If readiness comes back: describe where you are (sleep, HRV, resting
+  heart rate against your usual range, carry-over from recent days), never
+  how the day will go; show its parts and evidence (R13).
+
+## 4c. How much does each part count? Methods to explore
+
+The owner's question, without the jargon: "the ratings, the weekly
+score, the look-backs should all count, but we don't know how much". This
+is the list of ways to find out as data accrues. Each is a measurement,
+not a verdict; several run side by side and are compared. None is fixed
+by hand (R17).
+
+| Method | What it answers | Needs | Watch out for |
+|---|---|---|---|
+| **Equal weights** (have) | the fixed reference everything else is compared with | nothing | it's arbitrary, which is why it's only the reference |
+| **Agreement between parts** (each part's rank against the rest of the score) | does a part tell the same story as the others, or a different one? | ~30 scored days | a part that disagrees isn't wrong; it may be the one that matters |
+| **Predicting a later judgement** | which mix of today's parts best predicts how you judge the day **later**: the blind next-morning look-back for the day, the Sunday rating for the week (the week's daily scores against "How was last week?") | 60–90 days; ~12+ weeks for weekly | the anchor must be a *different* rating from any inside the part being weighed, or it predicts itself (§5) |
+| **Shared variation** (factor / principal component) | which parts move together as one underlying "how things are going" | ~60 days | rewards parts that overlap; a fallback |
+| **Latent day state** (§4.2) | all ratings and parts as noisy views of one hidden state; each gets its own weight and noise | ~60 days | needs its validation suite (R8) |
+| **What goes before what** (carry-over, §4.1) | parts that come before the others on later days (e.g. bedtime before productivity) | ~30–60 days | association, not cause (R10); shared background (C12) |
+| **Weights over time** (rolling refits) | whether the mix changes (new job, season, training) | months | noise looks like change; shrink toward equal (C14) |
+| **Your stated priorities** | what you *meant* to do: an intention in the morning ("exercise", "deep work") and "did you?" in the evening, as trackers or tags | from day one | an intention tracker is optional; the engine still tests everything both ways |
+
+How they'd show up: the equal-weight score stays; next to it, the learned
+mix with its weights, the days behind it, and how much better it predicts
+your later judgement. If it doesn't beat equal weights, the page says "not
+yet different" (R9, R13).
+
+## 4d. Sleep timing, not just sleep amount
+
+Late to bed and late up can look like good sleep, but may go with
+anxiety, slipped goals or a less active next day. HealthLog already stores
+the times (`sleep_sessions.sleep_start`, `sleep_end`, `in_bed_start`), so
+these are new daily features, not new data:
+
+- **Bedtime and wake time**, as clock times on a scale that doesn't break
+  at midnight (minutes after 18:00, so 01:30 sorts after 23:30).
+- **Sleep midpoint**, and how far it moves from your usual one.
+- **Regularity:** how much bed and wake times vary over the last week
+  (e.g. the Sleep Regularity Index, Phillips et al., 2017).
+- **Weekday vs weekend shift** ("social jetlag", Wittmann et al., 2006):
+  the midpoint difference between workdays and days off.
+
+The engine tests them against everything both ways (R17), with no built-in
+"late is bad": if late bedtimes go with lower ratings or fewer steps the
+next day, it finds that; if not, it says nothing. Care points: naps vs the
+main sleep, DST nights (R14), and nights the Watch wasn't worn (missing,
+not short).
+
+## 4e. Warnings: "something is changing"
+
+Instead of a readiness number, callouts when something departs from your
+own normal. Another ML angle, alongside the analysis:
+
+| Kind | Example | Method |
+|---|---|---|
+| **A trend** | "Your sleep has been getting shorter for two weeks" | slope over a recent window against your own variation; change-point detection |
+| **Out of your range** | "Resting heart rate is higher than on 95% of your days" | robust per-person baselines (median and MAD), already used for the Overview tiles |
+| **Several at once** | HRV down, resting heart rate up and sleep short together | multivariate anomaly score (plan M7); Apple's overnight vitals check does something similar |
+| **Drift in timing** | "Bedtime has moved an hour later this week" | §4d features with the same trend test |
+| **Gaps** | "No sleep data for 3 nights": the Watch off, or a sync stopped | coverage checks (what Apple doesn't tell you, §4b) |
+| **Goals slipping** | "Exercise intention met on 2 of the last 7 days" | the intention trackers of §4c |
+
+Rules: few and earned (a false-alarm budget like the FDR bar, and a cap per
+week), plain language with *n* and the range (R13), associative and never
+medical (R10; "you may want to discuss this with a clinician" only for
+health-relevant ones), and dismissible. Upstream HealthLog computes
+anomalies too; reuse where it fits (read contract, R3).
+
 **Several signals, not one score.** The page could show a few signals side
 by side, each with its own direction and evidence: the equal-weight
 good-day score (the fixed reference), the latent state, the forecast,
@@ -181,10 +290,9 @@ and keeps the one-number trap out.
 - **Very little data so far.** 8 ratings. Carry-over needs roughly 30+ days
   to estimate loosely; spells and drift need months. The engine's minimum
   days and FDR bar keep early numbers quiet, which is correct.
-- **Anchoring.** The look-back shows the evening answer, so the shift is
-  biased toward 0. Showing it is friendlier, hiding it is cleaner. This is
-  a decision for the owner (§7), and once made, the change should be logged
-  so data from before and after isn't mixed blindly.
+- **Anchoring.** The look-back showed the evening answer, so the shift was
+  biased toward 0. Decided: blind (§0.1). Days before the change keep that
+  bias; the change date is logged so the two periods aren't mixed blindly.
 - **Missing isn't random.** Ratings may be skipped on the worst (or the
   busiest) days (risks.md C9). State-space models assume gaps are
   uninformative unless told otherwise. Reminders help; coverage is shown.
@@ -194,10 +302,11 @@ and keeps the one-number trap out.
 - **Memory and belief bias.** Longer look-backs lean on beliefs (§2.1). A
   weekly rating isn't a better truth than the dailies, just a different
   one; the two disagreeing is a finding.
-- **Circularity.** If the evening rating goes into the good-day Mood part
-  (proposed 2026-10-29), the learned weights (M7) can't use it as their
-  anchor without predicting themselves. Either the anchor changes (latent
-  state, look-back, weekly) or the rating stays out of the score.
+- **Circularity.** The ratings go into the good-day score (§0.3), so a
+  learned weighting can't use the same rating as its anchor without
+  predicting itself. The rule: weigh against a **later, different**
+  judgement (the blind next-morning look-back for the evening rating, the
+  Sunday rating for the week), never the same item on the same day (§4c).
 - **Shared background vs carry-over.** A rough week can look like "bad days
   cause bad days". Trend, weekday and spans (vacation, sickness: M4 part 2)
   must be removed first (C3, C4).
@@ -215,8 +324,9 @@ and keeps the one-number trap out.
 
 ## 6. Possible order (not decided)
 
-1. **Now, collecting only:** decide whether the look-back is blind; maybe
-   add a weekly look-back. Data starts accruing; nothing is analysed yet.
+1. **Now, collecting only:** the blind look-back and the Sunday weekly
+   look-back (§0); the exist.io history rebuilt as trackers. Data accrues;
+   nothing new is analysed yet.
 2. **About 30 days in:** the descriptive layer (§4.1): shift, carry-over,
    recovery, inside the existing engine and its FDR family.
 3. **About 60 days in:** the latent state (§4.2) with its validation suite
@@ -226,16 +336,16 @@ and keeps the one-number trap out.
    learned weights (§4.5) anchored on the state.
 5. **Months in:** spells (§4.3) and drift handling.
 
-## 7. Open questions for the owner
+## 7. Open questions
 
-1. Should the next-morning look-back hide the evening answer?
-2. Should there be a weekly look-back (a rating, and pick the best and
-   worst day)? On which day?
-3. Should the evening rating go into the good-day Mood part, given the
-   circularity with M7 (§5)?
-4. Should there be a few extra daily dimensions, or should the passive
-   signals and your own trackers cover that?
-5. Should forecasts ever be shown before you've rated the day?
+Answered 2026-10-30 (§0). Still open:
+
+1. The best and worst day pick on Sunday: optional, later. Ask now and
+   then, or never?
+2. Readiness: shelved (§4b). Define it from data later, or rely on Apple?
+3. Intentions (§4c): a morning "what do you mean to do today?" as an
+   optional tracker?
+4. Which warnings (§4e) are wanted first?
 
 ## References
 
@@ -264,3 +374,10 @@ and keeps the one-number trap out.
   later in *npj Digital Medicine*), and next-day affect from wearables in
   20 students (arXiv 2201.11230). Small samples; treat as proof of concept.
 - State-space handling of gaps in person-level EMA data: arXiv 2206.14343.
+- Phillips, A. J. K., et al. (2017). Irregular sleep/wake patterns are
+  associated with poorer academic performance and delayed circadian and
+  sleep/wake timing. *Scientific Reports*, 7, 3216 (the Sleep Regularity
+  Index).
+- Wittmann, M., Dinich, J., Merrow, M., & Roenneberg, T. (2006). Social
+  jetlag: misalignment of biological and social time. *Chronobiology
+  International*, 23(1–2), 497–509.

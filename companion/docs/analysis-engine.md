@@ -245,11 +245,12 @@ How it has to behave:
   the learned score predicts the anchor.
 - **Needs** about 60–90 days with the anchor. Ratings started in late
   October are enough around January.
-- **The anchor itself is under review** (2026-10-30): the evening rating is
-  one reflection among several (next morning, a possible weekly look-back),
-  and putting it into the Mood part would make it circular. Options, from
-  a latent day state fed by all the ratings to forecasts with a track
-  record, are in [`reflection-and-prediction.md`](reflection-and-prediction.md).
+- **The anchor** (decided 2026-10-30): the day ratings (evening, a blind
+  next-morning look-back, a Sunday weekly look-back) are the owner's
+  overall judgement, not mood, and become **inputs** to the good-day score.
+  Weights are then learned against a *later, different* judgement (the
+  look-back for the evening, the weekly rating for the week), never the
+  same rating. Methods: [`reflection-and-prediction.md`](reflection-and-prediction.md) §4c.
 
 ## Validation (tests/stats)
 

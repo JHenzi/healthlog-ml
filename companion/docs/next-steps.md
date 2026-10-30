@@ -258,9 +258,15 @@ issue goes into `build.py` first.
 
 - **Reflection and prediction over time** (roadmap B16, research
   2026-10-30, [`reflection-and-prediction.md`](reflection-and-prediction.md)):
-  nothing is built until the owner answers its open questions (§7: a blind
-  look-back? a weekly look-back? the rating in the Mood part?). Data
-  collection is the first step; the descriptive layer comes at ~30 days.
+  decided 2026-10-30 (§0). To build: the look-back hides the evening
+  answer (log the date); a Sunday "How was last week?" at 18:00, set on
+  the Reminders page like the others; the ratings become inputs to the
+  good-day score (how much each counts is learned, §4c). Also noted: sleep
+  timing features (§4d) and warnings (§4e). Readiness is shelved (§4b).
+  The descriptive layer comes at ~30 days.
+- **Next work item: exist.io.** Export the exist.io history and rebuild
+  those metrics here as trackers and tags, with their history, so the
+  engine learns from them (roadmap B9, plan M10).
 - ~~Distributed lag models~~: done 2026-10-19 (analysis-engine.md, "Links
   spread over days"). Every ordered pair since 2026-10-20 (R17).
 - ~~Adjusted re-check~~: done 2026-10-19; since 2026-10-20 it allows for
