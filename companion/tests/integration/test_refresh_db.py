@@ -227,3 +227,27 @@ def test_the_good_day_score_is_a_feature_of_complete_days(db, admin_engine):
     finally:
         with admin_engine.begin() as conn:
             conn.execute(text("DELETE FROM metric_samples"))
+
+
+def test_water_written_for_coffee_or_beer_is_its_own_series(db, admin_engine):
+    day = dt.date(2026, 10, 1)
+    at = {h: dt.datetime.combine(day, dt.time(h), tzinfo=NY) for h in (9, 12, 19)}
+    with admin_engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO metric_samples (time, metric, source, unit, qty) VALUES "
+                "(:coffee, 'caffeine', '', 'mg', 50), (:coffee, 'dietary_water', '', 'mL', 71), "
+                "(:water, 'dietary_water', '', 'mL', 250), "
+                "(:beer, 'alcohol_consumption', '', 'count', 1), (:beer, 'dietary_water', '', 'mL', -142)"
+            ),
+            {"coffee": at[9], "water": at[12], "beer": at[19]},
+        )
+    try:
+        jobs.refresh(db)
+        assert features.series(db, "hl.dietary_water") == {day: 250.0}
+        assert features.series(db, "hl.dietary_water_from_caffeine") == {day: 71.0}
+        assert features.series(db, "hl.dietary_water_from_alcohol_consumption") == {day: -142.0}
+        assert features.series(db, "hl.caffeine") == {day: 50.0}
+    finally:
+        with admin_engine.begin() as conn:
+            conn.execute(text("DELETE FROM metric_samples"))

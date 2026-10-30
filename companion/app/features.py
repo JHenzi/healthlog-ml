@@ -97,15 +97,29 @@ def pick_metric_value(rows: list[MetricDayRow], rule: MetricRule) -> float | Non
     value = getattr(chosen, rule.aggregation)
     if value is None:
         return None
-    if rule.aggregation == "sum" and value < 0:
-        # A logged amount can't go below zero. Undo entries arrive as negative samples (a water app's
-        # correction) and can outnumber what the day kept, so the day's total stops at 0.
-        value = 0.0
     if rule.min_value is not None and value < rule.min_value:
         return None
     if rule.max_value is not None and value > rule.max_value:
         return None
     return float(value)
+
+
+DRINK_NAMES = {"caffeine": "coffee", "alcohol_consumption": "alcohol"}
+
+
+def rule_for(metric: str, rules: dict[str, MetricRule]) -> MetricRule:
+    """A metric's rule; water written for a drink sums like water, in the drink's family (not water's)."""
+    if metric in rules or not metric.startswith(upstream.DRINK_WATER_PREFIX):
+        return rules.get(metric, MetricRule())
+    drink = metric.removeprefix(upstream.DRINK_WATER_PREFIX)
+    drink_rule = rules.get(drink, MetricRule())
+    return MetricRule(
+        aggregation="sum",
+        display_name=f"Water from {DRINK_NAMES.get(drink, drink)}",
+        unit=rules.get("dietary_water", MetricRule()).unit,
+        analyse=drink_rule.analyse,
+        category=metric_family(drink, drink_rule.category),
+    )
 
 
 def metric_features(rows: Iterable[MetricDayRow], rules: dict[str, MetricRule]) -> FeatureSet:
@@ -114,12 +128,12 @@ def metric_features(rows: Iterable[MetricDayRow], rules: dict[str, MetricRule]) 
         grouped.setdefault((r.metric, r.day), []).append(r)
     by_metric: dict[str, dict[dt.date, float]] = {}
     for (metric, day), day_rows in grouped.items():
-        value = pick_metric_value(day_rows, rules.get(metric, MetricRule()))
+        value = pick_metric_value(day_rows, rule_for(metric, rules))
         if value is not None:
             by_metric.setdefault(metric, {})[day] = value
     out = FeatureSet()
     for metric, values in by_metric.items():
-        rule = rules.get(metric, MetricRule())
+        rule = rule_for(metric, rules)
         out.add(
             Def(
                 f"hl.{metric}",

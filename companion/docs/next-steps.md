@@ -291,12 +291,18 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
-- ~~**Negative water samples (#45)**~~: done 2026-10-29. They are undo
-  entries from Water Llama (−142 mL cancels a 142 mL logged that morning),
-  so summing them is right; a day whose undos outweigh what it kept (10/23:
-  −47 mL) now stops at 0 for every summed metric (`pick_metric_value`).
-  HealthLog's own daily sum (Grafana) still shows the negative; an upstream
-  question if it bothers anyone.
+- ~~**Coffee and beer counted as water (#45)**~~: done 2026-10-29. Water
+  Llama writes each drink to Apple Health twice: as caffeine or alcohol,
+  and as a water sample at the same instant (about +71 mL per 50 mg of
+  caffeine, −142 mL per standard drink). Those samples are now their own
+  series, *Water from coffee* and *Water from alcohol*
+  (`hl.dietary_water_from_<drink>`, in the drink's family), and *Water*
+  holds plain water only; the three add up to Apple Health's total. 10/23:
+  water 119, from coffee 142, from alcohol −308 mL. HealthLog's own daily
+  sum (Grafana) still mixes them; an upstream question if it matters.
+- **Water Llama's total doesn't reach Health:** it showed 39.9 oz consumed
+  on 10/23, HAE delivered about 9 oz. Check Apple Health → Water for that
+  day to see which side drops the rest.
 
 - **Purge a tracker or tag (plan M11):** removing a tag or archiving a
   tracker keeps its history (fixed 2026-10-20: removed tags used to vanish

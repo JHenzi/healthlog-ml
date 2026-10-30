@@ -36,10 +36,21 @@ def test_aggregation_choice():
     assert [pick_metric_value(rows, MetricRule(a)) for a in ("sum", "avg", "min", "max")] == [100.0, 10.0, 1.0, 20.0]
 
 
-def test_a_negative_sum_stops_at_zero():
-    rows = [_row("", s=-47.0, a=-11.75, lo=-166.0)]
-    assert pick_metric_value(rows, MetricRule("sum")) == 0.0
-    assert pick_metric_value(rows, MetricRule("avg")) == -11.75  # only a total is floored
+def test_water_from_a_drink_sums_like_water_in_the_drinks_family():
+    rules = {
+        "dietary_water": MetricRule("sum", unit="mL", category="nutrition"),
+        "alcohol_consumption": MetricRule("sum", category="unknown"),
+    }
+    rows = [
+        _row("", s=250.0, metric="dietary_water"),
+        _row("", s=-142.0, metric="dietary_water_from_alcohol_consumption"),
+    ]
+    out = metric_features(rows, rules)
+    assert out.values["hl.dietary_water"] == {D: 250.0}
+    assert out.values["hl.dietary_water_from_alcohol_consumption"] == {D: -142.0}  # kept as the app wrote it
+    alcohol_water = out.defs["hl.dietary_water_from_alcohol_consumption"]
+    assert alcohol_water.label == "Water from alcohol" and alcohol_water.unit == "mL"
+    assert alcohol_water.family == "metric:alcohol_consumption" != out.defs["hl.dietary_water"].family
 
 
 def test_bounds_make_a_day_missing_not_clipped():
