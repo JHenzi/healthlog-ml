@@ -2,7 +2,7 @@ name: companion
 
 on:
   push:
-    paths: ["companion/**", "compose.companion.yml", ".github/workflows/companion*.yml"]
+    paths: ["companion/**", "compose.companion.yml", ".github/workflows/companion*.yml", "!**/*.md"]
   # Every PR, not only companion ones: these are required checks for auto-merge into main, and a required
   # check that never starts would hold a PR forever.
   pull_request:
@@ -11,6 +11,28 @@ permissions:
   contents: read
 
 jobs:
+  # Markdown-only changes skip the tests and the image build. A skipped required check counts as passed, so a
+  # docs PR still auto-merges; the path check always runs.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE" ] || [ "$BASE" = 0000000000000000000000000000000000000000 ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE" HEAD | grep -qv '\.md$'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   check-paths:
     name: "companion: check paths"
     # R1 / risks.md A6: companion branches leave upstream-owned files alone.
@@ -25,6 +47,8 @@ jobs:
 
   test:
     name: "companion: tests"
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     services:
       db:
@@ -56,6 +80,8 @@ jobs:
 
   image:
     name: "companion: image"
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
