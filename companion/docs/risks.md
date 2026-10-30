@@ -65,6 +65,11 @@ be handled when the relevant milestone is built.
 | C7 | Unstable insights (flip run to run) | user distrust | require persistence across runs, or bootstrap stability ≥ threshold | stability test: resampling the data keeps top insights stable on planted data |
 | C8 | Causal or diagnostic wording | misleading, medically risky | association-only templates (R10) | **wording lint**: templates must not contain *cause(s), because, leads to, diagnos*, …; every sentence includes *n* (R13) |
 | C9 | Self-report bias (logging more on bad days) | biased effects | prompted review, reviewed-day rule, logging-coverage indicator shown next to insights | unit: coverage metric computed; insights below a coverage floor are flagged |
+| C10 | *design* (B16): the next-morning look-back shows the evening answer, anchoring it | the shift between the two is biased toward 0 | decide blind vs shown ([`reflection-and-prediction.md`](reflection-and-prediction.md) §7); log the date of any change so data from before and after isn't mixed | — (no model uses the shift yet) |
+| C11 | *design* (B16): longer look-backs (weekly, monthly) draw on beliefs more than on what was felt | a weekly rating treated as the "true" week | treat each rating as its own measurement, never a correction of another; disagreement is a finding | — |
+| C12 | *design* (B16): carry-over confused with a shared background (a rough week, a season, sickness) | "bad days cause bad days" from a common cause | remove trend and weekday, exclude spans, before estimating carry-over (as C3, C4) | planned: a validation suite where a slow shared level with no carry-over must give no carry-over |
+| C13 | *design* (B16): a shown forecast changes behaviour or the rating it predicts | the track record is inflated or broken; forecasts fulfil themselves | store every forecast and whether it was shown; consider showing it only after the evening rating; score against naive baselines (R9) | planned: the scorer uses only forecasts stored before the outcome |
+| C14 | *design* (B16): what predicts a good day drifts (job, season, training) | a stale model, confident and wrong | moving or down-weighted window; refits on a schedule; change detection; shrink toward the simple baseline | planned: a planted change in the relationship must be picked up within a set number of days |
 
 ## D. Security
 

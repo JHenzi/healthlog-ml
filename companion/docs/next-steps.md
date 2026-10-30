@@ -254,6 +254,11 @@ issue goes into `build.py` first.
 
 ### 4.4 M5 follow-ups and M6
 
+- **Reflection and prediction over time** (roadmap B16, research
+  2026-10-30, [`reflection-and-prediction.md`](reflection-and-prediction.md)):
+  nothing is built until the owner answers its open questions (§7: a blind
+  look-back? a weekly look-back? the rating in the Mood part?). Data
+  collection is the first step; the descriptive layer comes at ~30 days.
 - ~~Distributed lag models~~: done 2026-10-19 (analysis-engine.md, "Links
   spread over days"). Every ordered pair since 2026-10-20 (R17).
 - ~~Adjusted re-check~~: done 2026-10-19; since 2026-10-20 it allows for
