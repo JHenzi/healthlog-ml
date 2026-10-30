@@ -36,6 +36,12 @@ CONTRACT: dict[str, tuple[str, ...]] = {
 # HealthLog's stress states that carry a score (upstream analysis/constants.py).
 MEASURED_STRESS_STATES = ("rest", "low", "medium", "high")
 
+# Drink apps (Water Llama) write a coffee or a beer to Apple Health twice: as caffeine or alcohol, and as a
+# water sample at the same instant (positive for coffee, negative for alcohol). Those drinks aren't water, so
+# such a sample becomes its own metric, ``dietary_water_from_<drink>``, and plain water keeps only water.
+WATER_DRINKS = ("caffeine", "alcohol_consumption")
+DRINK_WATER_PREFIX = "dietary_water_from_"
+
 
 @dataclass(frozen=True)
 class ContractProblem:
@@ -194,18 +200,31 @@ def registry(db: Session) -> list[dict]:
 
 
 def metric_day_rows(db: Session, zone: ZoneInfo, boundary: dt.time, since: dt.date | None = None) -> list[MetricDayRow]:
-    """All metrics, per Companion day and source, over the whole history (or from ``since``)."""
-    day = sql_day_expr("time")
-    params: dict = {"tz": zone.key, "boundary": boundary_interval(boundary)}
+    """All metrics, per Companion day and source, over the whole history (or from ``since``).
+
+    A water sample written for a drink (``WATER_DRINKS``) is reported as ``dietary_water_from_<drink>``.
+    """
+    day = sql_day_expr("m.time")
+    params: dict = {
+        "tz": zone.key,
+        "boundary": boundary_interval(boundary),
+        "drinks": list(WATER_DRINKS),
+        "prefix": DRINK_WATER_PREFIX,
+    }
+    metric = "CASE WHEN d.drink IS NULL THEN m.metric ELSE :prefix || d.drink END"
+    drinks = (
+        "LEFT JOIN (SELECT time, min(metric) AS drink FROM public.metric_samples "
+        "WHERE metric = ANY(:drinks) GROUP BY time) d ON m.metric = 'dietary_water' AND d.time = m.time"
+    )
     where = ""
     if since is not None:
         params["start"] = day_bounds(since, zone, boundary)[0]
-        where = "WHERE time >= :start"
+        where = "WHERE m.time >= :start"
     rows = db.execute(
         sa.text(
-            f"SELECT {day} AS day, metric, source, sum(qty) AS s, avg(coalesce(vavg, qty)) AS a, "
+            f"SELECT {day} AS day, {metric} AS metric, source, sum(qty) AS s, avg(coalesce(vavg, qty)) AS a, "
             "min(coalesce(vmin, vavg, qty)) AS lo, max(coalesce(vmax, vavg, qty)) AS hi, count(*) AS n "
-            f"FROM public.metric_samples {where} GROUP BY 1, 2, 3"
+            f"FROM public.metric_samples m {drinks} {where} GROUP BY 1, 2, 3"
         ),
         params,
     ).all()
