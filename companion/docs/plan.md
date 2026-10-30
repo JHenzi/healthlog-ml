@@ -164,7 +164,7 @@ data immediately.
 | Milestone | Scope (design ref.) | Needs |
 |---|---|---|
 | M6 Within-day effects | event-locked responses, e.g. coffee → steps/HR/stress over the next hours, vs time-matched baselines (§4.3) | M4 events + minute-level data |
-| M7 ML models | next-day prediction with feature importance, day types, change points, multivariate anomalies; time-ordered CV; must beat a naive baseline (§4.7). **Personal good-day weights**, learned from your own day rating (or, without one, from which parts go before the others), shown next to the equal-weight standard and reported only when they predict better on later days | M5 feature table + ~90 days (60–90 days of a day rating for the weights) |
+| M7 ML models | next-day prediction with feature importance, day types, change points, multivariate anomalies; time-ordered CV; must beat a naive baseline (§4.7). **Personal good-day weights**, learned from your own day rating (or, without one, from which parts go before the others), shown next to the equal-weight standard and reported only when they predict better on later days. **Reflection and prediction over time** (roadmap B16, [`reflection-and-prediction.md`](reflection-and-prediction.md)): carry-over and recovery, a latent day state from all ratings, forecasts with a track record; research only so far | M5 feature table + ~90 days (60–90 days of a day rating for the weights) |
 | M8 Diary | entries, embeddings (pgvector), concepts with confirm/reject tuning, themes, evidence views (§3) | M5 |
 | M9 Experiments | n-of-1 interventions with baselines and confounder checks (§4.5) | M5 |
 | M10 Imports & interop | CSV import from other tracking apps; export (§5) | M4 |
