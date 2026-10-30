@@ -1,12 +1,40 @@
-{# The good-day score's parts as bars (0–100, ranked against your own history); a missing part is "no data", never 0. #}
+{# The good-day score's parts, 0–100 ranked against your own history; a missing part is "no data", never 0.
+   Colour is one of five bands, clay (low for you) → sand → moss (high), the same on the bars and the grid. #}
+{% macro band(v) %}gd-b{{ [(v // 20)|int, 4]|min }}{% endmacro %}
+
 {% macro parts_bars(parts) %}
 <ul class="goodday-parts">
   {% for p in parts %}
   <li{% if p.value is none %} class="missing"{% endif %}>
     <span class="goodday-part">{{ p.label }}</span>
-    <span class="goodday-track" aria-hidden="true">{% if p.value is not none %}<span style="width: {{ p.value|round(1) }}%"></span>{% endif %}</span>
+    <span class="goodday-track" aria-hidden="true">{% if p.value is not none %}<span class="{{ band(p.value) }}" style="width: {{ p.value|round(1) }}%"></span>{% endif %}</span>
     <span class="goodday-value">{% if p.value is not none %}{{ p.value|round|int }}{% else %}no data{% endif %}</span>
   </li>
   {% endfor %}
 </ul>
+{% endmacro %}
+
+{# Recent days as a grid: a row per day, the score then each part, every cell coloured by its band. #}
+{% macro days_grid(days) %}
+<div class="gd-grid-wrap">
+<table class="gd-grid">
+  <thead><tr><th scope="col">Day</th><th scope="col">Score</th>{% for p in days[0].parts %}<th scope="col">{{ p.label }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for d in days %}
+  <tr>
+    <th scope="row">{{ d.day.strftime("%a %-d") }}{% if d.best %} <span class="gd-best" title="one of your best days">★</span>{% endif %}</th>
+    {% if d.score is not none %}
+    <td class="gd-cell gd-score {{ band(d.score) }}">{{ d.score|round|int }}</td>
+    {% else %}
+    <td class="gd-cell gd-missing" title="not scored">–</td>
+    {% endif %}
+    {% for p in d.parts %}
+    {% if p.value is not none %}<td class="gd-cell {{ band(p.value) }}">{{ p.value|round|int }}</td>{% else %}<td class="gd-cell gd-missing" title="no data">–</td>{% endif %}
+    {% endfor %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="gd-key muted small"><span class="gd-cell gd-b0">low</span><span class="gd-cell gd-b2">usual</span><span class="gd-cell gd-b4">high</span> for you · <span class="gd-cell gd-missing">–</span> no data</p>
 {% endmacro %}

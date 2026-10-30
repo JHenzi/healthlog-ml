@@ -73,6 +73,14 @@ assigned by its place in the list. It's filled when on, with coloured outline an
 when off, and a coloured pill when a discovery is about it. Removing a tag
 shifts the colours of the tags after it.
 
+**Good-day colours** (2026-10-30): a good-day part or score (0–100, ranked
+against your own history) takes one of five bands, `gd-b0` … `gd-b4`: clay
+(low for you), apricot, sand (usual), sage, moss (high). Higher is better
+for every part by definition, so low → high reads bad → good. The
+`/good-days` page leads with the last 14 days as a grid (a row per day,
+the score and each part a coloured cell, ★ on best days, hatched where
+there's no data); the Overview card's bars use the same bands.
+
 ## Warm candidate (2026-10-19)
 
 `web/static/warm.css` is a second look that loads after `style.css` and only

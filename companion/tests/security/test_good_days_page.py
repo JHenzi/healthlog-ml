@@ -69,7 +69,7 @@ def test_the_page_shows_parts_best_days_and_what_they_share(signed_in, scored):
     assert "What your best days have in common" in html
     assert "higher HRV" in html and "&lt;b&gt;HRV&lt;/b&gt;: median" in html and "<b>HRV</b>" not in html
     assert "The top quarter of your 20 scored days" in html
-    assert html.count('class="goodday-parts"') >= 1 and "no data" in html  # water and mood: no data, not 0
+    assert 'class="gd-grid"' in html and 'title="no data"' in html  # water and mood: no data, not 0
 
 
 def test_the_overview_has_the_good_day_card(signed_in, scored):

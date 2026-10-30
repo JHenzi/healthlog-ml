@@ -445,6 +445,25 @@ button.chip[class*="tc-"][aria-pressed="true"] { color: #fffaf1; background: var
 .goodday-value { text-align: right; color: var(--color-muted); }
 .goodday-track { height: 8px; background: var(--color-divider); border-radius: 4px; overflow: hidden; }
 .goodday-track span { display: block; height: 100%; background: var(--color-accent); }
+.goodday-track span.gd-b0, .goodday-track span.gd-b1, .goodday-track span.gd-b2,
+.goodday-track span.gd-b3, .goodday-track span.gd-b4 { background: var(--gd-bg); }
+/* five bands, clay (low for you) -> sand -> moss (high): higher is better for every part, by definition */
+.gd-b0 { --gd-bg: #b9583a; --gd-fg: #fffaf1; }
+.gd-b1 { --gd-bg: #e2a47f; --gd-fg: #33271c; }
+.gd-b2 { --gd-bg: #ead9b8; --gd-fg: #33271c; }
+.gd-b3 { --gd-bg: #a7c595; --gd-fg: #33271c; }
+.gd-b4 { --gd-bg: #4f7a4a; --gd-fg: #fffaf1; }
+.gd-grid-wrap { overflow-x: auto; }
+.gd-grid { width: 100%; border-collapse: separate; border-spacing: 3px; font-variant-numeric: tabular-nums; }
+.gd-grid th { border: 0; font-size: .8rem; font-weight: 700; color: var(--color-muted); text-align: center; padding: 0 2px; }
+.gd-grid tbody th { text-align: left; white-space: nowrap; color: var(--color-text); }
+.gd-cell { text-align: center; font-size: .85rem; font-weight: 700; padding: 6px 2px; border-radius: 6px;
+  background: var(--gd-bg, transparent); color: var(--gd-fg, var(--color-muted)); }
+.gd-score { font-size: 1rem; }
+.gd-missing { background: repeating-linear-gradient(45deg, var(--color-divider) 0 3px, transparent 3px 6px); font-weight: 400; }
+.gd-best { color: #c98a3c; }
+.gd-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: var(--space-2); }
+.gd-key .gd-cell { padding: 1px 8px; font-size: .75rem; }
 .goodday-parts li.missing .goodday-track { background: repeating-linear-gradient(45deg, var(--color-divider) 0 3px, transparent 3px 6px); }
 .goodday-days { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1, 4px); }
