@@ -130,7 +130,9 @@ contract check and a refresh. HealthLog upgrades, rehearsals and rollback:
   GitHub merges it once CI is green and deletes the branch. `main` is
   protected: the required checks are `companion: check paths`,
   `companion: tests`, `companion: image` and upstream's `lint-backend`,
-  `test`, `smoke` (set 2026-10-30). Deploy after the merge; for a UI
+  `test`, `smoke` (set 2026-10-30). A Markdown-only change skips the
+  Companion tests and image build (skipped counts as passed); the path
+  check and upstream's three jobs still run. Deploy after the merge; for a UI
   change, deploy the working tree first so it can be looked at live.
   Upstream work branches from `upstream/dev` and gets a PR there.
 - **Docs:** updated in the same PR. When a milestone moves, update `plan.md`
