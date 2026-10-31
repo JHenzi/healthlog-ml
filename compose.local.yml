@@ -1,15 +1,64 @@
 # Local-only services for this fork. Upstream's docker-compose.yml stays untouched (companion R1).
 # Run with: docker compose -f docker-compose.yml -f compose.local.yml up -d
+#
+# Nothing that holds or reads health data has a route out (companion R5): the database, HealthLog, Grafana and
+# the Companion sit on `private`, an internal network. Internal networks can't publish ports, so the *-edge
+# containers forward them. companion/scripts/check_egress.sh proves this on every deploy. A notification or LLM
+# server outside this stack would need HealthLog back on `default`.
 services:
+  healthlog-db:
+    networks:
+      - private
+
   healthlog:
     # deploy.sh healthlog build runs HealthLog built from this checkout (HEALTHLOG_IMAGE=healthlog-local).
     image: ${HEALTHLOG_IMAGE:-ghcr.io/anym001/healthlog}:${HEALTHLOG_VERSION:-latest}
+    # Replaces the port in docker-compose.yml: healthlog-edge publishes it.
+    ports: !reset []
+    networks:
+      - private
 
-  grafana:
-    image: grafana/grafana:11.5.2
-    container_name: healthlog-grafana
+  healthlog-edge:
+    image: alpine/socat:1.8.1.3
+    container_name: healthlog-edge
+    command: ["TCP-LISTEN:8000,fork,reuseaddr", "TCP:healthlog:8000"]
+    user: "65534:65534"
+    depends_on:
+      - healthlog
+    ports:
+      - "8000:8000"
+    networks:
+      - default
+      - private
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 32m
+    restart: unless-stopped
+
+  grafana-edge:
+    image: alpine/socat:1.8.1.3
+    container_name: healthlog-grafana-edge
+    command: ["TCP-LISTEN:3000,fork,reuseaddr", "TCP:grafana:3000"]
+    user: "65534:65534"
+    depends_on:
+      - grafana
     ports:
       - "3001:3000"
+    networks:
+      - default
+      - private
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 32m
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.6.16
+    container_name: healthlog-grafana
+    networks:
+      - private
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
@@ -34,3 +83,7 @@ services:
 
 volumes:
   grafana-data:
+
+networks:
+  private:
+    internal: true

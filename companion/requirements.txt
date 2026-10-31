@@ -8,7 +8,7 @@ pydantic-settings==2.15.0
 apscheduler==3.11.3
 # Server-rendered pages + form posts.
 jinja2==3.1.6
-python-multipart==0.0.20
+python-multipart==0.0.33
 # Password hashing (R11).
 argon2-cffi==25.1.0
 # Reminders (web push): end-to-end encryption (RFC 8291) and VAPID signing; sent by the courier.

@@ -35,3 +35,6 @@ HealthAutoExport-*.json
 
 # Private notes: local only, never pushed
 /companion/docs/private/
+
+# Local Claude Code permissions (may quote commands and paths)
+/.claude/settings.local.json

@@ -25,7 +25,7 @@ from .models import ApiToken, User, WebSession
 
 SESSION_COOKIE = "companion_session"
 LOGIN_CSRF_COOKIE = "companion_login_csrf"
-TOKEN_PREFIX = "hlc_"
+TOKEN_PREFIX = "hlc_"  # noqa: S105 (a public prefix, not a secret)
 SINGLE_USER_ID = 1
 
 TRACKER_KEY_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")  # risks.md D5

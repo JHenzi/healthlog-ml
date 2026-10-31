@@ -1,36 +1,28 @@
 version: 2
+# This fork's own config: only what the Companion owns (R1). HealthLog's backend and upstream's workflows are
+# left out on purpose: a PR touching them fails the required `companion: check paths`. Upstream's Dependabot
+# keeps those fresh, and they arrive with the upstream sync. Alerts still cover the whole repo.
+# On an upstream sync, keep this file.
 updates:
-  # GitHub Actions: keep the pinned SHAs in the four workflows fresh.
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-    # PRs always target dev, never main (see CONTRIBUTING.md); main only
-    # updates via the dev -> main release PR.
-    target-branch: "dev"
-    groups:
-      github-actions:
-        patterns:
-          - "*"
-
-  # Python dependencies (FastAPI, SQLAlchemy, Alembic, psycopg, APScheduler …).
   - package-ecosystem: "pip"
-    directory: "/backend"
+    directory: "/companion"
+    target-branch: "main"
     schedule:
       interval: "monthly"
-    target-branch: "dev"
     groups:
-      python:
+      companion-python:
         patterns:
           - "*"
+    # Security updates ignore the schedule and arrive as their own PRs.
 
-  # Base image bumps (python:3.12-slim, s6-overlay is pinned via ARG).
   - package-ecosystem: "docker"
-    directory: "/backend"
+    directories:
+      - "/companion"
+      - "/companion/collector"
+    target-branch: "main"
     schedule:
       interval: "monthly"
-    target-branch: "dev"
     groups:
-      docker:
+      companion-docker:
         patterns:
           - "*"
