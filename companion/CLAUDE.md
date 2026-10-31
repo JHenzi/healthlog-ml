@@ -21,7 +21,8 @@ pipeline; the Companion owns its own schema, engine and UI.
 
 - **R1: Only touch our paths.** On companion branches, change only
   `companion/**`, `compose.companion.yml`, `compose.local.yml`,
-  `.github/workflows/companion*.yml` and `.gitignore`. A change HealthLog
+  `.github/workflows/companion*.yml`, `.github/dependabot.yml`,
+  `.github/SECURITY.md` and `.gitignore`. A change HealthLog
   needs goes upstream as its own PR, branched from `upstream/dev`.
 - **R2: Never depend on or write upstream database objects.** No views,
   foreign keys, triggers or SQL-body functions referencing schema `public`.
@@ -58,7 +59,10 @@ pipeline; the Companion owns its own schema, engine and UI.
   image (no database, no health data), never from the Companion itself:
   fetches from outside-data sources, and reminders the Companion has already
   encrypted for the phone, posted to its push service by the courier. Models
-  are baked into the image (`HF_HUB_OFFLINE=1`). No telemetry.
+  are baked into the image (`HF_HUB_OFFLINE=1`). No telemetry. The network
+  enforces this too: everything that holds or reads health data sits on the
+  internal `private` network, `*-edge` containers publish its ports, and
+  `scripts/check_egress.sh` proves it on every deploy.
 - **R6: Capture is structured.** No language model in any capture path.
   Values come from typed inputs; unparseable text becomes a note, never a
   guess.

@@ -3,6 +3,7 @@
 #   docker compose -f docker-compose.yml -f compose.local.yml -f compose.companion.yml up -d --build
 #
 # One-time database setup first: see companion/README.md ("Install").
+# The `private` network is defined in compose.local.yml, so this file needs that one.
 services:
   companion-web:
     build: ./companion
@@ -15,9 +16,9 @@ services:
       # Started first so it creates the shared volume with its own ownership (it writes, we only read).
       companion-collector:
         condition: service_started
-    ports:
-      # Localhost only: reach it through Tailscale Serve or a reverse proxy on this host.
-      - "${COMPANION_BIND:-127.0.0.1}:${COMPANION_PORT:-8020}:8000"
+    # No route out (R5): the private network is internal. companion-edge publishes the port.
+    networks:
+      - private
     environment: &companion-env
       # The `companion` role: owns schema companion, SELECT-only on HealthLog's tables.
       DATABASE_URL: postgresql+psycopg://companion:${COMPANION_DB_PASSWORD:?set COMPANION_DB_PASSWORD in .env}@healthlog-db:5432/healthlog
@@ -51,12 +52,34 @@ services:
     volumes:
       - companion-outside:/outside:ro
       - companion-push:/push
+    networks:
+      - private
     # No HTTP server in this process; the image's web health check doesn't apply.
     healthcheck:
       disable: true
     # The nightly analysis must never starve HealthLog or its database (risks.md F1).
     mem_limit: 1g
     cpus: 1.0
+    restart: unless-stopped
+
+  # Publishes the web port and nothing else: raw TCP forwarding, no data at rest, no credentials.
+  companion-edge:
+    image: alpine/socat:1.8.1.3
+    container_name: healthlog-companion-edge
+    command: ["TCP-LISTEN:8000,fork,reuseaddr", "TCP:companion-web:8000"]
+    user: "65534:65534"
+    depends_on:
+      - companion-web
+    ports:
+      # Localhost only: reach it through Tailscale Serve or a reverse proxy on this host.
+      - "${COMPANION_BIND:-127.0.0.1}:${COMPANION_PORT:-8020}:8000"
+    networks:
+      - default
+      - private
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 32m
     restart: unless-stopped
 
   # Weather (M3, opt-in): the one container that reaches the internet. It has no database credentials and no

@@ -21,7 +21,18 @@ target-version = "py312"
 
 [tool.ruff.lint]
 # Upstream's set plus DTZ: naive datetimes are a bug here (R14).
-select = ["E", "F", "W", "I", "B", "UP", "DTZ"]
+select = ["E", "F", "W", "I", "B", "UP", "DTZ", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+# S (bandit) guards shipped code; tests, migrations and build tooling aren't.
+"tests/**" = ["S"]
+"migrations/**" = ["S"]
+"grafana/**" = ["S"]
+"scripts/**" = ["S"]
+# Only fixed SQL fragments are interpolated (R3); every value is a bound parameter.
+"app/upstream.py" = ["S608"]
+# The URLs are built from allowlisted hosts (test_collector.py).
+"collector/collector.py" = ["S310"]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's dependency-injection defaults are evaluated once by design.

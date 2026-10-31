@@ -129,7 +129,7 @@ def _web(args: argparse.Namespace) -> int:
     import uvicorn
 
     _migrate()
-    uvicorn.run("app.main:app", host="0.0.0.0", port=args.port, proxy_headers=False)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=args.port, proxy_headers=False)  # noqa: S104 (inside the container)
     return 0
 
 

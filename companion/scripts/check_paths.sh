@@ -5,7 +5,7 @@ set -eu
 
 base="${1:-upstream/dev}"
 bad=$(git diff --name-only "$base"...HEAD -- | grep -Ev \
-    '^(companion/|compose\.companion\.yml$|compose\.local\.yml$|\.github/workflows/companion[^/]*\.yml$|\.gitignore$)' || true)
+    '^(companion/|compose\.companion\.yml$|compose\.local\.yml$|\.github/workflows/companion[^/]*\.yml$|\.github/dependabot\.yml$|\.github/SECURITY\.md$|\.gitignore$)' || true)
 
 if [ -n "$bad" ]; then
     echo "These upstream-owned files changed relative to $base (R1):"

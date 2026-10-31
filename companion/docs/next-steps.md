@@ -359,6 +359,28 @@ issue goes into `build.py` first.
   (~80 s each for 153 payloads). Fine now; worth a note to upstream if
   `raw_ingest` grows a lot.
 
+**Security baseline (2026-10-31).** Measured with pip-audit, gitleaks, zizmor,
+Trivy and a TCP probe from each container. Done: `python-multipart` bumped past
+its six advisories; the database, HealthLog, Grafana and the Companion moved to
+an internal network with `*-edge` forwarders, proved on each deploy by
+`scripts/check_egress.sh`; Dependabot alerts, security updates, CodeQL and
+private vulnerability reporting on; our own `.github/dependabot.yml` for
+`/companion`; `companion-security.yml` (pip-audit, gitleaks, weekly); ruff `S`
+rules; base image pinned by digest; Grafana 11.6.16. Still open:
+
+- **Keep `.github/dependabot.yml` on an upstream sync.** It's ours now, and his
+  `dev` changes to it will conflict. `/backend` and upstream's workflows are
+  left out on purpose: those PRs would fail `companion: check paths`.
+- **Grafana and HealthLog stay on `0.0.0.0`** (`3001`, `8000`): a tailnet client
+  uses `:3001` directly. Moving Grafana to localhost needs a Tailscale Serve
+  route first.
+- **`timescale/timescaledb:2.17.2-pg16` shows 41 critical findings,** mostly in
+  tools bundled with the image, with no published port and now no route out.
+  A planned upgrade with a restore drill (risks.md A8), not an emergency.
+- **If HealthLog ever needs notifications or an LLM outside this stack,** put it
+  back on `default` and accept that check_egress.sh must allow it.
+- **If this repo ever goes private,** CodeQL and secret scanning stop being free.
+
 ## 5. Things learned the hard way
 
 - **HAE timestamps differ by section.** Most sections use `2026-06-15

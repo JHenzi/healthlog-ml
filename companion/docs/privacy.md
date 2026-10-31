@@ -24,6 +24,11 @@ milestone.
 - **No outbound network calls from the Companion.** It contains no HTTP
   client. `tests/privacy` checks that the app code imports none, and that the
   pages, login and contract check run with non-loopback connections blocked.
+- **The network enforces it, in the Compose setup this project deploys.** The
+  database, HealthLog, Grafana and the Companion sit on an internal Docker
+  network with no route out; small forwarders that hold no data publish their
+  ports. Every deploy tries to connect out from each container and fails if
+  one succeeds (`scripts/check_egress.sh`).
 - **One opt-in exception: the weather collector** (`companion-collector`,
   off until you set a location). It is a separate container with no database
   credentials and no health data, on its own network (it can't reach the

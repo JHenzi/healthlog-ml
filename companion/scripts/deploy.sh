@@ -49,7 +49,7 @@ trap 'echo; echo "!! deploy stopped. To put the data back: companion/scripts/res
 case "$what" in
 companion)
     echo "== Companion from $(git -C "$repo" rev-parse --short HEAD)"
-    compose up -d --build --force-recreate companion-collector companion-courier companion-web companion-jobs
+    compose up -d --build --force-recreate companion-collector companion-courier companion-web companion-jobs companion-edge
     wait_healthy healthlog-companion
     ;;
 healthlog)
@@ -83,6 +83,7 @@ healthlog)
 esac
 
 echo "== verify"
+"$here/check_egress.sh"
 docker exec healthlog-companion companion check-upstream
 # No pipe here: a failing refresh must stop the deploy (a "| tail" once hid one).
 out=$(docker exec healthlog-companion companion refresh 2>&1) || { echo "$out" | tail -20; exit 1; }
