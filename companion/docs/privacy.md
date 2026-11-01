@@ -25,14 +25,12 @@ milestone.
   client. `tests/privacy` checks that the app code imports none, and that the
   pages, login and contract check run with non-loopback connections blocked.
 - **The network enforces it, in the Compose setup this project deploys.** The
-  database, HealthLog and the Companion sit on an internal Docker network with
-  no route out; small forwarders that hold no data publish their ports. Every
-  deploy tries to connect out from each container and fails if one succeeds
-  (`scripts/check_egress.sh`).
-- **Grafana is the exception.** It can reach the internet, so plugins can be
-  installed and data sources such as Hetzner Cloud work. Its analytics and
-  update checks are off, and its database login is read-only, but a plugin you
-  install can read what that login can read and could send it out.
+  database, HealthLog, Grafana and the Companion sit on an internal Docker
+  network with no route out; small forwarders that hold no data publish their
+  ports. Every deploy tries to connect out from each container and fails if
+  one succeeds (`scripts/check_egress.sh`). So Grafana can't install plugins or
+  use data sources on the internet, on purpose: it holds a login to your health
+  data, and plugins are third-party code.
 - **One opt-in exception: the weather collector** (`companion-collector`,
   off until you set a location). It is a separate container with no database
   credentials and no health data, on its own network (it can't reach the

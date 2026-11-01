@@ -1,6 +1,5 @@
 #!/bin/sh
-# Proves R5 at the network level: the database, HealthLog and the Companion can't open a connection to the internet.
-# Grafana is left out on purpose (compose.local.yml).
+# Proves R5 at the network level: nothing that holds or reads health data can open a connection to the internet.
 # Connects to 1.1.1.1:443 and sends nothing. Deliberately not a test in Python: tests/privacy can only see sockets
 # inside the test process. deploy.sh runs this on every deploy. Exit 1 if any container gets through.
 set -eu
@@ -29,6 +28,8 @@ for container in healthlog-companion healthlog-companion-jobs "$app"; do
     if docker exec "$container" python -c "$python_probe"; then state=open; else state=closed; fi
     report "$(docker inspect -f '{{.Name}}' "$container")" "$state"
 done
-if docker exec healthlog-db sh -c 'nc -z -w3 1.1.1.1 443' 2>/dev/null; then state=open; else state=closed; fi
-report healthlog-db "$state"
+for container in healthlog-db healthlog-grafana; do
+    if docker exec "$container" sh -c 'nc -z -w3 1.1.1.1 443' 2>/dev/null; then state=open; else state=closed; fi
+    report "$container" "$state"
+done
 exit "$failed"

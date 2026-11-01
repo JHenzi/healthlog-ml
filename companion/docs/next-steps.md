@@ -361,20 +361,20 @@ issue goes into `build.py` first.
 
 **Security baseline (2026-10-31).** Measured with pip-audit, gitleaks, zizmor,
 Trivy and a TCP probe from each container. Done: `python-multipart` bumped past
-its six advisories; the database, HealthLog and the Companion moved to an
-internal network with `*-edge` forwarders, proved on each deploy by
+its six advisories; the database, HealthLog, Grafana and the Companion moved to
+an internal network with `*-edge` forwarders, proved on each deploy by
 `scripts/check_egress.sh`; Dependabot alerts, security updates, CodeQL and
 private vulnerability reporting on; our own `.github/dependabot.yml` for
 `/companion`; `companion-security.yml` (pip-audit, gitleaks, weekly); ruff `S`
 rules; base image pinned by digest; Grafana 11.6.16 (with its plugin preinstall
-and key fetch off; it keeps a route out for plugins and the Hetzner data
-source, after cutting that off took the Hetzner dashboard down for an evening;
-upstream told in #128). CodeQL's first scan
+off: the internal network caught it calling grafana.com). CodeQL's first scan
 found one real bug, a `/\\` bypass in `_back()`, fixed; its other redirect and
 logging alerts are false positives, dismissed with a reason. Still open:
 
-- **Separating Grafana:** a second Grafana for infrastructure (Hetzner) would let
-  the health one go fully offline, if that's ever worth it.
+- **The Hetzner Cloud dashboard no longer works in this Grafana,** by choice
+  (2026-10-31): it needs the internet, and Grafana stays offline so the
+  no-outbound promise holds. Plugin installs from the UI are off for the same
+  reason. Its data source, dashboard and plugin are still there, unused.
 - **Keep `.github/dependabot.yml` on an upstream sync.** It's ours now, and his
   `dev` changes to it will conflict. `/backend` and upstream's workflows are
   left out on purpose: those PRs would fail `companion: check paths`.
