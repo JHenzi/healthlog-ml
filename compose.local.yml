@@ -1,10 +1,10 @@
 # Local-only services for this fork. Upstream's docker-compose.yml stays untouched (companion R1).
 # Run with: docker compose -f docker-compose.yml -f compose.local.yml up -d
 #
-# Nothing that holds or reads health data has a route out (companion R5): the database, HealthLog, Grafana and
-# the Companion sit on `private`, an internal network. Internal networks can't publish ports, so the *-edge
-# containers forward them. companion/scripts/check_egress.sh proves this on every deploy. A notification or LLM
-# server outside this stack would need HealthLog back on `default`.
+# The database, HealthLog and the Companion have no route out (companion R5): they sit on `private`, an internal
+# network. Internal networks can't publish ports, so the *-edge containers forward them. Grafana is the deliberate
+# exception, see below. companion/scripts/check_egress.sh proves this on every deploy. A notification or LLM server
+# outside this stack would need HealthLog back on `default`.
 services:
   healthlog-db:
     networks:
@@ -36,36 +36,24 @@ services:
     mem_limit: 32m
     restart: unless-stopped
 
-  grafana-edge:
-    image: alpine/socat:1.8.1.3
-    container_name: healthlog-grafana-edge
-    command: ["TCP-LISTEN:3000,fork,reuseaddr", "TCP:grafana:3000"]
-    user: "65534:65534"
-    depends_on:
-      - grafana
+  grafana:
+    image: grafana/grafana:11.6.16
+    container_name: healthlog-grafana
+    # On both networks: installing plugins and data sources like Hetzner Cloud need the internet. The analytics
+    # settings below keep it quiet, and its database login is read-only.
     ports:
       - "3001:3000"
     networks:
       - default
-      - private
-    read_only: true
-    cap_drop: [ALL]
-    security_opt: ["no-new-privileges:true"]
-    mem_limit: 32m
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana:11.6.16
-    container_name: healthlog-grafana
-    networks:
       - private
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
       GRAFANA_RO_PASSWORD: ${GRAFANA_RO_PASSWORD:?set GRAFANA_RO_PASSWORD in .env}
       # No phoning home (upstream #120, grafana/README.md).
-      # 11.6 otherwise fetches its bundled plugins from grafana.com at every start.
+      # 11.6 otherwise fetches its bundled plugins and plugin signing keys from grafana.com.
       GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_PLUGINS_PUBLIC_KEY_RETRIEVAL_DISABLED: "true"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
