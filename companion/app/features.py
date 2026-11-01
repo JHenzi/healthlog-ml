@@ -249,7 +249,7 @@ def tracker_features(
     zone: ZoneInfo,
     boundary: dt.time,
 ) -> FeatureSet:
-    """Each tracker is its own family: its total and its first time are linked by definition."""
+    """Each tracker is its own family: its total and its first time are linked by definition. Each tag is too."""
     out = FeatureSet()
     for spec, obs in specs:
         if dayrating.is_built_in(spec.key):
@@ -257,7 +257,9 @@ def tracker_features(
         tf = trackers.daily_features(spec, obs, reviewed, last_day, zone, boundary)
         for feature, values in tf.values.items():
             label, unit, kind = tf.labels[feature]
-            out.add(Def(feature, label, unit, "tracker", kind, family=f"tracker:{spec.key}"), values)
+            # Tags on one tracker aren't linked by definition: each is its own family, so they're tested together.
+            family = feature if ".tag." in feature else f"tracker:{spec.key}"
+            out.add(Def(feature, label, unit, "tracker", kind, family=family), values)
     return out
 
 

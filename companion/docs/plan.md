@@ -165,9 +165,9 @@ data immediately.
 |---|---|---|
 | M6 Within-day effects | event-locked responses, e.g. coffee → steps/HR/stress over the next hours, vs time-matched baselines (§4.3) | M4 events + minute-level data |
 | M7 ML models | next-day prediction with feature importance, day types, change points, multivariate anomalies; time-ordered CV; must beat a naive baseline (§4.7). **Personal good-day weights**, learned from your own day rating (or, without one, from which parts go before the others), shown next to the equal-weight standard and reported only when they predict better on later days. **Reflection and prediction over time** (roadmap B16, [`reflection-and-prediction.md`](reflection-and-prediction.md)): carry-over and recovery, a latent day state from all ratings, forecasts with a track record; research only so far | M5 feature table + ~90 days (60–90 days of a day rating for the weights) |
-| M8 Diary | entries, embeddings (pgvector), concepts with confirm/reject tuning, themes, evidence views (§3) | M5 |
+| M8 Diary | **started:** one note a day on the Capture page. Next: entries, embeddings (pgvector), concepts with confirm/reject tuning, themes, evidence views (§3) | M5 |
 | M9 Experiments | n-of-1 interventions with baselines and confounder checks (§4.5) | M5 |
-| M10 Imports & interop | CSV import from other tracking apps; export (§5) | M4 |
+| M10 Imports & interop | **started:** `import-days` (repeatable JSON import of day-by-day tags, trackers and notes). Next: CSV import from other tracking apps; export (§5) | M4 |
 | M12 Compare (opt-in, anonymous) | your figures against others': built-in published reference figures (offline); an anonymous summary you review field by field, and others' summaries to compare good-day weights and typical values against (roadmap B13). How summaries are exchanged is not decided | M7 for the weights; privacy review (risks.md E7, G6) |
 | M13 Weather along the route | per-workout weather and air quality from the GPS track, coarse grid, per hour, opt-in (roadmap B14; the privacy trade-off is debated first) | workouts with routes (on since 2026-10-28); M3 collector |
 | M11 Polish | reminders (web push), weekly summary, `proxy_header` auth, optional native iOS app; **purge** a tracker's or tag's entries on request (redacts the event log too, risks.md E5; removing or archiving keeps history) | — |

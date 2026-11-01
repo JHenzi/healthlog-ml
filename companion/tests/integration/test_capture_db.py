@@ -10,8 +10,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from sqlalchemy import select
 
-from app import capture, features
-from app.models import DayReview, Event, Observation
+from app import capture, features, importer
+from app.models import DayReview, Event, Observation, Tracker
 from app.timeutil import local_day
 from app.trackers import TrackerInputError
 
@@ -185,3 +185,70 @@ def test_removing_a_tag_or_archiving_a_tracker_keeps_its_history(db, coffee):
     features.rebuild(db, NY, FOUR)
     assert features.series(db, "tracker.day_tags.tag.travel") == {day: 1.0}
     assert features.series(db, "tracker.coffee.total") == {day: 2.0}  # no zero after archiving
+
+
+def _import_doc(**extra):
+    return {
+        "source": "other",
+        "tags": {"Calm": {"2026-01-05": 1, "2026-01-06": 0}},
+        "trackers": [
+            {"key": "first_walk", "name": "First walk", "type": "time", "days": {"2026-01-05": 595}},
+            {"key": "energy", "name": "Energy", "type": "scale", "scale_min": 1, "scale_max": 9,
+             "days": {"2026-01-05": 9}},
+        ],
+        "diary": {"2026-01-05": "synthetic text"},
+        **extra,
+    }  # fmt: skip
+
+
+def test_import_is_exact_repeatable_and_keeps_what_you_logged_here(db, coffee):
+    first = importer.run(db, _import_doc(), NY, FOUR)
+    assert (first["tags"], first["entries"], first["diary entries"]) == (2, 2, 1)
+    again = importer.run(db, _import_doc(), NY, FOUR)
+    assert again == {"already here": 5}
+    capture.rebuild(db, NY, FOUR)  # the log alone reproduces it
+    day = dt.date(2026, 1, 5)
+    assert capture.tags_for_day(db, day) == {capture.day_tags(db).id: {"calm"}}
+    assert capture.tags_for_day(db, day + dt.timedelta(days=1)) == {}
+    walk = db.execute(select(Tracker).where(Tracker.key == "first_walk")).scalar_one()
+    seen = capture.day_values(db, walk, day)[0].observed_at.astimezone(NY)
+    assert (seen.hour, seen.minute) == (9, 55)
+    assert capture.diary_text(db, day) == "synthetic text"
+    features.rebuild(db, NY, FOUR)
+    assert features.series(db, "tracker.day_tags.tag.calm") == {day: 1.0, day + dt.timedelta(days=1): 0.0}
+    assert not [f for f in features.all_series(db) if "diary" in f]
+
+
+def test_import_skips_a_day_logged_here_and_replace_archives_the_rest(db, coffee):
+    tags = capture.add_day_tags(db, ["Old", "Calm"])
+    _toggle(db, tags, "calm", dt.date(2026, 1, 5))
+    counts = importer.run(db, _import_doc(replace=True), NY, FOUR)
+    assert counts["kept yours"] == 1
+    assert counts["trackers archived"] >= 1
+    assert db.get(Tracker, coffee.id).archived
+    assert capture.day_tags(db).tags == ["Calm"]
+    assert not capture.day_tags(db).archived
+
+
+def test_a_tag_recorded_off_can_be_turned_on(db, coffee):
+    importer.run(db, _import_doc(), NY, FOUR)
+    day = dt.date(2026, 1, 6)
+    tracker = capture.day_tags(db)
+    assert _toggle(db, tracker, "calm", day) is True
+    assert capture.tags_for_day(db, day) == {tracker.id: {"calm"}}
+
+
+def test_a_time_tracker_can_be_changed_and_keeps_one_time_a_day(db, coffee):
+    importer.run(db, _import_doc(), NY, FOUR)
+    walk = db.execute(select(Tracker).where(Tracker.key == "first_walk")).scalar_one()
+    day = dt.date(2026, 1, 5)
+    later = dt.datetime.combine(day, dt.time(11, 40), NY)
+    how = dict(client_id=None, source="test", zone=NY, boundary=FOUR)
+    capture.set_day_time(db, walk, day, observed_at=later, **how)
+    rows = capture.day_values(db, walk, day)
+    assert [(o.observed_at, o.source) for o in rows] == [(later, "test")]
+    other_day = dt.datetime.combine(day + dt.timedelta(days=1), dt.time(9), NY)
+    with pytest.raises(TrackerInputError):
+        capture.set_day_time(db, walk, day, observed_at=other_day, **how)
+    assert importer.run(db, _import_doc(), NY, FOUR)["kept yours"] == 0  # a repeat import leaves your time alone
+    assert capture.day_values(db, walk, day)[0].observed_at == later

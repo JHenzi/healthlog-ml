@@ -16,7 +16,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from zoneinfo import ZoneInfo
 
-TYPES = ("count", "scale", "check", "quantity", "duration", "time", "choice", "moment", "tags")
+TYPES = ("count", "scale", "check", "quantity", "duration", "time", "choice", "moment", "tags", "note")
 TYPE_LABELS = {
     "count": "Count",
     "scale": "Rating 1–10",
@@ -27,6 +27,7 @@ TYPE_LABELS = {
     "choice": "Pick one",
     "moment": "Moment",
     "tags": "Day tags",
+    "note": "Note",
 }
 # One line each for the "What are you tracking?" choice on the New tracker form, in display order;
 # the first COMMON_TYPES are shown, the rest sit under "More kinds".
@@ -45,6 +46,8 @@ DEFAULT_SCALE = (1.0, 10.0)  # one scale for every rating: nothing to set up, an
 MAX_TAGS = 40
 DAY_TAGS_KEY = "day_tags"  # the one tags tracker: tags describe the day, not a measure
 MAX_TAG_LENGTH = 40
+DIARY_KEY = "diary"  # the one note tracker: free text for the day, never analysed
+MAX_NOTE_LENGTH = 20000
 KEY_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 MAX_FUTURE = dt.timedelta(minutes=5)  # risks.md B8: device clocks may be slightly ahead, not more
 MOMENT_MAX_INTENSITY = 3
@@ -179,6 +182,13 @@ def parse_value(spec: TrackerSpec, raw: object) -> tuple[float | None, str | Non
         if v != int(v) or not 1 <= v <= MOMENT_MAX_INTENSITY:
             raise TrackerInputError(f"intensity is 1 to {MOMENT_MAX_INTENSITY}")
         return v, None
+    if t == "note":
+        text = str(raw).strip() if raw is not None else ""
+        if not text:
+            raise TrackerInputError("write something first")
+        if len(text) > MAX_NOTE_LENGTH:
+            raise TrackerInputError(f"a note is at most {MAX_NOTE_LENGTH} characters")
+        return None, text
     if t == "tags":
         raise TrackerInputError("pick a tag")
     raise TrackerInputError(f"unknown type {t!r}")
@@ -215,7 +225,7 @@ class Obs:
     day: dt.date
     value_num: float | None
     value_text: str | None
-    tag: str | None = None  # a tag entry carries no value
+    tag: str | None = None  # a picked tag carries no value; value_num 0 records "not this day" (from an import)
 
 
 @dataclass
@@ -253,12 +263,13 @@ def daily_features(
     """Features of one tracker. ``last_day`` is the last complete day (zero-fill never reaches today)."""
     out = TrackerFeatures()
     by_day: dict[dt.date, list[Obs]] = {}
-    tags_by_day: dict[dt.date, set[str]] = {}
+    tag_on: dict[str, set[dt.date]] = {}
+    tag_off: dict[str, set[dt.date]] = {}
     for o in obs:
         if o.tag is None:
             by_day.setdefault(o.day, []).append(o)
         else:
-            tags_by_day.setdefault(o.day, set()).add(o.tag)
+            (tag_off if o.value_num == 0 else tag_on).setdefault(o.tag, set()).add(o.day)
     base = f"tracker.{spec.key}"
     name, unit = spec.name, spec.unit
     zero_days = {d for d in observed_days(spec, set(by_day), reviewed, last_day) if d <= last_day}
@@ -303,31 +314,29 @@ def daily_features(
             if vals:
                 out.put(f_int, d, max(vals))
 
-    if spec.tags:
-        # A tag is 1 on a day it was picked and 0 on a day the tracker was otherwise used or the
-        # day was reviewed (you saw the tag and didn't pick it); unknown everywhere else (R7).
-        used = set(by_day) | set(tags_by_day)
-        tag_days = {d for d in observed_days(spec, used, reviewed, last_day) if d <= last_day} | set(tags_by_day)
-        for tag in spec.tags:
-            slug = tag_slug(tag)
+    # A tag is 1 on a day it was picked and 0 where it was recorded as off, or where the tracker was otherwise used or
+    # the day reviewed (you saw the tag and didn't pick it); unknown everywhere else (R7). A tag's series starts at its
+    # own first entry, so a tag added later says nothing about the days before it. A day imported tag by tag says
+    # nothing about the tags it doesn't list. A tag taken off the list keeps its history, up to its last entry (after
+    # that it wasn't offered). Purging the entries is a separate act.
+    if tag_on or tag_off or spec.tags:
+        listed = {d for days in tag_off.values() for d in days}
+        used = set(by_day) | ({d for days in tag_on.values() for d in days} - listed)
+        offered = {d for d in observed_days(spec, used, reviewed, last_day) if d <= last_day}
+        current = {tag_slug(t): t for t in spec.tags}
+        for slug in [*current, *sorted((tag_on.keys() | tag_off.keys()) - current.keys())]:
+            on, off = tag_on.get(slug, set()), tag_off.get(slug, set())
+            entries = on | off
+            days = offered | entries
+            if entries:
+                days = {d for d in days if d >= min(entries)}
+            if slug not in current:
+                days = {d for d in days if d <= max(entries)}
             f = f"{base}.tag.{slug}"
-            label(f, f"{name}: {tag}", None, "count")
-            for d in tag_days:
-                out.put(f, d, float(slug in tags_by_day.get(d, set())))
-    # A tag taken off the list keeps its history: 1 where it was picked, 0 on observed days up to its last use
-    # (after that it wasn't offered, so its absence says nothing). Purging the entries is a separate act.
-    current = {tag_slug(t) for t in spec.tags}
-    picked = {tag for tags in tags_by_day.values() for tag in tags}
-    if picked - current:
-        used = set(by_day) | set(tags_by_day)
-        seen = {d for d in observed_days(spec, used, reviewed, last_day) if d <= last_day} | set(tags_by_day)
-        for slug in sorted(picked - current):
-            on = {d for d, tags in tags_by_day.items() if slug in tags}
-            f = f"{base}.tag.{slug}"
-            label(f, f"{name}: {slug.replace('_', ' ')} (removed)", None, "count")
-            for d in seen:
-                if d <= max(on):
-                    out.put(f, d, float(d in on))
+            text = current.get(slug) or f"{slug.replace('_', ' ')} (removed)"
+            label(f, f"{name}: {text}", None, "count")
+            for d in days:
+                out.put(f, d, float(d in on))
 
     if t in ("time",) or (t in ("count", "moment") and by_day):
         # Clock-time features: first (and for counts, last) time of the day.

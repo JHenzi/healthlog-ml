@@ -23,6 +23,7 @@ from .models import DayReview, Event, Observation, Tracker
 from .timeutil import local_day
 from .trackers import (
     DAY_TAGS_KEY,
+    DIARY_KEY,
     TrackerInputError,
     TrackerSpec,
     check_time,
@@ -244,7 +245,7 @@ def log(
     return Logged(db.get(Observation, client_id), tracker, created=True)
 
 
-SINGLE_VALUE_TYPES = ("scale", "check", "choice")  # one value per day: a new tap replaces it
+SINGLE_VALUE_TYPES = ("scale", "check", "choice", "note")  # one value per day: a new tap replaces it
 
 
 def day_values(db: Session, tracker: Tracker, day: dt.date) -> list[Observation]:
@@ -284,6 +285,8 @@ def set_day_value(
     value_num, value_text = parse_value(spec_of(tracker), raw_value)
     current = day_values(db, tracker, day)
     same = len(current) == 1 and (current[0].value_num, current[0].value_text) == (value_num, value_text)
+    if same and tracker.type == "note":
+        return True  # saving a note unchanged keeps it
     for o in current:
         delete(db, o.client_id, source=source)
     if same:
@@ -303,10 +306,84 @@ def set_day_value(
     return True
 
 
+def set_day_time(
+    db: Session,
+    tracker: Tracker,
+    day: dt.date,
+    *,
+    observed_at: dt.datetime | None,
+    client_id: uuid.UUID | None,
+    source: str,
+    zone: ZoneInfo,
+    boundary: dt.time,
+) -> None:
+    """Set a time tracker's time for the day: it replaces the day's entries, which stay in the log as tombstones."""
+    if client_id is not None and db.get(Observation, client_id) is not None:
+        return  # a double tap
+    if observed_at is not None and local_day(observed_at, zone, boundary) != day:
+        raise TrackerInputError("the time isn't on that day")
+    for o in day_values(db, tracker, day):
+        delete(db, o.client_id, source=source)
+    log(db, tracker, None, observed_at=observed_at, client_id=client_id, source=source, zone=zone, boundary=boundary)
+
+
 def undo_last(db: Session, tracker: Tracker, day: dt.date, *, source: str) -> bool:
     """Take back the day's latest entry (the minus button). It stays in the event log as a tombstone."""
     current = day_values(db, tracker, day)
     return bool(current) and delete(db, current[-1].client_id, source=source)
+
+
+_IS_PICK = sa.or_(Observation.value_num.is_(None), Observation.value_num != 0)  # value 0: recorded as off
+
+
+def _tag_off_entries(db: Session, tracker: Tracker, slug: str, day: dt.date) -> list[uuid.UUID]:
+    rows = db.execute(
+        sa.select(Observation.client_id).where(
+            Observation.tracker_id == tracker.id,
+            Observation.day == day,
+            Observation.tag == slug,
+            Observation.deleted.is_(False),
+            Observation.value_num == 0,
+        )
+    )
+    return list(rows.scalars())
+
+
+def record_tag(
+    db: Session,
+    tracker: Tracker,
+    tag: str,
+    on: bool,
+    *,
+    observed_at: dt.datetime,
+    client_id: uuid.UUID,
+    source: str,
+    zone: ZoneInfo,
+    boundary: dt.time,
+) -> None:
+    """Record a tag as on or off for a day, as another app did (an import): "off" is an entry, not an absence."""
+    slug = parse_tag(spec_of(tracker), tag)
+    payload = {
+        "tracker": tracker.key,
+        "observed_at": observed_at.isoformat(),
+        "value_num": None if on else 0.0,
+        "value_text": None,
+        "tag": slug,
+    }
+    apply(db, _append(db, "log", client_id, payload, source), {tracker.key: tracker}, zone, boundary)
+
+
+def diary(db: Session) -> Tracker:
+    """The diary's tracker, created with the first entry. Its text is never analysed."""
+    tracker = db.execute(sa.select(Tracker).where(Tracker.key == DIARY_KEY)).scalar_one_or_none()
+    return tracker or create_tracker(db, key=DIARY_KEY, name="Diary", type="note", in_review=False)
+
+
+def diary_text(db: Session, day: dt.date) -> str:
+    """The day's diary entry, or an empty string."""
+    tracker = db.execute(sa.select(Tracker).where(Tracker.key == DIARY_KEY)).scalar_one_or_none()
+    current = day_values(db, tracker, day) if tracker else []
+    return (current[-1].value_text or "") if current else ""
 
 
 def toggle_tag(
@@ -331,6 +408,7 @@ def toggle_tag(
                 Observation.day == day,
                 Observation.tag == slug,
                 Observation.deleted.is_(False),
+                _IS_PICK,
             )
         )
         .scalars()
@@ -340,6 +418,8 @@ def toggle_tag(
         for client_id in picked:
             delete(db, client_id, source=source)
         return False
+    for client_id in _tag_off_entries(db, tracker, slug, day):
+        delete(db, client_id, source=source)
     now = now_utc()
     when = observed_at or now
     check_time(when, now)
@@ -357,7 +437,7 @@ def tags_for_day(db: Session, day: dt.date) -> dict[int, set[str]]:
     out: dict[int, set[str]] = {}
     rows = db.execute(
         sa.select(Observation.tracker_id, Observation.tag).where(
-            Observation.day == day, Observation.tag.is_not(None), Observation.deleted.is_(False)
+            Observation.day == day, Observation.tag.is_not(None), Observation.deleted.is_(False), _IS_PICK
         )
     )
     for tracker_id, tag in rows:

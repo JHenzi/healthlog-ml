@@ -7,6 +7,7 @@ companion token create NAME --scope all|read|log:<tracker_key>
 companion token list
 companion token revoke ID
 companion refresh                        # seed metric settings, sync mood, rebuild daily features
+companion import-days [--apply]          # bring in another app's history: JSON on stdin (dry run without --apply)
 companion push keys                      # print a new VAPID key pair for .env (reminders)
 companion web                            # migrate, then serve on :8000
 companion jobs                           # run the nightly job scheduler
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import json
 import logging
 import sys
 from pathlib import Path
@@ -99,6 +101,25 @@ def _token_revoke(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def _import_days(args: argparse.Namespace) -> int:
+    from . import importer
+    from .config import get_settings
+    from .trackers import TrackerInputError
+
+    settings = get_settings()
+    with session_scope() as db:
+        try:
+            counts = importer.run(db, json.load(sys.stdin), settings.zone, settings.day_boundary)
+        except TrackerInputError as exc:
+            db.rollback()
+            print(f"nothing imported: {exc}", file=sys.stderr)
+            return 1
+        if not args.apply:
+            db.rollback()
+    print(("imported: " if args.apply else "dry run, nothing saved: ") + str(dict(sorted(counts.items()))))
+    return 0
+
+
 def _refresh(_args: argparse.Namespace) -> int:
     from . import jobs
 
@@ -160,6 +181,10 @@ def build_parser() -> argparse.ArgumentParser:
     revoke = tok_sub.add_parser("revoke", help="revoke a token")
     revoke.add_argument("id", type=int)
     revoke.set_defaults(func=_token_revoke)
+
+    days = sub.add_parser("import-days", help="import another app's day-by-day history from JSON on stdin")
+    days.add_argument("--apply", action="store_true", help="save it (the default is a dry run)")
+    days.set_defaults(func=_import_days)
 
     sub.add_parser("refresh", help="seed metric settings, sync mood, rebuild daily features").set_defaults(
         func=_refresh
