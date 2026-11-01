@@ -60,11 +60,9 @@ pipeline; the Companion owns its own schema, engine and UI.
   fetches from outside-data sources, and reminders the Companion has already
   encrypted for the phone, posted to its push service by the courier. Models
   are baked into the image (`HF_HUB_OFFLINE=1`). No telemetry. The network
-  enforces this too: the database, HealthLog and the Companion sit on the
-  internal `private` network, `*-edge` containers publish their ports, and
-  `scripts/check_egress.sh` proves it on every deploy. Grafana is the one
-  deliberate exception: it keeps a route out for plugins and internet data
-  sources, with a read-only database login.
+  enforces this too: everything that holds or reads health data sits on the
+  internal `private` network, `*-edge` containers publish its ports, and
+  `scripts/check_egress.sh` proves it on every deploy.
 - **R6: Capture is structured.** No language model in any capture path.
   Values come from typed inputs; unparseable text becomes a note, never a
   guess.

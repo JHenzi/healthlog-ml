@@ -48,16 +48,15 @@ def test_services_with_health_data_have_no_route_out():
     local, companion = _compose_files()
     assert local["networks"]["private"]["internal"] is True
     services = {**local["services"], **companion["services"]}
-    for name in ("healthlog-db", "healthlog", "companion-web", "companion-jobs"):
+    for name in ("healthlog-db", "healthlog", "grafana", "companion-web", "companion-jobs"):
         assert services[name]["networks"] == ["private"], name
         assert not services[name].get("ports"), name
 
 
-def test_only_the_edge_containers_and_grafana_publish_ports():
-    """Grafana keeps its route out on purpose: plugins and internet data sources need it (compose.local.yml)."""
+def test_only_the_edge_containers_publish_ports():
     local, companion = _compose_files()
     publishing = {n for n, s in {**local["services"], **companion["services"]}.items() if s.get("ports")}
-    assert publishing == {"healthlog-edge", "grafana", "companion-edge"}
+    assert publishing == {"healthlog-edge", "grafana-edge", "companion-edge"}
 
 
 def test_outbound_containers_cannot_reach_the_database():
