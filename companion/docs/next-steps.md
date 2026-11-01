@@ -366,7 +366,10 @@ an internal network with `*-edge` forwarders, proved on each deploy by
 `scripts/check_egress.sh`; Dependabot alerts, security updates, CodeQL and
 private vulnerability reporting on; our own `.github/dependabot.yml` for
 `/companion`; `companion-security.yml` (pip-audit, gitleaks, weekly); ruff `S`
-rules; base image pinned by digest; Grafana 11.6.16. Still open:
+rules; base image pinned by digest; Grafana 11.6.16 (with its plugin preinstall
+off: the internal network caught it calling grafana.com). CodeQL's first scan
+found one real bug, a `/\\` bypass in `_back()`, fixed; its other redirect and
+logging alerts are false positives, dismissed with a reason. Still open:
 
 - **Keep `.github/dependabot.yml` on an upstream sync.** It's ours now, and his
   `dev` changes to it will conflict. `/backend` and upstream's workflows are

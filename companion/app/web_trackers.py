@@ -489,7 +489,9 @@ def _when(day: dt.date, hhmm: str) -> dt.datetime | None:
 
 
 def _back(back: str, default: str = "/") -> str:
-    return back if back.startswith("/") and not back.startswith("//") else default
+    """Same-site paths only. Browsers read a backslash as a slash, so ``/\\evil.example`` leaves the site too."""
+    same_site = back.startswith("/") and not back.startswith("//")
+    return back if same_site and "\\" not in back and back.isprintable() else default
 
 
 @router.post("/log/{key}")
