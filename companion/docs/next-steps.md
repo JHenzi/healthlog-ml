@@ -264,9 +264,11 @@ issue goes into `build.py` first.
   good-day score (how much each counts is learned, §4c). Also noted: sleep
   timing features (§4d) and warnings (§4e). Readiness is shelved (§4b).
   The descriptive layer comes at ~30 days.
-- **Next work item: exist.io.** Export the exist.io history and rebuild
-  those metrics here as trackers and tags, with their history, so the
-  engine learns from them (roadmap B9, plan M10).
+- **exist.io import:** `companion import-days` (`app/importer.py`) brings
+  your own tags, inputs and notes in, repeatably, so both apps can run side
+  by side. Not Health or weather (HealthLog has them; a copy would correlate
+  with itself) and not mood (the day rating is ours). The first slice of the
+  diary came with it: one note a day on the Capture page.
 - ~~Distributed lag models~~: done 2026-10-19 (analysis-engine.md, "Links
   spread over days"). Every ordered pair since 2026-10-20 (R17).
 - ~~Adjusted re-check~~: done 2026-10-19; since 2026-10-20 it allows for

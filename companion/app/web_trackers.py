@@ -19,6 +19,7 @@ from .trackers import (
     COMMON_TYPES,
     DAY_TAGS_KEY,
     DEFAULT_SCALE,
+    DIARY_KEY,
     TYPE_HINTS,
     TYPE_LABELS,
     TrackerInputError,
@@ -103,7 +104,10 @@ def _options(raw: str) -> list[str]:
 def _display(o: Observation, t: Tracker) -> str:
     if o.tag is not None:
         names = {tag_slug(x): x for x in t.tags or ()}
-        return f"#{names.get(o.tag, o.tag.replace('_', ' '))}"
+        name = names.get(o.tag, o.tag.replace("_", " "))
+        return f"not #{name}" if o.value_num == 0 else f"#{name}"
+    if t.type == "note":
+        return o.value_text or ""
     if t.type == "choice":
         return (o.value_text or "").replace("_", " ")
     if t.type == "check":
@@ -209,7 +213,7 @@ def _tracker_or_404(db: Session, key: str) -> Tracker | None:
 
 def _built_in(key: str) -> bool:
     """Day tags and the day rating have their own place on the pages, not in the tracker lists."""
-    return key == DAY_TAGS_KEY or dayrating.is_built_in(key)
+    return key in (DAY_TAGS_KEY, DIARY_KEY) or dayrating.is_built_in(key)
 
 
 BUILT_IN_FIXED = "the day rating is built in and can't be changed"
@@ -512,7 +516,10 @@ def quick_log(
         return redirect
     if not _csrf_ok(session, csrf):
         return _forbidden()
-    tracker = dayrating.ensure(db, key) if dayrating.is_built_in(key) else _tracker_or_404(db, key)
+    if key == DIARY_KEY:
+        tracker = capture.diary(db)
+    else:
+        tracker = dayrating.ensure(db, key) if dayrating.is_built_in(key) else _tracker_or_404(db, key)
     if tracker is None:
         return Response("No such tracker", status_code=status.HTTP_404_NOT_FOUND)
     settings = get_settings()
@@ -532,7 +539,14 @@ def quick_log(
             zone=settings.zone,
             boundary=settings.day_boundary,
         )
-        if tracker.type in capture.SINGLE_VALUE_TYPES:
+        if tracker.type == "note" and not value.strip():
+            for o in capture.day_values(db, tracker, the_day):  # saving an empty note clears the day's
+                capture.delete(db, o.client_id, source="web")
+        elif tracker.type == "time":
+            if the_day < _today() and not at.strip():
+                raise TrackerInputError("pick a time")
+            capture.set_day_time(db, tracker, the_day, **how)
+        elif tracker.type in capture.SINGLE_VALUE_TYPES:
             capture.set_day_value(db, tracker, raw, the_day, **how)
         else:
             capture.log(db, tracker, raw, **how)
@@ -686,6 +700,7 @@ def review_page(
             "tagged": capture.tags_for_day(db, the_day),
             "reviewed": capture.is_reviewed(db, the_day),
             "rating": rating_card(db, the_day),
+            "diary_text": capture.diary_text(db, the_day),
             "csrf": session.csrf_token,
             "error": error,
             "new_id": lambda: str(uuid.uuid4()),

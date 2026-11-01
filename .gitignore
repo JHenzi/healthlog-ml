@@ -25,6 +25,12 @@ HealthAutoExport-*.json
 *.sql.gz
 /backup.sh
 
+# Exports from other tracking apps, and key lists extracted from them
+/mobileappdata/
+/extracted_keys.json
+/extracted_nested_keys.json
+/makekeys.py
+
 # Editor backup files (may hold copies of secrets, e.g. .env~)
 *~
 

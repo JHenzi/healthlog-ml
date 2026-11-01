@@ -16,6 +16,7 @@ milestone.
 | Daily features (one number per day per series) | `companion.daily_features`, rebuilt nightly | no |
 | Insights (sentences and their statistics) | `companion.insights`, replaced each run | only to your browser or token holder |
 | Your trackers and every entry (values, times, device source) | `companion.trackers`, `events` (append-only), `observations` | no |
+| Diary text (one entry a day, on the Capture page) | `companion.events` and `observations`; never analysed | only to your browser or token holder |
 | Home location (if weather is on) | `.env` only (`WEATHER_LATITUDE`, `WEATHER_LONGITUDE`), given to the collector container | rounded to 0.1° (~10 km), to Open-Meteo |
 | Hourly weather and air quality | the collector's file, then `companion.weather_hours` | no (it came from outside) |
 | Reminder subscriptions (if reminders are on) | `companion.push_subscriptions`: each device's push-service URL and its public encryption key | each reminder, encrypted for the device, to its push service (Apple's for an iPhone) |
@@ -53,8 +54,9 @@ milestone.
 - **No telemetry**, no model downloads at runtime (`HF_HUB_OFFLINE=1` in the image).
 - **Never logged:** the password (correct or not), session cookies, API tokens.
 - **A deleted entry stays in the event log** as a log event followed by a
-  delete (a tombstone), so derived tables can be rebuilt. True erasure
-  (`purge`) comes with the diary (M8), where it matters most.
+  delete (a tombstone), so derived tables can be rebuilt. That includes diary
+  text: clearing or changing an entry keeps the old text in the log until
+  `purge` exists (M11).
   A test captures the logs during login and API calls and checks for them.
 - **No language model** sees anything yet. When narration arrives, diary text
   will be excluded unless you opt in (R11).

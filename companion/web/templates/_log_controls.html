@@ -20,9 +20,9 @@
   {{ minus }}
   <form method="post" action="/log/{{ t.key }}" class="inline">{{ hidden }}<button type="submit" class="step">+</button></form>
 {% elif t.type == "time" %}
-  <span class="day-num"><strong>{{ state.first.strftime("%H:%M") if state else "—" }}</strong></span>
+  <form method="post" action="/log/{{ t.key }}" class="inline">{{ hidden }}<input class="time" type="time" name="at" required value="{{ state.first.strftime("%H:%M") if state and state.first else "" }}" aria-label="{{ t.name }} time"><button type="submit" class="secondary">Save</button></form>
   {{ minus }}
-  <form method="post" action="/log/{{ t.key }}" class="inline">{{ hidden }}<button type="submit">Now</button></form>
+  {% if not state %}<form method="post" action="/log/{{ t.key }}" class="inline">{{ hidden }}<button type="submit">Now</button></form>{% endif %}
 {% elif t.type == "check" %}
   {% for label, v, num in (("Yes", "yes", 1.0), ("No", "no", 0.0)) %}<form method="post" action="/log/{{ t.key }}" class="inline">{{ hidden }}<input type="hidden" name="value" value="{{ v }}"><button type="submit" class="chip" aria-pressed="{{ 'true' if state and state.num == num else 'false' }}">{{ label }}</button></form>{% endfor %}
 {% elif t.type == "scale" and (t.scale_max - t.scale_min) <= 10 and t.scale_min == t.scale_min|int %}

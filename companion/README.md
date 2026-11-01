@@ -202,6 +202,7 @@ curl -H "Authorization: Bearer hlc_…" https://<host>:8443/api/today
 | `companion set-password [--stdin]` | set the operator password (signs out all sessions) |
 | `companion token create NAME --scope …` / `list` / `revoke ID` | manage API tokens |
 | `companion push keys` | print a new VAPID key pair for `.env` (reminders) |
+| `companion import-days [--apply]` | bring in another app's day-by-day tags, trackers and notes from JSON on stdin (format: `app/importer.py`). A dry run unless `--apply`; repeatable, and a day you logged here keeps your entry |
 | `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, load the weather file, rebuild the daily feature table, run the insight engine (also nightly at 04:15, and *Rebuild now* on the Metrics and Insights pages) |
 | `companion web` | migrate, then serve on port 8000 (the `companion-web` service) |
 | `companion jobs` | run the scheduler (the `companion-jobs` service) |

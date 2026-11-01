@@ -33,9 +33,9 @@ end as open questions.
    explored as data comes in, with the methods in §4c, and never fixed by
    hand.
 4. **No extra built-in questions.** Your own trackers and day tags cover
-   the other dimensions. Next work item: export the exist.io history
-   (including its mood) and rebuild those metrics here as trackers, with
-   their history, so the engine learns from them (roadmap B9).
+   the other dimensions. The exist.io history comes in as your own tags
+   and trackers, so the engine learns from them (roadmap B9). Its mood
+   doesn't: the day rating replaces it.
 5. **No "today will be…" forecast.** Readiness is **shelved** as a note
    (§4b): define it later from data and tags, or lean on the Apple Watch
    rather than copying it.

@@ -205,3 +205,31 @@ def test_an_archived_tracker_keeps_its_history_but_is_not_zero_filled_after_its_
     f = daily_features(reviewed_only, [_obs(D2, 8, 2)], {D1, D3}, D3, NY, FOUR)
     assert f.values["tracker.coffee.total"] == {D1: 0.0, D2: 2.0}
     assert daily_features(reviewed_only, [], {D1}, D3, NY, FOUR).values == {}
+
+
+def test_a_tag_starts_at_its_own_first_entry_and_stores_an_explicit_off():
+    off, on = _tag(D1, "sick"), _tag(D2, "sick")
+    off = Obs(off.observed_at, off.day, 0.0, None, "sick")
+    f = daily_features(DAY_TAGS, [off, on, _tag(D1, "travel")], {D3}, D3, NY, FOUR)
+    assert f.values["tracker.day_tags.tag.sick"] == {D1: 0.0, D2: 1.0, D3: 0.0}
+
+
+def test_a_tag_added_later_says_nothing_about_earlier_days():
+    f = daily_features(DAY_TAGS, [_tag(D1, "travel"), _tag(D3, "sick")], {D2}, D3, NY, FOUR)
+    assert f.values["tracker.day_tags.tag.sick"] == {D3: 1.0}
+
+
+def test_a_day_imported_tag_by_tag_says_nothing_about_tags_it_does_not_list():
+    off = _tag(D2, "travel")
+    obs = [_tag(D1, "sick"), Obs(off.observed_at, D2, 0.0, None, "travel"), _tag(D2, "other"), _tag(D3, "sick")]
+    f = daily_features(DAY_TAGS, obs, set(), D3, NY, FOUR)
+    assert D2 not in f.values["tracker.day_tags.tag.sick"]
+
+
+def test_a_note_keeps_its_text_and_makes_no_features():
+    note = TrackerSpec("diary", "Diary", "note")
+    assert parse_value(note, "  a day  ") == (None, "a day")
+    with pytest.raises(TrackerInputError):
+        parse_value(note, "   ")
+    f = daily_features(note, [_obs(D1, 12, None, "a day")], {D1}, D3, NY, FOUR)
+    assert f.values == {}
