@@ -1,7 +1,7 @@
 {
   "uid": "healthlog-sleep-activity",
   "title": "HealthLog – Sleep & Activity",
-  "description": "Sleep stages, and sleep against the next day's activity on one scale.",
+  "description": "Sleep stages, sleep against activity on one scale, and which gap between them lines up.",
   "tags": [
     "healthlog",
     "companion"
@@ -34,6 +34,22 @@
         "includeAll": false,
         "current": {},
         "options": []
+      },
+      {
+        "name": "shift",
+        "type": "custom",
+        "label": "Activity counted",
+        "description": "Which day's activity sits next to each night: the day you woke up, or N days later.",
+        "query": "same day : 0, 1 day later : 1, 2 days later : 2, 3 days later : 3, 4 days later : 4, 5 days later : 5, 6 days later : 6, 7 days later : 7",
+        "current": {
+          "selected": true,
+          "text": "same day",
+          "value": "0"
+        },
+        "options": [],
+        "multi": false,
+        "includeAll": false,
+        "hide": 0
       }
     ]
   },
@@ -429,13 +445,13 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"font-size:15px;line-height:1.6\">\n<p><b>Reading the combined chart.</b> Hours of sleep, minutes of exercise and steps don't share a scale, so each line\nshows <b>where that day ranks among your own days</b> on screen: 100 is your highest, 0 your lowest, and the grey\nline at 50 is a typical day. Ranking puts a long night and a big exercise day on the same footing, however different\nthe units, and one extreme day can't flatten the rest. Each date pairs\n<b style=\"color:#5c7cfa\">the night that ended that morning</b> with that day's\n<b style=\"color:#2f9e44\">exercise</b> and <b style=\"color:#e8590c\">steps</b>: the day after the night.</p>\n<p>Peaks and dips that line up are worth a look, not proof: over a few weeks, lines can match by chance.</p></div>"
+        "content": "<div style=\"font-size:15px;line-height:1.6\">\n<p><b>Reading the combined chart.</b> Hours of sleep, minutes of exercise and steps don't share a scale, so each line\nshows <b>where that day ranks among your own days</b> on screen: 100 is your highest, 0 your lowest, and the grey\nline at 50 is a typical day. Ranking puts a long night and a big exercise day on the same footing, however different\nthe units, and one extreme day can't flatten the rest. Each date shows that day's\n<b style=\"color:#2f9e44\">exercise</b> and <b style=\"color:#e8590c\">steps</b> next to <b style=\"color:#5c7cfa\">a night's sleep</b>: by default the\nnight you woke up from that morning. <b>Activity counted</b> at the top moves the sleep line forward, so with\n<i>1 day later</i> Monday night's sleep (you wake on Tuesday) sits next to Wednesday's\nactivity.</p>\n<p>Peaks and dips that line up are worth a look, not proof: over a few weeks, lines can match by chance.</p></div>"
       }
     },
     {
       "id": 10,
       "type": "timeseries",
-      "title": "Sleep and the next day's activity, ranked against your own days",
+      "title": "Sleep and activity, ranked against your own days",
       "description": "Each series as its percentile rank over the selected range: 100 = your highest day, 50 = typical, 0 = lowest.",
       "datasource": {
         "uid": "healthlog-db"
@@ -454,7 +470,7 @@
           },
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "WITH s AS (\n  SELECT sleep_date AS day, total_sleep_h AS v FROM sleep_nightly WHERE $__timeFilter((sleep_date::timestamp AT TIME ZONE '$tz'))\n), e AS (\n  SELECT day, sum AS v FROM daily_metrics WHERE metric = 'apple_exercise_time' AND $__timeFilter((day::timestamp AT TIME ZONE '$tz'))\n), st AS (\n  SELECT day, sum AS v FROM daily_metrics WHERE metric = 'step_count' AND $__timeFilter((day::timestamp AT TIME ZONE '$tz'))\n), days AS (SELECT day FROM s UNION SELECT day FROM e UNION SELECT day FROM st)\nSELECT (day::timestamp AT TIME ZONE '$tz') AS time,\n  s.r AS \"Sleep (the night before)\", e.r AS \"Exercise\", st.r AS \"Steps\"\nFROM days\n  LEFT JOIN (SELECT day, 100 * percent_rank() OVER (ORDER BY v) AS r FROM s) s USING (day)\n  LEFT JOIN (SELECT day, 100 * percent_rank() OVER (ORDER BY v) AS r FROM e) e USING (day)\n  LEFT JOIN (SELECT day, 100 * percent_rank() OVER (ORDER BY v) AS r FROM st) st USING (day)\nORDER BY day",
+          "rawSql": "WITH s AS (\n  SELECT sleep_date + $shift AS day, total_sleep_h AS v FROM sleep_nightly WHERE $__timeFilter((sleep_date::timestamp AT TIME ZONE '$tz'))\n), e AS (\n  SELECT day, sum AS v FROM daily_metrics WHERE metric = 'apple_exercise_time' AND $__timeFilter((day::timestamp AT TIME ZONE '$tz'))\n), st AS (\n  SELECT day, sum AS v FROM daily_metrics WHERE metric = 'step_count' AND $__timeFilter((day::timestamp AT TIME ZONE '$tz'))\n), days AS (SELECT day FROM s UNION SELECT day FROM e UNION SELECT day FROM st)\nSELECT (day::timestamp AT TIME ZONE '$tz') AS time,\n  s.r AS \"Sleep\", e.r AS \"Exercise\", st.r AS \"Steps\"\nFROM days\n  LEFT JOIN (SELECT day, 100 * percent_rank() OVER (ORDER BY v) AS r FROM s) s USING (day)\n  LEFT JOIN (SELECT day, 100 * percent_rank() OVER (ORDER BY v) AS r FROM e) e USING (day)\n  LEFT JOIN (SELECT day, 100 * percent_rank() OVER (ORDER BY v) AS r FROM st) st USING (day)\nORDER BY day",
           "format": "time_series"
         }
       ],
@@ -498,7 +514,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Sleep (the night before)"
+              "options": "Sleep"
             },
             "properties": [
               {
@@ -561,8 +577,8 @@
     {
       "id": 11,
       "type": "stat",
-      "title": "Exercise the day after",
-      "description": "Average exercise minutes on days after nights at or above your median sleep (longer) and below it (shorter), over the selected range. A description, not a test.",
+      "title": "Exercise after longer and shorter nights",
+      "description": "Average exercise minutes after nights at or above your median sleep (longer) and below it (shorter), on the day set by Activity counted. A description, not a test.",
       "datasource": {
         "uid": "healthlog-db"
       },
@@ -580,7 +596,7 @@
           },
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "WITH s AS (\n  SELECT sleep_date AS day, total_sleep_h AS v FROM sleep_nightly WHERE $__timeFilter((sleep_date::timestamp AT TIME ZONE '$tz'))\n), m AS (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY v) AS mid FROM s),\na AS (\n  SELECT s.day, s.v >= m.mid AS longer, d.metric, d.sum\n  FROM s CROSS JOIN m JOIN daily_metrics d ON d.day = s.day AND d.metric IN ('apple_exercise_time', 'step_count')\n)\nSELECT CASE WHEN longer THEN 'After longer nights' ELSE 'After shorter nights' END\n         || ' (' || COUNT(*) || ' days)' AS \"Group\",\n       AVG(sum) AS \"Value\"\nFROM a WHERE metric = 'apple_exercise_time' GROUP BY longer ORDER BY longer DESC",
+          "rawSql": "WITH s AS (\n  SELECT sleep_date AS day, total_sleep_h AS v FROM sleep_nightly WHERE $__timeFilter((sleep_date::timestamp AT TIME ZONE '$tz'))\n), m AS (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY v) AS mid FROM s),\na AS (\n  SELECT s.day, s.v >= m.mid AS longer, d.metric, d.sum\n  FROM s CROSS JOIN m JOIN daily_metrics d\n    ON d.day = s.day + $shift AND d.metric IN ('apple_exercise_time', 'step_count')\n)\nSELECT CASE WHEN longer THEN 'After longer nights' ELSE 'After shorter nights' END\n         || ' (' || COUNT(*) || ' days)' AS \"Group\",\n       AVG(sum) AS \"Value\"\nFROM a WHERE metric = 'apple_exercise_time' GROUP BY longer ORDER BY longer DESC",
           "format": "table"
         }
       ],
@@ -614,8 +630,8 @@
     {
       "id": 12,
       "type": "stat",
-      "title": "Steps the day after",
-      "description": "Average steps on days after your longer and shorter nights (split at your median sleep).",
+      "title": "Steps after longer and shorter nights",
+      "description": "Average steps after your longer and shorter nights (split at your median sleep), on the day set by Activity counted.",
       "datasource": {
         "uid": "healthlog-db"
       },
@@ -633,7 +649,7 @@
           },
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "WITH s AS (\n  SELECT sleep_date AS day, total_sleep_h AS v FROM sleep_nightly WHERE $__timeFilter((sleep_date::timestamp AT TIME ZONE '$tz'))\n), m AS (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY v) AS mid FROM s),\na AS (\n  SELECT s.day, s.v >= m.mid AS longer, d.metric, d.sum\n  FROM s CROSS JOIN m JOIN daily_metrics d ON d.day = s.day AND d.metric IN ('apple_exercise_time', 'step_count')\n)\nSELECT CASE WHEN longer THEN 'After longer nights' ELSE 'After shorter nights' END\n         || ' (' || COUNT(*) || ' days)' AS \"Group\",\n       AVG(sum) AS \"Value\"\nFROM a WHERE metric = 'step_count' GROUP BY longer ORDER BY longer DESC",
+          "rawSql": "WITH s AS (\n  SELECT sleep_date AS day, total_sleep_h AS v FROM sleep_nightly WHERE $__timeFilter((sleep_date::timestamp AT TIME ZONE '$tz'))\n), m AS (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY v) AS mid FROM s),\na AS (\n  SELECT s.day, s.v >= m.mid AS longer, d.metric, d.sum\n  FROM s CROSS JOIN m JOIN daily_metrics d\n    ON d.day = s.day + $shift AND d.metric IN ('apple_exercise_time', 'step_count')\n)\nSELECT CASE WHEN longer THEN 'After longer nights' ELSE 'After shorter nights' END\n         || ' (' || COUNT(*) || ' days)' AS \"Group\",\n       AVG(sum) AS \"Value\"\nFROM a WHERE metric = 'step_count' GROUP BY longer ORDER BY longer DESC",
           "format": "table"
         }
       ],
@@ -667,7 +683,7 @@
     {
       "id": 13,
       "type": "row",
-      "title": "Overnight measures",
+      "title": "Which gap lines up",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -679,6 +695,166 @@
     },
     {
       "id": 14,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 5
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"font-size:15px;line-height:1.6\">\n<p><b>Which gap lines up?</b> Each bar measures how closely <b style=\"color:#5c7cfa\">sleep</b> and\n<b style=\"color:#2f9e44\">exercise</b> or <b style=\"color:#e8590c\">steps</b> move together when they are a given number of days apart,\nfrom -1 (opposite) through 0 (unrelated) to +1 (in step). Days apart count from the morning you woke up. Right of\ncentre, the sleep comes first: <i>+1</i> pairs Monday night (waking Tuesday) with Wednesday.\nLeft of centre, the activity comes first: <i>-2</i> pairs Monday's activity with the night\nending Wednesday morning. Hover a bar for how many pairs it rests on.</p>\n<p>How tall a bar chance alone reaches depends on the pairs behind it: about 0.3 either way for 40 pairs, 0.2 for 100.\nAmong 30 bars, one may pass that by luck too. A bar that stays tall as the range grows is the one to watch.</p></div>"
+      }
+    },
+    {
+      "id": 15,
+      "type": "barchart",
+      "title": "How closely sleep and activity move together, by days apart",
+      "description": "Rank correlation (Spearman) between total sleep and each activity at every gap from 7 days before to 7 days after the night, over the selected range. + = sleep first, - = activity first.",
+      "datasource": {
+        "uid": "healthlog-db"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "healthlog-db"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "WITH s AS (\n  SELECT sleep_date AS day, total_sleep_h AS v FROM sleep_nightly WHERE $__timeFilter((sleep_date::timestamp AT TIME ZONE '$tz'))\n), a AS (\n  SELECT day, metric, sum AS v FROM daily_metrics WHERE metric IN ('apple_exercise_time', 'step_count')\n), p AS (\n  SELECT g.gap, a.metric, s.v AS sv, a.v AS av\n  FROM s CROSS JOIN generate_series(-7, 7) AS g(gap) JOIN a ON a.day = s.day + g.gap\n), r AS (\n  SELECT gap, metric, rank() OVER (PARTITION BY gap, metric ORDER BY sv) AS rs,\n         rank() OVER (PARTITION BY gap, metric ORDER BY av) AS ra\n  FROM p\n)\nSELECT CASE WHEN gap > 0 THEN '+' ELSE '' END || gap AS \"Days apart\",\n  corr(rs, ra) FILTER (WHERE metric = 'apple_exercise_time') AS \"Exercise\",\n  corr(rs, ra) FILTER (WHERE metric = 'step_count') AS \"Steps\",\n  COUNT(*) FILTER (WHERE metric = 'apple_exercise_time') AS \"Pairs (exercise)\",\n  COUNT(*) FILTER (WHERE metric = 'step_count') AS \"Pairs (steps)\"\nFROM r GROUP BY gap ORDER BY gap",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": -1,
+          "max": 1,
+          "decimals": 2,
+          "noValue": "Not reported by your devices in this range",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "axisCenteredZero": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Exercise"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#2f9e44"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Steps"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#e8590c"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pairs (exercise)"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "viz": true,
+                  "legend": true,
+                  "tooltip": false
+                }
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pairs (steps)"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "viz": true,
+                  "legend": true,
+                  "tooltip": false
+                }
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "xField": "Days apart",
+        "orientation": "vertical",
+        "groupWidth": 0.7,
+        "barWidth": 0.9,
+        "showValue": "never",
+        "stacking": "none",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Overnight measures",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 52,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 17,
       "type": "timeseries",
       "title": "Sleeping wrist temperature",
       "description": "Only from watches that measure it (some need a newer model or a setting turned on).",
@@ -687,7 +863,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 38,
+        "y": 53,
         "w": 8,
         "h": 7
       },
@@ -755,7 +931,7 @@
       }
     },
     {
-      "id": 15,
+      "id": 18,
       "type": "timeseries",
       "title": "Respiratory rate (breaths/min)",
       "description": "Only from watches that measure it (some need a newer model or a setting turned on).",
@@ -764,7 +940,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 38,
+        "y": 53,
         "w": 8,
         "h": 7
       },
@@ -832,7 +1008,7 @@
       }
     },
     {
-      "id": 16,
+      "id": 19,
       "type": "timeseries",
       "title": "Breathing disturbances",
       "description": "Only from watches that measure it (some need a newer model or a setting turned on).",
@@ -841,7 +1017,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 38,
+        "y": 53,
         "w": 8,
         "h": 7
       },

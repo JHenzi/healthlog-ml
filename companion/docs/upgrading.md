@@ -38,6 +38,15 @@ sets both (`healthlog-local` and the commit). His changes arrive as a merge:
 4. Fork PR, green CI (his backend tests run too), merge.
 5. On `main`: `RUN="…" companion/scripts/deploy.sh healthlog build`.
 
+**Grafana dashboards with our UIDs.** Upstream's
+`grafana/dashboards/sleep-activity.json` and `all-metrics.json` are his
+versions of ours, with the same UIDs. Both folders are mounted, so two files
+with one UID would leave Grafana to pick one. Remove his two in the sync
+merge (`git rm grafana/dashboards/sleep-activity.json
+grafana/dashboards/all-metrics.json`). If a later sync shows a
+modify/delete conflict on them, read his change, port real bug fixes into
+`companion/grafana/build.py`, and keep the delete.
+
 The path check (R1) compares against `upstream/dev`, so after a sync only
 our own paths show as changed. Nothing is pulled from his registry, so
 nothing changes until we merge and deploy.
