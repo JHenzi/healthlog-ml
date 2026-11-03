@@ -22,6 +22,19 @@ TZ_VAR = {
     "current": {},
     "options": [],
 }
+GAPS = ["same day : 0"] + [f"{n} day{'s' if n > 1 else ''} later : {n}" for n in range(1, 8)]
+SHIFT_VAR = {
+    "name": "shift",
+    "type": "custom",
+    "label": "Activity counted",
+    "description": "Which day's activity sits next to each night: the day you woke up, or N days later.",
+    "query": ", ".join(GAPS),
+    "current": {"selected": True, "text": "same day", "value": "0"},
+    "options": [],
+    "multi": False,
+    "includeAll": False,
+    "hide": 0,
+}
 DAY = "(day::timestamp AT TIME ZONE '$tz')"
 NIGHT = "(sleep_date::timestamp AT TIME ZONE '$tz')"
 NOT_REPORTED = "Not reported by your devices in this range"
@@ -105,10 +118,22 @@ NORMAL_KEY = f"""<div style="font-size:15px;line-height:1.6">
 <p><b>Reading the combined chart.</b> Hours of sleep, minutes of exercise and steps don't share a scale, so each line
 shows <b>where that day ranks among your own days</b> on screen: 100 is your highest, 0 your lowest, and the grey
 line at 50 is a typical day. Ranking puts a long night and a big exercise day on the same footing, however different
-the units, and one extreme day can't flatten the rest. Each date pairs
-{term("sleep", "the night that ended that morning")} with that day's
-{term("exercise", "exercise")} and {term("steps", "steps")}: the day after the night.</p>
+the units, and one extreme day can't flatten the rest. Each date shows that day's
+{term("exercise", "exercise")} and {term("steps", "steps")} next to {term("sleep", "a night's sleep")}: by default the
+night you woke up from that morning. <b>Activity counted</b> at the top moves the sleep line forward, so with
+<i>1 day later</i> Monday night's sleep (you wake on Tuesday) sits next to Wednesday's
+activity.</p>
 <p>Peaks and dips that line up are worth a look, not proof: over a few weeks, lines can match by chance.</p></div>"""
+
+LAG_KEY = f"""<div style="font-size:15px;line-height:1.6">
+<p><b>Which gap lines up?</b> Each bar measures how closely {term("sleep", "sleep")} and
+{term("exercise", "exercise")} or {term("steps", "steps")} move together when they are a given number of days apart,
+from -1 (opposite) through 0 (unrelated) to +1 (in step). Days apart count from the morning you woke up. Right of
+centre, the sleep comes first: <i>+1</i> pairs Monday night (waking Tuesday) with Wednesday.
+Left of centre, the activity comes first: <i>-2</i> pairs Monday's activity with the night
+ending Wednesday morning. Hover a bar for how many pairs it rests on.</p>
+<p>How tall a bar chance alone reaches depends on the pairs behind it: about 0.3 either way for 40 pairs, 0.2 for 100.
+Among 30 bars, one may pass that by luck too. A bar that stays tall as the range grows is the one to watch.</p></div>"""
 
 
 def stat(title, sql, x, y, w, h, unit, decimals=1, fmt="table", colour=None, desc=""):
@@ -258,14 +283,14 @@ P.append(
 P.append(row("Sleep and the next day", 17))
 P.append(text_panel(NORMAL_KEY, 0, 18, 24, 5))
 NORMAL_SQL = f"""WITH s AS (
-  SELECT sleep_date AS day, total_sleep_h AS v {NIGHTS}
+  SELECT sleep_date + $shift AS day, total_sleep_h AS v {NIGHTS}
 ), e AS (
   SELECT day, sum AS v FROM daily_metrics WHERE metric = 'apple_exercise_time' AND $__timeFilter({DAY})
 ), st AS (
   SELECT day, sum AS v FROM daily_metrics WHERE metric = 'step_count' AND $__timeFilter({DAY})
 ), days AS (SELECT day FROM s UNION SELECT day FROM e UNION SELECT day FROM st)
 SELECT {DAY} AS time,
-  s.r AS "Sleep (the night before)", e.r AS "Exercise", st.r AS "Steps"
+  s.r AS "Sleep", e.r AS "Exercise", st.r AS "Steps"
 FROM days
   LEFT JOIN (SELECT day, 100 * percent_rank() OVER (ORDER BY v) AS r FROM s) s USING (day)
   LEFT JOIN (SELECT day, 100 * percent_rank() OVER (ORDER BY v) AS r FROM e) e USING (day)
@@ -273,7 +298,7 @@ FROM days
 ORDER BY day"""
 P.append(
     series(
-        "Sleep and the next day's activity, ranked against your own days",
+        "Sleep and activity, ranked against your own days",
         NORMAL_SQL,
         0,
         23,
@@ -281,7 +306,7 @@ P.append(
         10,
         "none",
         [
-            fixed("Sleep (the night before)", C["sleep"], [{"id": "custom.lineWidth", "value": 3}]),
+            fixed("Sleep", C["sleep"], [{"id": "custom.lineWidth", "value": 3}]),
             fixed("Exercise", C["exercise"]),
             fixed("Steps", C["steps"]),
         ],
@@ -313,7 +338,8 @@ AFTER_SQL = f"""WITH s AS (
 ), m AS (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY v) AS mid FROM s),
 a AS (
   SELECT s.day, s.v >= m.mid AS longer, d.metric, d.sum
-  FROM s CROSS JOIN m JOIN daily_metrics d ON d.day = s.day AND d.metric IN ('apple_exercise_time', 'step_count')
+  FROM s CROSS JOIN m JOIN daily_metrics d
+    ON d.day = s.day + $shift AND d.metric IN ('apple_exercise_time', 'step_count')
 )
 SELECT CASE WHEN longer THEN 'After longer nights' ELSE 'After shorter nights' END
          || ' (' || COUNT(*) || ' days)' AS "Group",
@@ -321,7 +347,7 @@ SELECT CASE WHEN longer THEN 'After longer nights' ELSE 'After shorter nights' E
 FROM a WHERE metric = '%s' GROUP BY longer ORDER BY longer DESC"""
 P.append(
     stat(
-        "Exercise the day after",
+        "Exercise after longer and shorter nights",
         AFTER_SQL % "apple_exercise_time",
         0,
         33,
@@ -330,13 +356,13 @@ P.append(
         "m",
         0,
         colour=C["exercise"],
-        desc="Average exercise minutes on days after nights at or above your median sleep (longer) and below it "
-        "(shorter), over the selected range. A description, not a test.",
+        desc="Average exercise minutes after nights at or above your median sleep (longer) and below it "
+        "(shorter), on the day set by Activity counted. A description, not a test.",
     )
 )
 P.append(
     stat(
-        "Steps the day after",
+        "Steps after longer and shorter nights",
         AFTER_SQL % "step_count",
         12,
         33,
@@ -345,10 +371,78 @@ P.append(
         "none",
         0,
         colour=C["steps"],
-        desc="Average steps on days after your longer and shorter nights (split at your median sleep).",
+        desc="Average steps after your longer and shorter nights (split at your median sleep), on the day set by "
+        "Activity counted.",
     )
 )
-P.append(row("Overnight measures", 37))
+P.append(row("Which gap lines up", 37))
+P.append(text_panel(LAG_KEY, 0, 38, 24, 5))
+# Spearman correlation per gap: rank both sides within each gap's own pairs, then Pearson on the ranks. Both directions
+# (activity before sleep and after), every gap from -7 to +7: no gap is singled out.
+LAG_SQL = f"""WITH s AS (
+  SELECT sleep_date AS day, total_sleep_h AS v {NIGHTS}
+), a AS (
+  SELECT day, metric, sum AS v FROM daily_metrics WHERE metric IN ('apple_exercise_time', 'step_count')
+), p AS (
+  SELECT g.gap, a.metric, s.v AS sv, a.v AS av
+  FROM s CROSS JOIN generate_series(-7, 7) AS g(gap) JOIN a ON a.day = s.day + g.gap
+), r AS (
+  SELECT gap, metric, rank() OVER (PARTITION BY gap, metric ORDER BY sv) AS rs,
+         rank() OVER (PARTITION BY gap, metric ORDER BY av) AS ra
+  FROM p
+)
+SELECT CASE WHEN gap > 0 THEN '+' ELSE '' END || gap AS "Days apart",
+  corr(rs, ra) FILTER (WHERE metric = 'apple_exercise_time') AS "Exercise",
+  corr(rs, ra) FILTER (WHERE metric = 'step_count') AS "Steps",
+  COUNT(*) FILTER (WHERE metric = 'apple_exercise_time') AS "Pairs (exercise)",
+  COUNT(*) FILTER (WHERE metric = 'step_count') AS "Pairs (steps)"
+FROM r GROUP BY gap ORDER BY gap"""
+HIDE = [{"id": "custom.hideFrom", "value": {"viz": True, "legend": True, "tooltip": False}}]
+P.append(
+    {
+        "id": nid(),
+        "type": "barchart",
+        "title": "How closely sleep and activity move together, by days apart",
+        "description": "Rank correlation (Spearman) between total sleep and each activity at every gap from 7 days "
+        "before to 7 days after the night, over the selected range. + = sleep first, - = activity first.",
+        "datasource": DS,
+        "gridPos": {"x": 0, "y": 43, "w": 24, "h": 9},
+        "targets": [target(LAG_SQL, "table")],
+        "fieldConfig": {
+            "defaults": {
+                "min": -1,
+                "max": 1,
+                "decimals": 2,
+                "noValue": NOT_REPORTED,
+                "color": {"mode": "palette-classic"},
+                "custom": {"fillOpacity": 80, "lineWidth": 0, "axisCenteredZero": True},
+            },
+            "overrides": [
+                fixed("Exercise", C["exercise"]),
+                fixed("Steps", C["steps"]),
+                {
+                    "matcher": {"id": "byName", "options": "Pairs (exercise)"},
+                    "properties": [*HIDE, {"id": "decimals", "value": 0}],
+                },
+                {
+                    "matcher": {"id": "byName", "options": "Pairs (steps)"},
+                    "properties": [*HIDE, {"id": "decimals", "value": 0}],
+                },
+            ],
+        },
+        "options": {
+            "xField": "Days apart",
+            "orientation": "vertical",
+            "groupWidth": 0.7,
+            "barWidth": 0.9,
+            "showValue": "never",
+            "stacking": "none",
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": True},
+            "tooltip": {"mode": "multi", "sort": "none"},
+        },
+    }
+)
+P.append(row("Overnight measures", 52))
 for k, (metric, name, unit, agg) in enumerate(
     (
         ("apple_sleeping_wrist_temperature", "Sleeping wrist temperature", "celsius", "avg"),
@@ -362,7 +456,7 @@ for k, (metric, name, unit, agg) in enumerate(
             f"SELECT {DAY} AS time, {agg} AS \"{name}\" FROM daily_metrics WHERE metric = '{metric}' "
             f"AND $__timeFilter({DAY}) ORDER BY day",
             8 * k,
-            38,
+            53,
             8,
             7,
             unit,
@@ -374,9 +468,9 @@ for k, (metric, name, unit, agg) in enumerate(
 sleep = dashboard(
     "healthlog-sleep-activity",
     "HealthLog – Sleep & Activity",
-    "Sleep stages, and sleep against the next day's activity on one scale.",
+    "Sleep stages, sleep against activity on one scale, and which gap between them lines up.",
     P,
-    [TZ_VAR],
+    [TZ_VAR, SHIFT_VAR],
 )
 
 # --- All Metrics ---------------------------------------------------------------------------------------------------

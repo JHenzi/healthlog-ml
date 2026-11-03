@@ -8,7 +8,12 @@ are.
 - **Sleep & Activity** (`healthlog-sleep-activity`): a key with each term in
   its chart colour, sleep stages per night, sleep and the next day's exercise
   and steps on one timeline, the day after longer vs shorter nights, and the
-  overnight measures.
+  overnight measures. **Activity counted** (top of the page) shifts sleep forward
+  0–7 days, so Monday night's sleep can sit next to Wednesday's activity.
+  **Which gap lines up** measures, for every gap from 7 days before to 7 days
+  after a night, how closely sleep and exercise or steps move together (rank
+  correlation, with the number of pairs in the tooltip). Both directions and
+  every gap are shown; none is picked out (R17).
 - **All Metrics** (`healthlog-all-metrics`): every metric with data in the
   last 180 days as its own small chart, grouped by category, with no dropdowns.
   Totals (steps, minutes, energy) are bars from zero; measurements (heart
@@ -33,3 +38,11 @@ python3 companion/grafana/build.py companion/grafana/dashboards
 
 `compose.local.yml` mounts upstream's dashboards and these side by side;
 Grafana picks up changes within 30 seconds.
+
+**Upstream ships its own copy.** Upstream adapted these two dashboards
+(#121) with the same UIDs and puts them in `grafana/dashboards/`, with the
+reading guide collapsed and the day-after panels dropped. Ours stay the live
+ones: when a sync merge brings their `sleep-activity.json` /
+`all-metrics.json`, delete them in the merge (see
+[`docs/upgrading.md`](../docs/upgrading.md)). Their three dashboards link to
+these UIDs, so the links land on ours.
