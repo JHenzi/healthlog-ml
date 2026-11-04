@@ -105,3 +105,64 @@ def test_outside_and_almanac_series_are_listed(signed_in, db):
     assert "Weather" in listing and "Temperature (mean)" in listing
     assert "Almanac" in listing and "Moon (share lit)" in listing
     assert signed_in.get("/metrics/almanac.moon").status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("back", "lands"),
+    [("/insights", "/insights"), ("/metrics", "/metrics"), ("https://evil.example/", "/insights"), ("", "/insights")],
+)
+def test_rebuild_returns_to_its_page_and_nowhere_else(signed_in, monkeypatch, back, lands):
+    from app import jobs
+
+    monkeypatch.setattr(jobs, "refresh", lambda db: None)
+    csrf = _csrf(signed_in.get("/insights").text)
+    response = signed_in.post("/refresh", data={"csrf": csrf, "back": back}, follow_redirects=False)
+    assert response.status_code == 303 and response.headers["location"] == lands
+
+
+def test_tiles_and_calendar_colour_by_your_own_days(signed_in, db, a_metric):
+    import datetime as dt
+
+    from app.web import _today
+
+    start = _today() - dt.timedelta(days=40)
+    for i in range(1, 40):
+        day = start + dt.timedelta(days=i)
+        if day != dt.date(2026, 10, 10):  # a_metric's day
+            db.add(DailyFeature(day=day, feature="hl.step_count", value=1000 + i))
+    db.flush()
+    listing = signed_in.get("/metrics").text
+    assert 'class="mtile' in listing and "for you" in listing
+    detail = signed_in.get("/metrics/hl.step_count").text
+    assert 'class="gd-grid mcal"' in detail and "gd-b4" in detail
+
+
+def test_day_tags_read_as_days_not_lines(signed_in, db):
+    import datetime as dt
+
+    from app.web import _today
+
+    db.add(FeatureDef(feature="tracker.tag.x", label="Day: Hobby", unit=None, source="tracker", kind="count"))
+    db.add(FeatureDef(feature="tracker.tag.old", label="Day: Gone", unit=None, source="tracker", kind="count"))
+    for i in range(1, 21):
+        db.add(DailyFeature(day=_today() - dt.timedelta(days=i), feature="tracker.tag.x", value=float(i % 2)))
+    db.add(DailyFeature(day=_today() - dt.timedelta(days=90), feature="tracker.tag.old", value=1.0))
+    db.flush()
+    listing = signed_in.get("/metrics").text
+    assert "Day: Hobby" in listing and "10 of 30 days" in listing
+    assert "Not in the last 30 days (1)" in listing  # the quiet tag folds away
+    detail = signed_in.get("/metrics/tracker.tag.x").text
+    assert "% of days" in detail and "for you" not in detail
+
+
+def test_mood_valence_is_one_chart(signed_in, db):
+    import datetime as dt
+
+    from app.web import _today
+
+    for key, label in (("mood.valence_mean", "Mood valence (mean)"), ("mood.valence_min", "Mood valence (lowest)")):
+        db.add(FeatureDef(feature=key, label=label, unit=None, source="mood", kind="continuous"))
+        db.add(DailyFeature(day=_today() - dt.timedelta(days=1), feature=key, value=0.5))
+    db.flush()
+    listing = signed_in.get("/metrics").text
+    assert 'class="mood-chart"' in listing and 'class="mtile' not in listing

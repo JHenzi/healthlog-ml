@@ -169,6 +169,9 @@ present; otherwise the source with the most samples that day
 - **Pages:** Jinja autoescaping, plus a strict CSP (`script-src 'self'`,
   `frame-ancestors 'none'`).
 - **Proxies:** `X-Forwarded-For` is honoured only from `TRUSTED_PROXIES`, and
-  only for log lines.
+  only for log lines. `X-Forwarded-Proto` / `-Host` from a trusted peer set
+  the address the Connect page hands out (`proxies.public_base_url`), so it
+  says `https://` behind `tailscale serve`; uvicorn itself still runs with
+  `proxy_headers=False`.
 - **Later:** `proxy_header` mode (trusting an identity header from an
   authenticating proxy) comes in M11.

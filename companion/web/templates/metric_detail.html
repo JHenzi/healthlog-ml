@@ -1,30 +1,40 @@
 {% extends "base.html" %}
 {% block title %}{{ d.label }} · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
+{% from "_metric.html" import spark as spark_chart, calendar, key, BAND_WORDS %}
 {% block content %}
 <section class="card">
   <p class="kicker"><a href="/metrics">‹ My Metrics</a></p>
   <p><span class="tag{% if provenance == 'Logged' %} tag-accent{% endif %}">{{ provenance }}</span> <span class="tag tag-quiet">{{ d.source }}</span></p>
   <h1>{{ d.label }}</h1>
   <p class="muted">{{ s.days }} days of data{% if d.unit %} · {{ d.unit }}{% endif %}</p>
-  {% if spark and spark[0] %}
-  <svg class="spark" viewBox="0 0 240 40" preserveAspectRatio="none" role="img" aria-label="Last 60 days">
-    {% for seg in spark %}<polyline points="{{ seg }}"></polyline>{% endfor %}
-  </svg>
+  {% if not counted %}
+  {% set b = band(g.latest_rank) %}
+  {% if b is not none %}<p><span class="gd-cell gd-b{{ b }} mtile-band">Latest day: {{ BAND_WORDS[b] }}</span></p>{% endif %}
+  <div class="mdetail-chart">{{ spark_chart(g, b, "spark") }}</div>
+  <p class="muted small">The last 60 days.</p>
   {% endif %}
   <dl class="stats">
-    <div><dt>Latest</dt><dd>{{ fmt(s.latest, d.unit) }}{% if s.latest_day %} <span class="muted small">{{ s.latest_day.strftime("%b %-d") }}</span>{% endif %}</dd></div>
-    <div><dt>Last 30 days</dt><dd>{% if s.recent %}{{ fmt(s.recent.mean, d.unit) }} <span class="muted small">{{ s.recent.n }} days</span>{% else %}too few days{% endif %}</dd></div>
-    <div><dt>30 days before</dt><dd>{% if s.prior %}{{ fmt(s.prior.mean, d.unit) }} <span class="muted small">{{ s.prior.n }} days</span>{% else %}too few days{% endif %}</dd></div>
+    <div><dt>Latest</dt><dd>{% if yes_no %}{{ "Yes" if s.latest else "No" }}{% else %}{{ fmt(s.latest, d.unit) }}{% endif %}{% if s.latest_day %} <span class="muted small">{{ s.latest_day.strftime("%b %-d") }}</span>{% endif %}</dd></div>
+    <div><dt>Last 30 days</dt><dd>{% if s.recent and yes_no %}{{ (s.recent.mean * 100)|round|int }}% of days{% elif s.recent %}{{ fmt(s.recent.mean, d.unit) }} <span class="muted small">{{ s.recent.n }} days</span>{% else %}too few days{% endif %}</dd></div>
+    <div><dt>30 days before</dt><dd>{% if s.prior and yes_no %}{{ (s.prior.mean * 100)|round|int }}% of days{% elif s.prior %}{{ fmt(s.prior.mean, d.unit) }} <span class="muted small">{{ s.prior.n }} days</span>{% else %}too few days{% endif %}</dd></div>
   </dl>
 </section>
 
 <section class="card">
+  <h2>The last 30 days</h2>
+  {% if counted %}<p class="muted small">Filled on the days it happened.</p>{% else %}<p class="muted small">Each day coloured by where it falls among all your own days.</p>{% endif %}
+  {{ calendar(g.cells, fmt, counted, yes_no) }}
+  {% if not counted %}{{ key() }}{% endif %}
+</section>
+
+<section class="card">
   <h2>By weekday</h2>
-  <div class="table-wrap">
-  <table class="weekday">
-    <thead><tr>{% for w in weekdays %}<th class="num">{{ w }}</th>{% endfor %}</tr></thead>
-    <tbody><tr>{% for w in s.weekday %}<td class="num">{% if w %}{{ fmt(w.mean) }}<br><span class="muted small">n={{ w.n }}</span>{% else %}–{% endif %}</td>{% endfor %}</tr></tbody>
+  <p class="muted small">{% if yes_no %}How often it happened on each weekday, over all your days.{% else %}Your average for each weekday over all your days{% if not counted %}, coloured the same way{% endif %}.{% endif %}</p>
+  <div class="gd-grid-wrap">
+  <table class="gd-grid">
+    <thead><tr>{% for w in weekdays %}<th scope="col">{{ w }}</th>{% endfor %}</tr></thead>
+    <tbody><tr>{% for w in s.weekday %}{% set wb = weekday_bands[loop.index0] %}{% if w %}<td class="gd-cell{% if counted %}{% if w.mean %} gd-b3{% endif %}{% elif wb is not none %} gd-b{{ wb }}{% endif %}">{% if yes_no %}{{ (w.mean * 100)|round|int }}%{% else %}{{ fmt(w.mean) }}{% endif %}<span class="mcal-day">{{ w.n }} days</span></td>{% else %}<td class="gd-cell gd-missing">–</td>{% endif %}{% endfor %}</tr></tbody>
   </table>
   </div>
 </section>
@@ -58,15 +68,4 @@
   {% endif %}
 </section>
 {% endif %}
-
-<section class="card">
-  <h2>Last 30 days</h2>
-  <div class="table-wrap">
-  <table>
-    <tbody>
-    {% for day, value in recent %}<tr><td>{{ day.strftime("%a %b %-d") }}</td><td class="num">{{ fmt(value, d.unit) if value is not none else "no data" }}</td></tr>{% endfor %}
-    </tbody>
-  </table>
-  </div>
-</section>
 {% endblock %}

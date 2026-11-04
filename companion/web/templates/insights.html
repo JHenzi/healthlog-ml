@@ -5,17 +5,15 @@
 {% block content %}
 <section class="card">
   <p class="kicker">Discovery</p>
-  <div class="row">
-    <h1>Discoveries</h1>
-    <form method="post" action="/refresh" class="inline">
-      <input type="hidden" name="csrf" value="{{ csrf }}">
-      <button type="submit" class="secondary">Rebuild now</button>
-    </form>
-  </div>
+  <h1>Discoveries</h1>
   <p>Patterns in your own data, strongest first. These are associations: they say what tends to go together, not what drives what. Each one shows how many days it rests on.</p>
   {% if run %}
-  <p class="muted small">Last run {{ run.computed_at[:16].replace("T", " ") }} UTC: {{ "{:,}".format(run.tests) }} patterns tested across {{ run.eligible }} of {{ run.features }} series (a series needs at least {{ run.min_days }} days of data); {{ run.reported }} cleared the bar of at most {{ (run.fdr_q * 100)|round|int }}% false discoveries.</p>
+  <p class="muted small">Last run {{ run.computed_at[:16].replace("T", " ") }} UTC: {{ "{:,}".format(run.tests) }} patterns tested across {{ run.eligible }} of {{ run.features }} series (a series needs at least {{ run.min_days }} days of data); {{ run.reported }} cleared the bar of at most {{ (run.fdr_q * 100)|round|int }}% false discoveries. Runs again tonight at 04:15.</p>
   {% endif %}
+  <form method="post" action="/refresh" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/insights">
+    <button type="submit" class="link">Run it now</button>
+  </form>
   {% if not any %}<p class="tag tag-quiet">Not enough data yet</p>
   <p>Nothing clears the bar yet. With many patterns tested, a strong-looking link on a few weeks of data is still often chance, so the engine waits for more days. Most patterns need 6–8 weeks of consistent data; this list grows as data accumulates.</p>{% endif %}
 </section>

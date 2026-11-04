@@ -123,6 +123,11 @@ def validate_definition(spec: TrackerSpec) -> None:
 
 
 def _number(raw: object) -> float:
+    # Say what arrived instead, so a Shortcut built slightly wrong can be fixed from the spoken reply.
+    if raw is None:
+        raise TrackerInputError('expected a number in "value", and the request had none')
+    if isinstance(raw, dict | list):
+        raise TrackerInputError('expected a number in "value", not a dictionary or list: put it at the top level')
     if isinstance(raw, bool):
         raise TrackerInputError("expected a number")
     if isinstance(raw, int | float):

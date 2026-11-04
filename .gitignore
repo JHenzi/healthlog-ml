@@ -30,6 +30,9 @@ HealthAutoExport-*.json
 /extracted_keys.json
 /extracted_nested_keys.json
 /makekeys.py
+/Mobile wellness tracking wireframes.zip
+/*.pdf
+/Screenshot *.png
 
 # Editor backup files (may hold copies of secrets, e.g. .env~)
 *~

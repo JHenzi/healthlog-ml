@@ -6,6 +6,8 @@ import datetime as dt
 import statistics
 from dataclasses import dataclass
 
+from .goodday import percentiles
+
 WINDOW_DAYS = 30
 MIN_DAYS = 7
 WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -89,6 +91,67 @@ def sparkline(values: dict[dt.date, float], end: dt.date, days: int = 60, width:
         y = height - 1 - (window_vals[day] - lo) / span * (height - 2)
         segments[-1].append(f"{x:.1f},{y:.1f}")
     return "|".join(" ".join(seg) for seg in segments if seg)
+
+
+def band(rank: float | None) -> int | None:
+    """One of five colour bands for a 0–100 rank (clay low → sand → moss high), as on the Good days page."""
+    return None if rank is None else min(int(rank // 20), 4)
+
+
+@dataclass(frozen=True)
+class Glance:
+    """One tile on the My Metrics page: the latest value, how it ranks among your own days, and its last 60 days."""
+
+    latest_rank: float | None  # 0–100 among every recorded day; None below MIN_RANK_DAYS
+    spark: tuple[str, ...]  # polyline segments, gaps left as gaps
+    dot: tuple[float, float] | None  # the newest point of the sparkline
+    cells: tuple[tuple[dt.date, float | None, int | None], ...]  # last 30 days: (day, value, band)
+
+
+MIN_RANK_DAYS = 14  # a rank among fewer days says little (same floor as the good-day score)
+
+
+def ranks(values: dict[dt.date, float]) -> dict[dt.date, float]:
+    """Each day's percentile among your own days, or nothing below ``MIN_RANK_DAYS`` days."""
+    return percentiles(values) if len(values) >= MIN_RANK_DAYS else {}
+
+
+def glance(values: dict[dt.date, float], summary: Summary, today: dt.date) -> Glance:
+    end = today - dt.timedelta(days=1)
+    ranked = ranks(values)
+    spark = tuple(seg for seg in sparkline(values, end).split("|") if seg)
+    dot = None
+    if spark:
+        x, y = spark[-1].split(" ")[-1].split(",")
+        dot = (float(x), float(y))
+    latest_rank = ranked.get(summary.latest_day) if summary.latest_day else None
+    cells = tuple(
+        (day, values.get(day), band(ranked.get(day)))
+        for day in (end - dt.timedelta(days=i) for i in range(WINDOW_DAYS - 1, -1, -1))
+    )
+    return Glance(latest_rank, spark, dot, cells)
+
+
+MOOD_SERIES = ("mood.valence_mean", "mood.valence_min", "mood.daily_valence", "mood.momentary_valence")
+
+
+@dataclass(frozen=True)
+class MoodBar:
+    day: dt.date
+    mean: float | None  # -1 (very unpleasant) .. 1 (very pleasant); None: nothing logged
+    low: float | None  # the day's lowest moment
+    band: int | None  # clay below neutral → moss above, the Good days colours
+
+
+def mood_bars(mean: dict[dt.date, float], low: dict[dt.date, float], today: dt.date) -> list[MoodBar]:
+    """The last 30 days of State of Mind as one chart: each day's average valence and its lowest moment."""
+    end = today - dt.timedelta(days=1)
+    out = []
+    for i in range(WINDOW_DAYS - 1, -1, -1):
+        day = end - dt.timedelta(days=i)
+        m = mean.get(day)
+        out.append(MoodBar(day, m, low.get(day), band((m + 1) / 2 * 100) if m is not None else None))
+    return out
 
 
 def coverage(days_with_data: set[dt.date], end: dt.date, days: int = WINDOW_DAYS) -> list[tuple[dt.date, bool]]:

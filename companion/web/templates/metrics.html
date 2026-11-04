@@ -1,37 +1,40 @@
 {% extends "base.html" %}
+{% from "_metric.html" import tile, key, day_rows, mood_chart %}
 {% block title %}My Metrics · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
 <section class="card">
   <p class="kicker">Library</p>
-  <div class="row">
-    <h1>My Metrics</h1>
-    <form method="post" action="/refresh" class="inline">
-      <input type="hidden" name="csrf" value="{{ csrf }}">
-      <button type="submit" class="secondary">Rebuild now</button>
-    </form>
-  </div>
-  <p class="muted">Every daily series the Companion builds, last 30 days against the 30 days before. Rebuilt nightly at 04:15.</p>
-  {% if empty %}<p>No daily features yet. Press <em>Rebuild now</em>.</p>{% endif %}
+  <h1>My Metrics</h1>
+  <p>Everything the Companion tracks, one tile each: the latest day, the last 60 days, and how the latest day sits among all your own days. Tap a tile for the calendar and settings.</p>
+  {{ key() }}
+  {% if empty %}
+  <p>No daily series yet. They're built every night at 04:15, or now:</p>
+  <form method="post" action="/refresh" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/metrics">
+    <button type="submit" class="secondary">Build now</button>
+  </form>
+  {% endif %}
 </section>
-{% for title, items in groups %}
+{% for title, charts, active, quiet in groups %}
 <section class="card">
   <h2>{{ title }}</h2>
-  <div class="table-wrap">
-  <table>
-    <thead><tr><th>Metric</th><th class="num">Latest</th><th class="num">30-day avg</th><th class="num">vs prior 30</th></tr></thead>
-    <tbody>
-    {% for d, s in items %}
-      <tr{% if not d.analyse %} class="dim"{% endif %}>
-        <td><a href="/metrics/{{ d.feature }}">{{ d.label }}</a>{% if not d.analyse %} <span class="muted">(not analysed)</span>{% endif %}</td>
-        <td class="num">{{ fmt(s.latest, d.unit) }}{% if s.latest_day %}<br><span class="muted small">{{ s.latest_day.strftime("%b %-d") }}</span>{% endif %}</td>
-        <td class="num">{% if s.recent %}{{ fmt(s.recent.mean, d.unit) }}<br><span class="muted small">{{ s.recent.n }} days</span>{% else %}<span class="muted">too few days</span>{% endif %}</td>
-        <td class="num">{% if s.change_pct is not none %}{{ "%+.0f"|format(s.change_pct) }}%{% else %}–{% endif %}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  {% if title.startswith("Mood") %}{{ mood_chart(mood, mood_links) }}{% endif %}
+  {% if charts %}
+  <div class="mtiles">
+    {% for d, s, g in charts %}{{ tile(d, s, g, fmt, band) }}{% endfor %}
   </div>
+  {% endif %}
+  {% if active %}
+  {% if charts %}<h3 class="mdays-head">Which days</h3>{% endif %}
+  {{ day_rows(active, fmt) }}
+  {% endif %}
+  {% if quiet %}
+  <details class="mdays-quiet">
+    <summary>Not in the last 30 days ({{ quiet|length }})</summary>
+    {{ day_rows(quiet, fmt) }}
+  </details>
+  {% endif %}
 </section>
 {% endfor %}
 {% endblock %}

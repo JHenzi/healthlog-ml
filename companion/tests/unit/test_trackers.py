@@ -233,3 +233,9 @@ def test_a_note_keeps_its_text_and_makes_no_features():
         parse_value(note, "   ")
     f = daily_features(note, [_obs(D1, 12, None, "a day")], {D1}, D3, NY, FOUR)
     assert f.values == {}
+
+
+def test_a_missing_amount_says_so():
+    spec = TrackerSpec("sessions", "Sessions", "quantity", "sessions")
+    with pytest.raises(TrackerInputError, match="had none"):
+        parse_value(spec, None)

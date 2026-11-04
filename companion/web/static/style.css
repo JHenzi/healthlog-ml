@@ -467,3 +467,54 @@ button.chip[class*="tc-"][aria-pressed="true"] { color: #fffaf1; background: var
 .goodday-parts li.missing .goodday-track { background: repeating-linear-gradient(45deg, var(--color-divider) 0 3px, transparent 3px 6px); }
 .goodday-days { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1, 4px); }
+
+/* My Metrics: one tile per series, coloured by where the latest day falls among your own days (gd bands). */
+.mtiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-2); margin-top: var(--space-2); }
+.mtile { display: grid; gap: 6px; padding: var(--space-3); border: 1px solid var(--color-divider); border-radius: var(--radius-sm, 10px);
+  background: var(--color-bg); color: inherit; text-decoration: none; min-width: 0; }
+.mtile:hover { border-color: var(--color-accent); }
+.mtile.dim { opacity: .6; }
+.mtile-name { font-size: 14px; font-weight: 700; color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mtile-value strong { font-size: 28px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.mtile-value span { font-size: 14px; color: var(--color-muted); }
+.mtile-chart, .mdetail-chart { position: relative; display: block; height: 40px; }
+.mdetail-chart { height: 72px; margin-top: var(--space-3); }
+.mtile-spark, .mdetail-chart .spark { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; }
+.mtile-spark polyline { fill: none; stroke: var(--color-muted); stroke-width: 1.5; vector-effect: non-scaling-stroke; opacity: .7; }
+.mtile-dot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+  background: var(--gd-bg, var(--color-text)); box-shadow: 0 0 0 2px var(--color-bg); }
+.mtile-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 13px; }
+.mtile-band { display: inline-block; padding: 3px 8px; font-size: 12px; }
+.mtile-trend { line-height: 1.35; }
+.mtile-change { font-weight: 700; color: var(--color-text); }
+.mcal td { min-width: 2.6rem; }
+.mcal-day { display: block; font-size: .7rem; font-weight: 400; opacity: .75; }
+.mdays-head { margin: var(--space-4) 0 0; font-size: 15px; color: var(--color-muted); }
+.mdays { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; gap: 6px; }
+.mdays li { display: grid; grid-template-columns: minmax(8rem, 13rem) 1fr auto; align-items: center; gap: var(--space-2); }
+.mdays-name { font-size: 14px; font-weight: 700; color: inherit; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdays-name:hover { color: var(--color-accent-strong); }
+.mdays-name.dim { opacity: .6; }
+.mdays-strip { display: grid; grid-template-columns: repeat(30, 1fr); gap: 2px; min-width: 0; }
+.mday { aspect-ratio: 1; min-width: 0; border-radius: 3px; border: 1px solid var(--color-divider); font-size: 9px; font-weight: 700;
+  line-height: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.mday.yes { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
+.mday.none { border-color: transparent; background: repeating-linear-gradient(45deg, var(--color-divider) 0 2px, transparent 2px 4px); }
+.mdays-count { font-size: 12px; color: var(--color-muted); white-space: nowrap; }
+.mdays-quiet { margin-top: var(--space-3); }
+.mdays-quiet summary { cursor: pointer; color: var(--color-muted); font-size: 14px; }
+@media (max-width: 600px) {
+  .mdays li { grid-template-columns: 1fr auto; }
+  .mdays-strip { grid-column: 1 / -1; grid-row: 2; }
+}
+.mood-chart svg { display: block; width: 100%; height: 150px; }
+.mood-chart rect[class^="gd-b"] { fill: var(--gd-bg); }
+.mood-zero { stroke: var(--color-rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mood-low { stroke: var(--color-text); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.mood-none { fill: var(--color-divider); }
+.mood-chart { position: relative; }
+.mood-axis { position: absolute; left: 0; font-size: 11px; color: var(--color-muted); pointer-events: none; }
+.mood-axis.top { top: 0; } .mood-axis.bottom { top: 132px; }
+.mood-dates { display: flex; justify-content: space-between; margin: 2px 0 var(--space-2); }
+.shortcut-prompt { width: 100%; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; padding: var(--space-2);
+  border: 1px solid var(--color-rule); border-radius: var(--radius-sm, 10px); background: var(--color-bg); color: var(--color-text); resize: vertical; }

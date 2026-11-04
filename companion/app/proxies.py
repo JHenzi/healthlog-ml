@@ -56,3 +56,22 @@ def client_ip(peer: str | None, forwarded_for: str | None, trusted: str) -> str 
         if first:
             return first
     return peer
+
+
+def public_base_url(
+    scheme: str, host: str, peer: str | None, forwarded_proto: str | None, forwarded_host: str | None, trusted: str
+) -> str:
+    """The address a phone should use, e.g. for a Shortcut's URL.
+
+    Behind a TLS proxy (``tailscale serve``, Caddy) the app itself only sees plain HTTP, so a URL built from the
+    request alone says ``http://`` on a port that only speaks HTTPS. A trusted peer's ``X-Forwarded-Proto`` /
+    ``X-Forwarded-Host`` win; anyone else's are ignored.
+    """
+    if is_trusted_peer(peer, trusted):
+        proto = (forwarded_proto or "").split(",")[0].strip().lower()
+        if proto in ("http", "https"):
+            scheme = proto
+        fwd_host = (forwarded_host or "").split(",")[0].strip()
+        if fwd_host and all(c.isalnum() or c in ".-:[]" for c in fwd_host):
+            host = fwd_host
+    return f"{scheme}://{host}"
