@@ -537,7 +537,7 @@ def metric_panel(name, draw, y):
   AVG(CASE {AGG} WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END)
     OVER (ORDER BY d.day RANGE BETWEEN INTERVAL '6 days' PRECEDING AND CURRENT ROW) AS "7-day average"
 FROM daily_metrics d LEFT JOIN metric_registry r USING (metric)
-WHERE d.metric = '${name}' AND $__timeFilter({DAY})
+WHERE d.metric IN (${{{name}:sqlstring}}) AND $__timeFilter({DAY})
 ORDER BY d.day"""
     panel = series(
         f"${name}",
