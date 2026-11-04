@@ -40,8 +40,8 @@ def rendered_at() -> str:
 
 
 MANIFEST = {
-    "name": "Companion",
-    "short_name": "Companion",
+    "name": "Health and Discovery Companion",
+    "short_name": "Companion",  # the label under the Home Screen icon: about 12 characters fit
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
