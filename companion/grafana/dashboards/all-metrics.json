@@ -142,7 +142,7 @@
           },
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "SELECT (day::timestamp AT TIME ZONE '$tz') AS time,\n  CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END AS \"Daily\",\n  AVG(CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END)\n    OVER (ORDER BY d.day RANGE BETWEEN INTERVAL '6 days' PRECEDING AND CURRENT ROW) AS \"7-day average\"\nFROM daily_metrics d LEFT JOIN metric_registry r USING (metric)\nWHERE d.metric = '$total' AND $__timeFilter((day::timestamp AT TIME ZONE '$tz'))\nORDER BY d.day",
+          "rawSql": "SELECT (day::timestamp AT TIME ZONE '$tz') AS time,\n  CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END AS \"Daily\",\n  AVG(CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END)\n    OVER (ORDER BY d.day RANGE BETWEEN INTERVAL '6 days' PRECEDING AND CURRENT ROW) AS \"7-day average\"\nFROM daily_metrics d LEFT JOIN metric_registry r USING (metric)\nWHERE d.metric IN (${total:sqlstring}) AND $__timeFilter((day::timestamp AT TIME ZONE '$tz'))\nORDER BY d.day",
           "format": "time_series"
         }
       ],
@@ -277,7 +277,7 @@
           },
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "SELECT (day::timestamp AT TIME ZONE '$tz') AS time,\n  CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END AS \"Daily\",\n  AVG(CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END)\n    OVER (ORDER BY d.day RANGE BETWEEN INTERVAL '6 days' PRECEDING AND CURRENT ROW) AS \"7-day average\"\nFROM daily_metrics d LEFT JOIN metric_registry r USING (metric)\nWHERE d.metric = '$measured' AND $__timeFilter((day::timestamp AT TIME ZONE '$tz'))\nORDER BY d.day",
+          "rawSql": "SELECT (day::timestamp AT TIME ZONE '$tz') AS time,\n  CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END AS \"Daily\",\n  AVG(CASE COALESCE(r.agg_default, 'avg') WHEN 'sum' THEN d.sum WHEN 'min' THEN d.vmin WHEN 'max' THEN d.vmax ELSE d.avg END)\n    OVER (ORDER BY d.day RANGE BETWEEN INTERVAL '6 days' PRECEDING AND CURRENT ROW) AS \"7-day average\"\nFROM daily_metrics d LEFT JOIN metric_registry r USING (metric)\nWHERE d.metric IN (${measured:sqlstring}) AND $__timeFilter((day::timestamp AT TIME ZONE '$tz'))\nORDER BY d.day",
           "format": "time_series"
         }
       ],

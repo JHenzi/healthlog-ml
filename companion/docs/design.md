@@ -13,7 +13,8 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | Color | Ink `#201e1d` on ground `#f3f2f2`. One accent, `#ec3013`, kept for the primary action, the current section and Preliminary tags. Paragraph-size accent text uses `#ae1800` (4.5:1). A dark mode inverts ground and ink. | `:root` tokens in `style.css` |
 | Structure | Zero corner radius. 2px ink rules between sections, 1px rules between rows. No cards, shadows or floating panels. | `.card`, `.sentences`, `.entries`, `.discovery` |
 | Labels | Flush left everywhere, including inside buttons. Uppercase, tracked kickers above titles. | `.kicker`, `button` |
-| Missing data | Days without data are hatched and never drawn as zero (R7). | `.coverage span.missing` |
+| Missing data | Days without data are hatched and never drawn as zero (R7). | `.coverage span.missing`, `.gd-missing`, `.mday.none` |
+| "For you" colour | Where a day falls among your own days, in five bands: clay (low for you), sand (usual), moss (high). The same on Good days, My Metrics and the metric calendar. It means unusual for you, never good or bad. | `.gd-b0`–`.gd-b4`, `metrics_view.band` |
 | Provenance | Every metric is tagged **Imported** (Apple Health via HealthLog), **Logged** (trackers) or **Derived** (stress, energy reserve). | `metrics_view.PROVENANCE` |
 | Confidence | Findings resting on fewer than 30 days carry a **Preliminary** tag. Strength (weak / moderate / strong) is always shown. | `insights.html`, `today.html` |
 | Navigation | Five sections: Overview, Discovery, Capture, My Metrics, Trackers. On phones (≤ 720px) a row of tabs under the brand in a sticky header, never at the bottom (the home bar and Safari's toolbar cover it); header links above that. | `_nav.html` |
@@ -29,7 +30,8 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | 2a Daily log | `/review` | built: per-type controls, coloured ratings, tag chips, reviewed state. "Not recorded" toggling to come |
 | 2b Metric builder | `/trackers` | built, reshaped into three panels: what you track, day tags, and name + kind + only the needed detail, with ideas that fill in the form. Reminders come with web push (M11) |
 | 3a Explore | — | not built: aligned timelines, scatter, calendar, lag option |
-| 3b Metric detail | `/metrics/{feature}`, `/trackers/{key}` | built: provenance, 30-day comparison, weekday profile, recent days |
+| 3b Metric detail | `/metrics/{feature}`, `/trackers/{key}` | built: provenance, 30-day comparison, weekday profile as coloured cells, the last 30 days as a coloured Monday-first calendar (2026-11-04); counts and tags read yes/no and "% of days" |
+| My Metrics | `/metrics` | rebuilt 2026-11-04 (`_metric.html`): a tile per series (latest value, 60-day sparkline, a dot and chip for where the latest day falls among your own days, 30-day average ▲/▼ on the month before); counts and day tags as rows of 30 day squares, quiet ones folded away; State of Mind valence as one chart (a bar per day above or below neutral, a tick at the lowest moment). Order: sleep and Health, then what you log, then outside |
 | 4a Experiments | — | not built (M9) |
 | 4b Settings and data | — | not built: source health, export, delete |
 

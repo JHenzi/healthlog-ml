@@ -1,0 +1,98 @@
+{# My Metrics tiles and the day calendar. Colour is where a day falls among your own days, in the five bands of
+   the Good days page: clay (low for you) → sand (usual) → moss (high). It says "unusual for you", never good or bad. #}
+{% set BAND_WORDS = ["very low for you", "low for you", "usual for you", "high for you", "very high for you"] %}
+
+{% macro unit_of(u) %}{% if u and u != "count" %}{{ u }}{% endif %}{% endmacro %}
+
+{% macro spark(g, b, cls="mtile-spark") %}
+{% if g.spark %}
+<svg class="{{ cls }}" viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true">
+  {% for seg in g.spark %}<polyline points="{{ seg }}"></polyline>{% endfor %}
+</svg>
+{% if g.dot %}<span class="mtile-dot{% if b is not none %} gd-b{{ b }}{% endif %}" style="left: {{ (g.dot[0] / 240 * 100)|round(1) }}%; top: {{ (g.dot[1] / 40 * 100)|round(1) }}%"></span>{% endif %}
+{% endif %}
+{% endmacro %}
+
+{% macro tile(d, s, g, fmt, band) %}
+{% set b = band(g.latest_rank) %}
+<a class="mtile{% if not d.analyse %} dim{% endif %}" href="/metrics/{{ d.feature }}">
+  <span class="mtile-name">{{ d.label }}</span>
+  <span class="mtile-value"><strong>{{ fmt(s.latest) }}</strong> <span>{{ unit_of(d.unit) }}</span></span>
+  <span class="mtile-chart">{{ spark(g, b) }}</span>
+  <span class="mtile-foot">
+    {% if b is not none %}<span class="gd-cell gd-b{{ b }} mtile-band">{{ BAND_WORDS[b] }}</span>{% elif s.latest is not none %}<span class="mtile-band muted">too few days to compare</span>{% endif %}
+    {% if s.latest_day %}<span class="muted">{{ s.latest_day.strftime("%b %-d") }}</span>{% endif %}
+  </span>
+  <span class="mtile-trend muted small">
+    {% if s.recent %}30-day average {{ fmt(s.recent.mean) }}{% if s.change_pct is not none %} · <span class="mtile-change">{{ "▲" if s.change_pct > 0 else "▼" if s.change_pct < 0 else "=" }} {{ "%.0f"|format(s.change_pct|abs) }}%</span> on the month before{% endif %}{% else %}Not enough days for a 30-day average{% endif %}
+    {% if not d.analyse %}<br>Not in the analysis{% endif %}
+  </span>
+</a>
+{% endmacro %}
+
+{% macro key() %}
+<p class="gd-key muted small"><span class="gd-cell gd-b0">low</span><span class="gd-cell gd-b2">usual</span><span class="gd-cell gd-b4">high</span> for you · <span class="gd-cell gd-missing">–</span> no data</p>
+{% endmacro %}
+
+{# The last 30 days as a calendar, Monday first. #}
+{% macro calendar(cells, fmt, counted=false, yes_no=false) %}
+<div class="gd-grid-wrap">
+<table class="gd-grid mcal">
+  <thead><tr>{% for w in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] %}<th scope="col">{{ w }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% set lead = cells[0][0].weekday() %}
+  {% set padded = [none] * lead + cells|list %}
+  {% for week in padded|batch(7) %}
+  <tr>
+    {% for c in week %}
+    {% if c is none %}<td></td>
+    {% elif c[1] is none %}<td class="gd-cell gd-missing" title="{{ c[0].strftime('%a %b %-d') }}: no data"><span class="mcal-day">{{ c[0].day }}</span>–</td>
+    {% elif counted %}<td class="gd-cell{% if c[1] %} gd-b4{% endif %}" title="{{ c[0].strftime('%a %b %-d') }}"><span class="mcal-day">{{ c[0].day }}</span>{% if yes_no %}{{ "yes" if c[1] else "no" }}{% else %}{{ fmt(c[1]) }}{% endif %}</td>
+    {% else %}<td class="gd-cell{% if c[2] is not none %} gd-b{{ c[2] }}{% endif %}" title="{{ c[0].strftime('%a %b %-d') }}"><span class="mcal-day">{{ c[0].day }}</span>{{ fmt(c[1]) }}</td>{% endif %}
+    {% endfor %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endmacro %}
+
+{# Counts and day tags: one row each, the last 30 days as small squares. Filled on days it happened (a count
+   shows its number), empty on recorded days it didn't, hatched where nothing was recorded. #}
+{% macro day_rows(items, fmt) %}
+<ul class="mdays">
+  {% for d, s, g in items %}
+  {% set hits = g.cells|selectattr(1)|list|length %}
+  {% set many = g.cells|map(attribute=1)|reject("none")|select(">", 1)|list %}
+  <li>
+    <a class="mdays-name{% if not d.analyse %} dim{% endif %}" href="/metrics/{{ d.feature }}">{{ d.label }}</a>
+    <span class="mdays-strip" aria-hidden="true">
+      {% for day, v, b in g.cells %}<span class="mday{% if v is none %} none{% elif v %} yes{% endif %}" title="{{ day.strftime('%a %b %-d') }}: {% if v is none %}no data{% elif many %}{{ fmt(v) }}{% elif v %}yes{% else %}no{% endif %}">{% if many and v %}{{ fmt(v) }}{% endif %}</span>{% endfor %}
+    </span>
+    <span class="mdays-count">{{ hits }} of 30 days</span>
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{# State of Mind, last 30 days: a bar per day up (pleasant) or down (unpleasant) from neutral, coloured clay → moss,
+   and a tick at the day's lowest moment. A day with nothing logged gets a hatched stub, never a zero bar. #}
+{% macro mood_chart(bars, links) %}
+{% if bars|selectattr("mean", "ne", none)|list %}
+<div class="mood-chart">
+  <span class="mood-axis top">pleasant</span><span class="mood-axis bottom">unpleasant</span>
+  <svg viewBox="0 0 300 104" preserveAspectRatio="none" role="img" aria-label="Mood over the last 30 days, above or below neutral">
+    <line class="mood-zero" x1="0" y1="52" x2="300" y2="52"/>
+    {% for b in bars %}{% set x = loop.index0 * 10 + 1.5 %}
+    {% if b.mean is none %}<rect class="mood-none" x="{{ x }}" y="49" width="7" height="6" rx="1"/>
+    {% else %}{% set h = [(b.mean|abs) * 44, 1.5]|max %}
+    <rect class="gd-b{{ b.band }}" x="{{ x }}" y="{{ 52 - h if b.mean >= 0 else 52 }}" width="7" height="{{ h }}" rx="1.5"><title>{{ b.day.strftime("%a %b %-d") }}: average {{ "%+.2f"|format(b.mean) }}{% if b.low is not none %}, lowest {{ "%+.2f"|format(b.low) }}{% endif %}</title></rect>
+    {% if b.low is not none and b.low < b.mean %}<line class="mood-low" x1="{{ x - 0.5 }}" x2="{{ x + 7.5 }}" y1="{{ 52 - b.low * 44 }}" y2="{{ 52 - b.low * 44 }}"/>{% endif %}
+    {% endif %}{% endfor %}
+  </svg>
+  <p class="mood-dates muted small"><span>{{ bars[0].day.strftime("%b %-d") }}</span><span>{{ bars[-1].day.strftime("%b %-d") }}</span></p>
+</div>
+<p class="muted small">Each day's average mood, up for pleasant and down for unpleasant; the thin line marks the day's lowest moment. Hatched: nothing logged.
+{% if links %}Series: {% for d in links %}<a href="/metrics/{{ d.feature }}">{{ d.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}{% endif %}</p>
+{% endif %}
+{% endmacro %}

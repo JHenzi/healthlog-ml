@@ -108,7 +108,8 @@ Every field is optional:
   | count | a whole number (default 1) |
   | yes/no | `yes`/`no`, `true`/`false` or `1`/`0` (default yes) |
   | rating | a number on its scale (1–10) |
-  | amount, minutes | a number, 0 or more |
+  | amount | a number, 0 or more (default 1) |
+  | minutes | a number, 0 or more |
   | pick-one | one of its options |
   | moment | an intensity from 1 to 3 (optional) |
   | time of day | none: the entry's time is the value |
@@ -149,13 +150,33 @@ Scope `all`. Remove one entry. It stays in the event log as a tombstone.
 
 ## In a Shortcut
 
-Use **Get Contents of URL**:
+The easiest way: each tracker's **Connect** page has a **Build the Shortcut
+with a prompt** box (`app/shortcut_prompt.py`). Paste it into the Shortcuts
+app's AI builder. It names the Shortcut the way you'll say it to Siri
+("Snap a stretching session"), asks a question only when the type needs one
+(rating, minutes, pick-one), and fills in the token if you just made one.
+The URL it gives is `https://` when the page came through a TLS proxy such
+as `tailscale serve` (from `TRUSTED_PROXIES`, `X-Forwarded-Proto`/`-Host`);
+before 2026-11-04 it said `http://` on the HTTPS port, and requests never
+arrived.
+
+By hand, use **Get Contents of URL**:
 - **Method:** `POST`
-- **Headers:** `Authorization` = `Bearer hlc_…`
-- **Request Body:** JSON, with a `value` field.
+- **Headers:** key `Authorization` (no colon), value `Bearer hlc_…` (the
+  word Bearer, a space, the token)
+- **Request Body:** JSON with `value` as a top-level key, not inside another
+  dictionary. Leave it out for a count, check, moment, time or amount (each
+  run logs 1). Don't send `time`: the entry is stamped when the request
+  arrives.
 
 Then **Get Dictionary Value** `message` (or `detail` on an error) and
-**Speak Text** it.
+**Speak Text** it. A missing number is spelled out ("expected a number in
+"value", and the request had none"), so a Shortcut built slightly wrong can
+be fixed from what Siri says.
+
+**Naming for Siri:** start with a verb Siri doesn't own. "Log a" creates a
+calendar event; "record", "add" and "play" go to Voice Memos, Reminders and
+Music. We use **"Snap a …"**.
 
 For a generic "Track" Shortcut:
 1. `GET /api/trackers` with a `read` token.

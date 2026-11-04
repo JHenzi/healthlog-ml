@@ -290,3 +290,10 @@ def test_overview_coverage_strip_and_current_section(signed_in, db, coffee):
     assert "Data for analysis" in html and "0 of 30 days" in html
     assert html.count('class="missing"') == 30  # nothing logged yet: every day hatched, none drawn as zero
     assert '<a href="/" aria-current="page">Overview</a>' in html
+
+
+def test_an_amount_without_a_body_logs_one(client, db):
+    capture.create_tracker(db, key="sessions", name="Sessions", type="quantity", unit="sessions")
+    raw, _ = auth.create_token(db, "t", "log:sessions")
+    reply = client.post("/api/log/sessions", json={}, headers=_bearer(raw))
+    assert reply.status_code == 201 and reply.json()["value"] == 1.0

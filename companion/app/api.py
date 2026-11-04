@@ -132,10 +132,12 @@ def log_entry(key: str, body: LogRequest, request: Request, response: Response, 
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such tracker")
     settings = get_settings()
     try:
+        # A Shortcut without a body logs one, for an amount as for a count; the spoken reply says what was logged.
+        value = 1 if body.value is None and tracker.type == "quantity" else body.value
         logged = capture.log(
             db,
             tracker,
-            body.value,
+            value,
             observed_at=body.time,
             client_id=body.client_id,
             source=body.source,

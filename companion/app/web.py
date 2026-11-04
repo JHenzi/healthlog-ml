@@ -188,16 +188,16 @@ def _today() -> dt.date:
     return current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
 
 
-SOURCE_ORDER = (
+SOURCE_ORDER = (  # Health and sleep first, then what you log yourself, then the world outside
+    "sleep",
+    "healthlog",
+    "workout",
+    "stress",
+    "energy",
+    "mood",
     "goodday",
     "rating",
     "tracker",
-    "sleep",
-    "healthlog",
-    "stress",
-    "energy",
-    "workout",
-    "mood",
     "weather",
     "almanac",
 )
@@ -227,16 +227,36 @@ def metrics_page(
     all_values = features.all_series(db)
     groups = []
     for source in SOURCE_ORDER:
-        items = [
-            (d, metrics_view.summarize(all_values.get(d.feature, {}), day))
-            for d in sorted((d for d in defs.values() if d.source == source), key=lambda d: d.label.lower())
-        ]
+        items = []
+        for d in sorted((d for d in defs.values() if d.source == source), key=lambda d: d.label.lower()):
+            values = all_values.get(d.feature, {})
+            summary = metrics_view.summarize(values, day)
+            items.append((d, summary, metrics_view.glance(values, summary, day)))
         if items:
-            groups.append((SOURCE_TITLES[source], items))
+            # Counts and day tags (0/1) read as which days they happened, not as a line; quiet ones fold away.
+            charts = [it for it in items if it[0].kind != "count"]
+            days = [it for it in items if it[0].kind == "count"]
+            active = [it for it in days if any(v for _, v, _ in it[2].cells)]
+            quiet = [it for it in days if it not in active]
+            active.sort(key=lambda it: -sum(1 for _, v, _ in it[2].cells if v))
+            if source == "mood":  # the valence series fold into one chart: a bar per day above or below neutral
+                charts = []
+            groups.append((SOURCE_TITLES[source], charts, active, quiet))
+    mood_links = [defs[f] for f in metrics_view.MOOD_SERIES if f in defs]
     return templates.TemplateResponse(
         request,
         "metrics.html",
-        {"groups": groups, "csrf": session.csrf_token, "fmt": metrics_view.fmt, "empty": not defs},
+        {
+            "groups": groups,
+            "mood": metrics_view.mood_bars(
+                all_values.get("mood.valence_mean", {}), all_values.get("mood.valence_min", {}), day
+            ),
+            "mood_links": mood_links,
+            "csrf": session.csrf_token,
+            "fmt": metrics_view.fmt,
+            "band": metrics_view.band,
+            "empty": not defs,
+        },
     )
 
 
@@ -255,8 +275,8 @@ def metric_detail(
         return Response("No such metric", status_code=status.HTTP_404_NOT_FOUND)
     day = _today()
     values = features.series(db, feature)
+    summary = metrics_view.summarize(values, day)
     end = day - dt.timedelta(days=1)
-    recent = [(end - dt.timedelta(days=i), values.get(end - dt.timedelta(days=i))) for i in range(30)]
     metric = feature.removeprefix("hl.") if feature.startswith("hl.") else None
     setting = db.get(MetricSetting, metric) if metric else None
     return templates.TemplateResponse(
@@ -264,11 +284,15 @@ def metric_detail(
         "metric_detail.html",
         {
             "d": definition,
-            "s": metrics_view.summarize(values, day),
+            "s": summary,
             "spark": metrics_view.sparkline(values, end).split("|"),
-            "recent": recent,
+            "g": metrics_view.glance(values, summary, day),
+            "weekday_bands": _weekday_bands(values, summary),
             "weekdays": metrics_view.WEEKDAYS,
             "fmt": metrics_view.fmt,
+            "band": metrics_view.band,
+            "counted": definition.kind == "count",  # which days, not a level: no line, no "high for you"
+            "yes_no": definition.kind == "count" and set(values.values()) <= {0, 1},
             "setting": setting,
             "sources": upstream.metric_sources(db, metric) if setting else [],
             "aggregations": metric_settings.AGGREGATIONS,
@@ -277,6 +301,22 @@ def metric_detail(
             "provenance": metrics_view.PROVENANCE.get(definition.source, "Imported"),
         },
     )
+
+
+def _weekday_bands(values: dict[dt.date, float], summary: metrics_view.Summary) -> list[int | None]:
+    """Each weekday's average, coloured by where it falls among your own days (Mon..Sun)."""
+    ordered = sorted(values.values())
+    if len(ordered) < metrics_view.MIN_RANK_DAYS:
+        return [None] * 7
+    out = []
+    for w in summary.weekday:
+        if w is None:
+            out.append(None)
+            continue
+        below = sum(v < w.mean for v in ordered)
+        equal = sum(v == w.mean for v in ordered)
+        out.append(metrics_view.band((below + equal / 2) / len(ordered) * 100))
+    return out
 
 
 def _optional_float(raw: str) -> float | None:
@@ -340,9 +380,13 @@ def reset_metric_settings(
     return RedirectResponse(f"/metrics/{feature}", status_code=status.HTTP_303_SEE_OTHER)
 
 
+REFRESH_RETURNS = ("/insights", "/metrics")  # where Rebuild now may send you back to; anything else is /insights
+
+
 @router.post("/refresh")
 def refresh_now(
     csrf: str = Form(""),
+    back: str = Form(""),
     session: WebSession | None = Depends(current_session),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -352,7 +396,7 @@ def refresh_now(
         return Response("CSRF check failed", status_code=status.HTTP_403_FORBIDDEN)
     jobs.refresh(db)
     db.commit()
-    return RedirectResponse("/metrics", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(back if back in REFRESH_RETURNS else "/insights", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # --- good days ----------------------------------------------------------------

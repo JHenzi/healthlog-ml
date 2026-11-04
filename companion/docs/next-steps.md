@@ -215,8 +215,8 @@ need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
 The warm look and the at-a-glance layer are live
 ([`design.md`](design.md)). Next:
 
-- The glance treatment on Metrics (arrow and colour per row) and on the
-  evidence page.
+- ~~The glance treatment on Metrics~~: done 2026-11-04 (see the log in
+  §4.5). Still to do on the evidence page.
 - Permanent per-tag colours, if shifting colours after a removal bothers
   anyone.
 
@@ -310,6 +310,35 @@ issue goes into `build.py` first.
   refresh today. Watch it as trackers and weather add series (risks.md F1).
 
 ### 4.5 Found along the way (do when convenient)
+
+**Fixed 2026-11-04** (one fork PR):
+- *Rebuild on Discovery sent you to My Metrics.* It now returns to the page
+  it was pressed on (only `/insights` or `/metrics`, never an outside URL),
+  and on Discovery it's a quiet "Run it now" under the last run.
+- *My Metrics was tables of numbers.* Redone with the Good days colours:
+  tiles, day squares for counts and tags (no more 0/1 lines), one mood
+  chart, Health and sleep first. Metric detail: coloured calendar and
+  weekdays.
+- *Shortcuts never reached the Companion.* The Connect page said `http://`
+  on the HTTPS-only port behind `tailscale serve`; it now follows a trusted
+  proxy's `X-Forwarded-Proto`.
+- *Shortcuts were hard to build.* The Connect page gives a paste-ready prompt
+  for Shortcuts' AI builder, named "Snap a …" for Siri. The body example no
+  longer suggests sending `time` (the server stamps now).
+- *An amount without a value was refused.* Over the API it now logs 1, like a
+  count, and a missing number says so in the error Siri speaks.
+
+- **Editable history (2026-11-04, Joe):** there's no place in the UI to fix
+  an entry's time or value; only undo. Add an edit on the tracker's entry
+  list that writes a correcting event (the old one stays in the event log,
+  like a tombstone), so derived tables still rebuild from the log.
+
+- **A discovery can vanish on a rebuild (2026-11-04):** the nightly run
+  reported 1 discovery (12,093 tests); a manual rebuild that morning, with one
+  more day of data (12,101 tests), reported 0. Correct under the FDR bar, but
+  to the user the pattern they were reading just disappears. Consider saying
+  so ("1 pattern from the last run no longer clears the bar") rather than
+  showing an empty list. Planned as roadmap B17 (Earlier discoveries).
 
 - ~~**Coffee and beer counted as water (#45)**~~: done 2026-10-29. Water
   Llama writes each drink to Apple Health twice: as caffeine or alcohol,

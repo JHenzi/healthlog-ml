@@ -12,7 +12,7 @@
   <h2>How</h2>
   <dl class="facts">
     <dt>URL</dt><dd><code>POST {{ log_url }}</code></dd>
-    <dt>Body</dt><dd><code>{"value": …, "time": "2026-10-17T07:10:00-04:00"}</code> (both optional for counts, checks and moments)</dd>
+    <dt>Body</dt><dd><code>{"value": …}</code> ({% if t.type in ("count", "check", "moment", "time") %}optional here: an empty <code>{}</code> logs one{% else %}the number to log{% endif %}). The time is always now; add <code>"time"</code> only to back-date an entry.</dd>
     <dt>Header</dt><dd><code>Authorization: Bearer &lt;token&gt;</code></dd>
   </dl>
   {% if new_token %}
@@ -36,6 +36,14 @@
     {% endfor %}
   </ul>
   {% endif %}
+</section>
+
+<section class="card">
+  <h2>Build the Shortcut with a prompt</h2>
+  <p class="muted">Paste this into the Shortcuts app's AI builder. It spells out every step: method, header, body and speaking the reply back.{% if not new_token %} Replace the token line with a token from above (create one if you don't have it saved; it's shown once).{% endif %}</p>
+  {% if new_token %}<p class="small"><strong>Your new token is already filled in.</strong> It can only log {{ t.name }}; revoke it above if it ever leaks.</p>{% endif %}
+  <textarea class="shortcut-prompt" readonly rows="14" aria-label="Prompt for the Shortcuts AI builder">{{ shortcut_prompt }}</textarea>
+  <p class="muted small">Building it by hand instead? The header key is <code>Authorization</code> (no colon) and its value is <code>Bearer</code>, a space, then the token. The body's keys sit at the top level, not inside another dictionary. Name it the way you'll say it, starting with "Snap a" (the prompt does this): "log", "record", "add" and "play" are taken by Calendar, Voice Memos, Reminders and Music.</p>
   <p class="muted small">Siri: a Shortcut named after this tracker that runs <em>Get Contents of URL</em> (method POST, the header above) and speaks the reply's <code>message</code>.</p>
 </section>
 

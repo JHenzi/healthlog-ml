@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.auth import scope_allows, validate_scope
-from app.proxies import client_ip, is_trusted_peer
+from app.proxies import client_ip, is_trusted_peer, public_base_url
 
 
 @pytest.mark.parametrize("scope", ["all", "read", "log:coffee", "log:first_social_media"])
@@ -45,3 +45,13 @@ def test_wildcard_and_garbage():
     assert is_trusted_peer("8.8.8.8", "*")
     assert not is_trusted_peer(None, "")
     assert not is_trusted_peer("not-an-ip", "")
+
+
+def test_shortcut_url_follows_a_trusted_tls_proxy():
+    host = "tv.example.ts.net:8443"
+    # tailscale serve in front: the app sees http, the phone must use https
+    assert public_base_url("http", host, "172.25.0.4", "https", None, "") == f"https://{host}"
+    assert public_base_url("http", host, "172.25.0.4", None, None, "") == f"http://{host}"  # no proxy header
+    # a public peer can't rewrite the URL
+    assert public_base_url("http", host, "198.51.100.7", "https", "evil.example", "") == f"http://{host}"
+    assert public_base_url("http", host, "172.25.0.4", "gopher", "bad/host", "") == f"http://{host}"

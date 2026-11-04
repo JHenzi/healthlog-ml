@@ -11,10 +11,11 @@ from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from . import auth, capture, dayrating
+from . import auth, capture, dayrating, shortcut_prompt
 from .config import get_settings
 from .db import get_db
 from .models import ApiToken, Observation, Tracker, WebSession
+from .proxies import public_base_url
 from .trackers import (
     COMMON_TYPES,
     DAY_TAGS_KEY,
@@ -270,7 +271,14 @@ def _render_detail(
     )
     tokens = db.execute(sa.select(ApiToken).where(ApiToken.scope == f"log:{key}").order_by(ApiToken.id)).scalars().all()
     successor = db.get(Tracker, tracker.successor_id) if tracker.successor_id else None
-    base_url = str(request.base_url).rstrip("/")
+    base_url = public_base_url(
+        request.url.scheme,
+        request.headers.get("host") or request.url.netloc,
+        request.client.host if request.client else None,
+        request.headers.get("x-forwarded-proto"),
+        request.headers.get("x-forwarded-host"),
+        get_settings().trusted_proxies,
+    )
     return templates.TemplateResponse(
         request,
         page,
@@ -281,6 +289,15 @@ def _render_detail(
             "tokens": tokens,
             "new_token": new_token,
             "log_url": f"{base_url}/api/log/{key}",
+            "shortcut_prompt": shortcut_prompt.build(
+                name=tracker.name,
+                t_type=tracker.type,
+                unit=tracker.unit,
+                scale=(tracker.scale_min or 1, tracker.scale_max or 10),
+                options=list(tracker.options or []),
+                url=f"{base_url}/api/log/{key}",
+                token=new_token,
+            ),
             "successor": successor,
             "tagged": capture.tags_for_day(db, _today()).get(tracker.id, set()),
             "state": day_state(db, _today()).get(tracker.id),
