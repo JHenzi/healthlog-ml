@@ -1,50 +1,172 @@
-# HealthLog Companion
+<p align="center"><img src="docs/design/icon.png" width="120" alt="The Companion icon: a light cross on a teal network of points"></p>
 
-Our analysis engine and UI on top of [HealthLog](../README.md). HealthLog is
+# Health and Discovery Companion
+
+*The Companion*, for short. Our analysis engine and app, built in this fork
+on top of [HealthLog](../README.md). HealthLog is
 the data pipeline (Apple Health → TimescaleDB). The Companion reads its tables
 **read-only**, keeps its own data in schema `companion`, and turns it into
 plain-language sentences. Design: [`docs/companion-app-design.md`](docs/companion-app-design.md).
 Rules: [`CLAUDE.md`](CLAUDE.md). Build plan: [`docs/plan.md`](docs/plan.md).
 
-What works today (milestones M1, M2, M4 part 1 and M5 v1):
+Everything runs on your own server. The Companion makes **no outbound
+calls**: no telemetry, no cloud, no model APIs. The two opt-in exceptions
+(weather, phone reminders) leave from separate containers that hold no health
+data, and every deploy proves the rest can't reach the internet
+([`docs/privacy.md`](docs/privacy.md)).
 
-- a **Today** page: last night's sleep and yesterday's HRV, resting heart
-  rate, steps, stress, energy reserve and mood, each against your 30-day
-  average, with the number of days behind that average;
-- a **Metrics** page: every daily series the Companion builds (all of
-  HealthLog's metrics, sleep stages, stress, energy reserve, workouts and
-  Apple Health State of Mind), each with its last 30 days against the 30
-  before, a weekday profile and a 60-day sparkline. For HealthLog metrics you
-  can change how a day's value is formed (sum, average, lowest, highest),
-  which sources to prefer, plausibility bounds, and whether it's analysed;
-- an **Insights** page: relationships between series (same day and next day,
-  in both directions), changes over the last week and month, and weekday
-  rhythms. Each finding is a sentence with its number of days and strength,
-  plus an *explain* view with the method and statistics. False discoveries
-  are held to 10%, and the engine is validated on synthetic data before it
-  ships ([`docs/analysis-engine.md`](docs/analysis-engine.md));
-- `GET /api/insights` (a `read` token);
-- a **good-day score** on the Overview and a **Good days** page: one number
-  per day from four parts with equal weight (active, sleep, water, mood),
-  each ranked against your own history, shown next to the score. Your best
-  days (the top quarter) are listed, and the nightly analysis compares the
-  score with every other series, so the page shows what your best days have
-  in common once a link clears the bar ([`docs/analysis-engine.md`](docs/analysis-engine.md));
-- a built-in **day rating**: "How was today?" (1–10) each evening and
-  "Looking back, how was yesterday?" the next morning, both on the Overview
-  and in Capture. Nothing to set up and nothing to delete. The two ratings
-  and the change between them are daily series like any other, and they are
-  what the personal good-day weights will learn from;
-- **your own trackers**: create anything you want to track (a count like
-  coffee, a 1–5 productivity scale, yes/no, an amount with a unit, a
-  duration, a time of day, a choice such as lunch at home / takeout /
-  skipped, or a moment like anger with an intensity). Log with one tap on
-  Today, back-date from the tracker's page, and fill gaps in the **evening
-  review**. Every tracker becomes daily series in the same analysis;
-- password sign-in, plus scoped API tokens for Shortcuts and scripts;
-- `GET /api/today` (a `read` token), the same sentences as JSON, plus `notes` (streaks, records);
-- a startup and nightly check that HealthLog's tables still match what we
-  read (`companion check-upstream`).
+## What it does
+
+In one line: it pulls your Apple Health data together with what you log
+yourself and the world outside (weather, daylight, the moon, holidays),
+turns it all into one number per day per series, and tells you, in plain
+sentences with their evidence attached, what tends to go together in **your**
+data. It has no built-in theory of what matters (rule R17): everything is
+compared with everything, in both directions, and only what clears a strict
+false-discovery bar is shown.
+
+The app has five sections: **Overview**, **Discovery**, **Capture**,
+**My Metrics** and **Trackers**.
+
+### Overview: your day at a glance
+
+- **Your day**: the built-in day rating. "How was today?" (1–10) in the
+  evening, and a blind "Looking back, how was yesterday?" the next morning.
+  Nothing to set up. Both ratings and the change between them become daily
+  series like any other.
+- **Good day**: today's good-day score (below) and its parts as coloured
+  bars.
+- **Compared with your usual**: tiles for last night's sleep and yesterday's
+  HRV, resting heart rate, steps, stress, energy reserve and mood, each with
+  ▲/▼ against your 30-day average and the number of days behind it. The same
+  as sentences, if you prefer words.
+- **Worth exploring**: the strongest current discoveries.
+- **Worth noting**: streaks and personal records, as plain facts ("7 days in
+  a row", "the highest of your 60+ days"), never judged good or bad.
+- **Data for analysis**: a 30-day coverage strip, so gaps are visible, and
+  any problem reading HealthLog's data, stated outright.
+- **Quick add**: one tap for your pinned trackers.
+
+### Discovery: what goes together in your data
+
+- **Discoveries**, strongest first, grouped as *Relationships* (two series
+  that move together the same day, the next day, or spread over the
+  following week), *This week* and *This month* (a real change against the
+  weeks before) and *Weekly rhythm* (a series that differs by weekday).
+- Each one is a sentence such as "Higher X tends to be followed by lower Y
+  the next day", with its **number of days**, a **strength** word, a
+  **likely range** bar and a *Preliminary* tag under 30 days. The wording is
+  association only: never *causes* or anything diagnostic (R10).
+- **Re-checked**: a relationship is re-read after removing what else the
+  run linked to both sides, and says whether it holds, fades or grows.
+- **Evidence page** for each: the method in words, effect size, raw and
+  adjusted p, effective days after allowing for day-to-day carry-over, and
+  for links over days a bar per day 0–7 showing when the link peaks.
+- **Good days**: a score per day from four equally weighted parts (active,
+  sleep, water, mood), each ranked against your own history. A grid of the
+  last two weeks coloured low → high, **your best days** (the top quarter),
+  and **what your best days have in common**: series the analysis linked to
+  the score, with their typical value on best days vs the rest.
+- Runs every night at 04:15, or **Run it now**. Statistically: residuals
+  after removing weekday profiles and trends, effective sample sizes, one
+  Benjamini-Hochberg family at 10% over every test of a run, effect floors,
+  and a validation suite that plants effects and confounders on synthetic
+  data before any method ships (R8,
+  [`docs/analysis-engine.md`](docs/analysis-engine.md)).
+
+### Capture: logging the day
+
+- **The day page** (today or any earlier day): the day rating, **day tags**
+  (one tap each: "worked from home", "late meal", anything you add), every
+  tracker with a control that fits its type, and a short **diary** entry.
+  Diary text is never analysed and never logged.
+- **Reviewed days**: marking a day reviewed is what lets an unlogged count
+  or yes/no count as zero. Otherwise a forgotten entry stays *unknown*,
+  never "none" (R7: missing is not zero).
+- **Reminders** (optional): a push at 10:00 for the look back and at 19:00
+  for the rating, skipped when already answered. Times are adjustable;
+  **Send a test** checks the whole path.
+
+### My Metrics: every series, readable
+
+- A **tile per series**: the latest value, a 60-day sparkline, and a chip
+  for where the latest day falls among all your own days ("high for you",
+  "usual for you"), coloured clay → sand → moss. The colour means unusual
+  *for you*, never good or bad. Under it, the 30-day average with ▲/▼ on the
+  month before.
+- **Counts and day tags** as rows of 30 day squares (filled on days they
+  happened, hatched where nothing was recorded), most frequent first; ones
+  you haven't used in 30 days fold away.
+- **Mood** as one chart: a bar per day above or below neutral, with a tick at
+  the day's lowest moment.
+- Ordered sleep and Health first, then what you log, then outside data.
+- **Each series' page**: a coloured calendar of the last 30 days, your
+  average per weekday, and for HealthLog metrics the **settings** for how a
+  day's value is formed (sum, average, lowest, highest), which sources to
+  prefer (never added together, R16), plausibility bounds, and whether it's
+  analysed.
+
+What's there: all of HealthLog's metrics (not just its core ones), sleep and
+its stages, stress and energy reserve, workout minutes, Apple Health State of
+Mind (valence, every feeling and what it was about), the good-day score, the
+day ratings, your trackers and tags, weather and the almanac.
+
+### Trackers: measure anything
+
+- **Kinds**: a count (coffee), a 1–10 rating, yes/no, an amount with a unit,
+  minutes, a time of day, a pick-one (lunch at home / takeout / skipped), a
+  moment with an intensity, or a day tag. Ratings are always 1–10 and
+  coloured low → high; there's no "higher is better" setting, because the
+  data finds the direction.
+- **Opinionated setup**: a name and a kind, with ideas that fill in the
+  form. A tracker's type and scale are locked once it has data; a change
+  makes a successor, so history never silently changes meaning (R12).
+- **Every entry is kept**: an append-only event log is the source of truth.
+  Undo leaves a tombstone, and every daily series can be rebuilt from it.
+- **Log from anywhere**: each tracker has a **Connect** page with its own
+  URL and a token that can log that tracker and nothing else, plus a
+  **paste-ready prompt for the Shortcuts app's AI builder**. It builds a
+  Shortcut named the way you'll say it ("Snap a stretching session"), so
+  Siri, a HomePod, an NFC sticker or the Action button logs it and speaks
+  the reply back. See *Logging from Shortcuts* below.
+- **Import your history** from another tracking app: `companion import-days`
+  brings in day-by-day tags, trackers and notes, never overwriting a day you
+  logged here.
+
+### Outside data
+
+- **Weather and air quality** (opt-in): temperature, humidity, pressure and
+  its change, rain, cloud, UV, wind, PM2.5 and AQI for your area, backfilled
+  over your whole history from [Open-Meteo](https://open-meteo.com), with
+  your location rounded to ~10 km first.
+- **The almanac**, computed here with nothing fetched: day length, the moon,
+  public holidays and days until the next one.
+
+Both are analysed like everything else, so "rainy days go with shorter
+sleep" can turn up, and so can its absence.
+
+### On the phone
+
+- **Installable app** (Add to Home Screen): full screen, opens instantly
+  from a saved copy, and says how fresh it is ("Saved 9:42 · checking for
+  updates…"). Signing out deletes the saved copies.
+- Forms save **in place**: no reload, same scroll position, a double tap
+  posts once.
+
+### Also
+
+- **Grafana dashboards** next to HealthLog's: *Sleep & Activity* (with a
+  0–7 day shift and a gap correlation chart) and *All Metrics* (every
+  metric, no dropdowns), in [`grafana/`](grafana/README.md).
+- A **JSON API** for everything above, every route documented in
+  [`docs/api.md`](docs/api.md) (R18).
+- **Security**: password sign-in with lockout, CSRF on every form, a strict
+  content security policy, hashed tokens with one scope each, and the web
+  port on localhost only behind HTTPS.
+- **Safe to run next to HealthLog**: read-only access to its tables through
+  one read contract, checked at startup and nightly
+  (`companion check-upstream`), and nothing that depends on its schema, so
+  HealthLog upgrades stay its own business (R2, R3).
 
 ## Install
 
@@ -137,7 +259,7 @@ proxy to `127.0.0.1:8020` and set `X-Forwarded-For`.
 
 Open the Companion in Safari, tap **Share → Add to Home Screen**, then open
 it from the Home Screen and sign in once. It then runs full screen, with no
-Safari toolbar, and the tabs sit along the bottom.
+Safari toolbar, and the section tabs sit in the header.
 
 - **Pages open at once.** The phone keeps a saved copy of each page and
   shows it straight away. Until the fresh one arrives, a note at the bottom
@@ -152,9 +274,15 @@ Safari toolbar, and the tabs sit along the bottom.
 **Every API route, with its token scope, body and reply, is in
 [`docs/api.md`](docs/api.md)** (rule R18). In short:
 
-Every tracker has its own endpoint, `POST /api/log/<key>`. Its **Set up**
-panel creates a token that can log only that tracker, so a leaked coffee
+Every tracker has its own endpoint, `POST /api/log/<key>`. Its **Connect**
+page creates a token that can log only that tracker, so a leaked coffee
 token can log coffee and nothing else.
+
+**The easy way:** copy the **Build the Shortcut with a prompt** box from the
+Connect page into the Shortcuts app's AI builder. Start every Shortcut's
+name with **"Snap a"**: Siri keeps "log a" (Calendar), "record", "add" and
+"play" for its own apps. Behind `tailscale serve`, the URL on that page is
+`https://`, as it must be.
 
 ```bash
 curl -X POST -H "Authorization: Bearer hlc_…" -H "Content-Type: application/json" \
@@ -162,10 +290,11 @@ curl -X POST -H "Authorization: Bearer hlc_…" -H "Content-Type: application/js
 # {"tracker": "coffee", "value": 2.0, "day": "2026-10-17", "created": true, "message": "Logged Coffee at 07:10", …}
 ```
 
-- `value` is per type and optional for counts (1), yes/no (yes), moments and
-  time-of-day trackers.
-- `time` (ISO 8601 with an offset) back-dates an entry. More than 5 minutes
-  in the future is refused.
+- `value` is per type and optional for counts and amounts (1), yes/no
+  (yes), moments and time-of-day trackers.
+- Entries are stamped when they arrive. Send `time` (ISO 8601 with an
+  offset) only to back-date one; more than 5 minutes in the future is
+  refused.
 - `client_id` (a UUID) makes a retry safe: the same id twice logs once.
 - A Shortcut can speak the reply's `message`, so a misheard entry is caught
   right away.
@@ -203,7 +332,7 @@ curl -H "Authorization: Bearer hlc_…" https://<host>:8443/api/today
 | `companion token create NAME --scope …` / `list` / `revoke ID` | manage API tokens |
 | `companion push keys` | print a new VAPID key pair for `.env` (reminders) |
 | `companion import-days [--apply]` | bring in another app's day-by-day tags, trackers and notes from JSON on stdin (format: `app/importer.py`). A dry run unless `--apply`; repeatable, and a day you logged here keeps your entry |
-| `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, load the weather file, rebuild the daily feature table, run the insight engine (also nightly at 04:15, and *Rebuild now* on the Metrics and Insights pages) |
+| `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, load the weather file, rebuild the daily feature table, run the insight engine (also nightly at 04:15, and *Run it now* on Discovery) |
 | `companion web` | migrate, then serve on port 8000 (the `companion-web` service) |
 | `companion jobs` | run the scheduler (the `companion-jobs` service) |
 
