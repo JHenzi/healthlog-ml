@@ -59,6 +59,10 @@ The app has five sections: **Overview**, **Discovery**, **Capture**,
   association only: never *causes* or anything diagnostic (R10).
 - **Re-checked**: a relationship is re-read after removing what else the
   run linked to both sides, and says whether it holds, fades or grows.
+- **Earlier discoveries**: each run starts over, so a pattern near the bar
+  can drop out after one more day of data. It isn't lost: it moves to a
+  quieter list with the days it held, for 90 days, and moves back up if it
+  clears the bar again. Current ones say *since* when they first appeared.
 - **Evidence page** for each: the method in words, effect size, raw and
   adjusted p, effective days after allowing for day-to-day carry-over, and
   for links over days a bar per day 0–7 showing when the link peaks.

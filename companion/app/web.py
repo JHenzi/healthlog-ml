@@ -15,10 +15,11 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from . import auth, capture, features, glance, goodday, jobs, metric_settings, metrics_view, pwa, today, upstream
+from .analysis import history as analysis_history
 from .analysis import run as analysis_run
 from .config import get_settings
 from .db import get_db
-from .models import DailyFeature, FeatureDef, Insight, MetricSetting, Setting, User, WebSession
+from .models import DailyFeature, EarlierInsight, FeatureDef, Insight, MetricSetting, Setting, User, WebSession
 from .proxies import client_ip
 from .timeutil import current_day
 from .trackers import tag_slug
@@ -167,7 +168,7 @@ def _overview(db: Session, day: dt.date) -> dict:
     }
 
 
-def _cards(db: Session, insights: list[Insight]) -> dict[int, glance.Card]:
+def _cards(db: Session, insights: list[Insight] | list[EarlierInsight]) -> dict[int, glance.Card]:
     """Each insight's at-a-glance head, keyed by id."""
     features = {f for i in insights for f in (i.feature_a, i.feature_b) if f}
     defs = {d.feature: d for d in db.execute(sa.select(FeatureDef).where(FeatureDef.feature.in_(features))).scalars()}
@@ -452,6 +453,11 @@ def insights_page(
         return redirect
     rows = db.execute(sa.select(Insight).order_by(Insight.score.desc())).scalars().all()
     sections = [(title, [i for i in rows if keep(i)]) for title, keep in INSIGHT_SECTIONS]
+    earlier = (
+        db.execute(sa.select(EarlierInsight).order_by(EarlierInsight.dropped_on.desc(), EarlierInsight.n.desc()))
+        .scalars()
+        .all()
+    )
     last_run = db.get(Setting, analysis_run.STATS_KEY)
     return templates.TemplateResponse(
         request,
@@ -464,6 +470,9 @@ def insights_page(
             "run": last_run.value if last_run else None,
             "csrf": session.csrf_token,
             "any": bool(rows),
+            "earlier": earlier,
+            "earlier_cards": _cards(db, list(earlier)),
+            "keep_days": analysis_history.KEEP_DAYS,
             "preliminary_days": PRELIMINARY_DAYS,
         },
     )

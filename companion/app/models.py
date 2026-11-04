@@ -153,6 +153,32 @@ class Insight(Base):
     score: Mapped[float] = mapped_column(Float)
     sentence: Mapped[str] = mapped_column(Text)
     details: Mapped[dict] = mapped_column(JSONB, server_default="{}")
+    first_seen: Mapped[dt.date | None] = mapped_column(Date, nullable=True)  # first run that reported it, carried over
+    last_seen: Mapped[dt.date | None] = mapped_column(Date, nullable=True)  # this run's day
+
+
+class EarlierInsight(Base):
+    """A finding an earlier run reported and the latest doesn't (roadmap B17). Shown, never analysed (R8)."""
+
+    __tablename__ = "earlier_insights"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    key: Mapped[str] = mapped_column(Text, unique=True)
+    kind: Mapped[str] = mapped_column(Text)
+    horizon: Mapped[str] = mapped_column(Text)
+    feature_a: Mapped[str] = mapped_column(Text)
+    feature_b: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lag: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    method: Mapped[str] = mapped_column(Text)
+    effect: Mapped[float] = mapped_column(Float)
+    p_adj: Mapped[float] = mapped_column(Float)
+    n: Mapped[int] = mapped_column(Integer)
+    strength: Mapped[str] = mapped_column(Text)
+    sentence: Mapped[str] = mapped_column(Text)
+    details: Mapped[dict] = mapped_column(JSONB, server_default="{}")
+    first_seen: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    last_held: Mapped[dt.date] = mapped_column(Date)
+    dropped_on: Mapped[dt.date] = mapped_column(Date)
 
 
 class Tracker(Base):

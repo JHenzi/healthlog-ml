@@ -25,7 +25,7 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | Wireframe | Page | State |
 |---|---|---|
 | 1a Overview | `/` | built: coverage strip, "worth exploring", "worth noting" (streaks, records; `app/highlights.py`), baseline sentences, quick add |
-| 1b Discoveries | `/insights` | built, with the likely-range bar (2026-10-19) |
+| 1b Discoveries | `/insights` | built, with the likely-range bar (2026-10-19); *since* dates and a quieter **Earlier discoveries** list for findings that dropped out (2026-11-04, B17) |
 | 1c Evidence | `/insights/{id}` | built: finding, method, effect, likely range, days, effective days, p. Raw-observation plot and "things that could explain this" to come |
 | 2a Daily log | `/review` | built: per-type controls, coloured ratings, tag chips, reviewed state. "Not recorded" toggling to come |
 | 2b Metric builder | `/trackers` | built, reshaped into three panels: what you track, day tags, and name + kind + only the needed detail, with ideas that fill in the form. Reminders come with web push (M11) |

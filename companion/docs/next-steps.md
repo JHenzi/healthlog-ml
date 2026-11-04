@@ -338,7 +338,10 @@ issue goes into `build.py` first.
   more day of data (12,101 tests), reported 0. Correct under the FDR bar, but
   to the user the pattern they were reading just disappears. Consider saying
   so ("1 pattern from the last run no longer clears the bar") rather than
-  showing an empty list. Planned as roadmap B17 (Earlier discoveries).
+  showing an empty list. **Built as roadmap B17** (2026-11-04): dropped
+  findings are listed under Earlier discoveries for 90 days. The history
+  starts with the first run after migration 0009; the two lost this autumn
+  aren't backfilled.
 
 - ~~**Coffee and beer counted as water (#45)**~~: done 2026-10-29. Water
   Llama writes each drink to Apple Health twice: as caffeine or alcohol,
