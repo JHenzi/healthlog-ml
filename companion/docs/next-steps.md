@@ -328,10 +328,12 @@ issue goes into `build.py` first.
 - *An amount without a value was refused.* Over the API it now logs 1, like a
   count, and a missing number says so in the error Siri speaks.
 
-- **Editable history (2026-11-04, Joe):** there's no place in the UI to fix
-  an entry's time or value; only undo. Add an edit on the tracker's entry
-  list that writes a correcting event (the old one stays in the event log,
-  like a tombstone), so derived tables still rebuild from the log.
+- ~~**Editable history (2026-11-04, Joe)**~~: done 2026-11-04. Each entry in
+  a tracker's History has **edit** (day, time, value; `POST
+  /entries/{id}/edit`), which appends an `edit` event, so the original stays
+  in the log and derived tables still rebuild from it. One-value-a-day kinds
+  can't be moved onto a day that has a value. Tags aren't editable (pick or
+  unpick them). Not over the API yet.
 
 - **A discovery can vanish on a rebuild (2026-11-04):** the nightly run
   reported 1 discovery (12,093 tests); a manual rebuild that morning, with one

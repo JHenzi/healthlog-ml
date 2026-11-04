@@ -30,7 +30,7 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | 2a Daily log | `/review` | built: per-type controls, coloured ratings, tag chips, reviewed state. "Not recorded" toggling to come |
 | 2b Metric builder | `/trackers` | built, reshaped into three panels: what you track, day tags, and name + kind + only the needed detail, with ideas that fill in the form. Reminders come with web push (M11) |
 | 3a Explore | — | not built: aligned timelines, scatter, calendar, lag option |
-| 3b Metric detail | `/metrics/{feature}`, `/trackers/{key}` | built: provenance, 30-day comparison, weekday profile as coloured cells, the last 30 days as a coloured Monday-first calendar (2026-11-04); counts and tags read yes/no and "% of days" |
+| 3b Metric detail | `/metrics/{feature}`, `/trackers/{key}` | built: provenance, 30-day comparison, weekday profile as coloured cells, the last 30 days as a coloured Monday-first calendar (2026-11-04); counts and tags read yes/no and "% of days". A tracker's History has **edit** next to delete (2026-11-04) |
 | My Metrics | `/metrics` | rebuilt 2026-11-04 (`_metric.html`): a tile per series (latest value, 60-day sparkline, a dot and chip for where the latest day falls among your own days, 30-day average ▲/▼ on the month before); counts and day tags as rows of 30 day squares, quiet ones folded away; State of Mind valence as one chart (a bar per day above or below neutral, a tick at the lowest moment). Order: sleep and Health, then what you log, then outside |
 | 4a Experiments | — | not built (M9) |
 | 4b Settings and data | — | not built: source health, export, delete |

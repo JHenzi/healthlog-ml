@@ -127,6 +127,10 @@ day ratings, your trackers and tags, weather and the almanac.
   makes a successor, so history never silently changes meaning (R12).
 - **Every entry is kept**: an append-only event log is the source of truth.
   Undo leaves a tombstone, and every daily series can be rebuilt from it.
+- **History is editable**: a tracker's History lists every entry with
+  **edit** (day, time, value) and **delete**. A fix is a new event next to
+  the original, so nothing is overwritten. A rating, yes/no, pick-one or
+  time can't be moved onto a day that already has one.
 - **Log from anywhere**: each tracker has a **Connect** page with its own
   URL and a token that can log that tracker and nothing else, plus a
   **paste-ready prompt for the Shortcuts app's AI builder**. It builds a

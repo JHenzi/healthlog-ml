@@ -285,6 +285,7 @@ def _render_detail(
         {
             "t": tracker,
             "entries": [(e, _display(e, tracker), _local(e.observed_at)) for e in entries],
+            "today": _today(),
             "locked": capture.has_data(db, tracker),
             "tokens": tokens,
             "new_token": new_token,
@@ -682,6 +683,55 @@ def delete_entry(
     capture.delete(db, client_id, source="web")
     db.commit()
     target = _back(back)
+    return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/entries/{client_id}/edit")
+def edit_entry(
+    client_id: uuid.UUID,
+    request: Request,
+    csrf: str = Form(""),
+    day: str = Form(""),
+    at: str = Form(""),
+    value: str = Form(""),
+    back: str = Form("/"),
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Fix an entry's day, time or value. The log keeps the old one: the edit is a new event (history editable)."""
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    if not _csrf_ok(session, csrf):
+        return _forbidden()
+    settings = get_settings()
+    target = _back(back)
+    try:
+        the_day = dt.date.fromisoformat(day)
+        if the_day > _today():
+            raise TrackerInputError("that day is in the future")
+        if not at.strip():
+            raise TrackerInputError("pick a time")
+        capture.edit(
+            db,
+            client_id,
+            value if value != "" else None,
+            observed_at=_parse_local_time(the_day, at),
+            source="web",
+            zone=settings.zone,
+            boundary=settings.day_boundary,
+        )
+    except KeyError:
+        db.rollback()
+        return Response("No such entry", status_code=status.HTTP_404_NOT_FOUND)
+    except (TrackerInputError, ValueError) as exc:
+        db.rollback()
+        row = db.get(Observation, client_id)
+        tracker = db.get(Tracker, row.tracker_id) if row else None
+        if tracker is None:
+            return Response("No such entry", status_code=status.HTTP_404_NOT_FOUND)
+        message = str(exc) if isinstance(exc, TrackerInputError) else "use a day like 2026-11-04"
+        return _render_detail(tracker.key, request, session, db, error=message)
+    db.commit()
     return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
 
 
