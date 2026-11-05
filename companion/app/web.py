@@ -280,10 +280,16 @@ def metric_detail(
     end = day - dt.timedelta(days=1)
     metric = feature.removeprefix("hl.") if feature.startswith("hl.") else None
     setting = db.get(MetricSetting, metric) if metric else None
+    fluids = fluid_links = None
+    if feature in metrics_view.FLUID_SERIES:  # B15: the three water series read as one stack
+        fluids = metrics_view.fluid_chart(*(features.series(db, f) for f in metrics_view.FLUID_SERIES), day)
+        fluid_links = [d for f in metrics_view.FLUID_SERIES if f != feature and (d := db.get(FeatureDef, f))]
     return templates.TemplateResponse(
         request,
         "metric_detail.html",
         {
+            "fluids": fluids,
+            "fluid_links": fluid_links,
             "d": definition,
             "s": summary,
             "spark": metrics_view.sparkline(values, end).split("|"),

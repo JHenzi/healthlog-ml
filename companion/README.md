@@ -103,6 +103,9 @@ The app has five sections: **Overview**, **Discovery**, **Capture**,
   you haven't used in 30 days fold away.
 - **Mood** as one chart: a bar per day above or below neutral, with a tick at
   the day's lowest moment.
+- **Water** as one stack on each water page: plain water and water from
+  coffee above the line, what alcohol takes off below it, and the day's net
+  (Apple Health's total). The analysis still keeps the three apart.
 - Ordered sleep and Health first, then what you log, then outside data.
 - **Each series' page**: a coloured calendar of the last 30 days, your
   average per weekday, and for HealthLog metrics the **settings** for how a
