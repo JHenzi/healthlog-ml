@@ -154,6 +154,47 @@ def mood_bars(mean: dict[dt.date, float], low: dict[dt.date, float], today: dt.d
     return out
 
 
+FLUID_WATER = "hl.dietary_water"
+FLUID_SERIES = (FLUID_WATER, "hl.dietary_water_from_caffeine", "hl.dietary_water_from_alcohol_consumption")
+
+
+@dataclass(frozen=True)
+class FluidDay:
+    day: dt.date
+    water: float | None  # plain water
+    coffee: float | None  # water Health counts for coffee
+    alcohol: float | None  # negative: what Health takes off for a drink
+    net: float | None  # the three added up: Apple Health's total; None when none of them has a value (R7)
+
+
+@dataclass(frozen=True)
+class FluidChart:
+    days: tuple[FluidDay, ...]
+    top: float  # the tallest day above the axis (water + coffee)
+    bottom: float  # the deepest day below it (alcohol, as a positive number)
+
+
+def fluid_chart(
+    water: dict[dt.date, float], coffee: dict[dt.date, float], alcohol: dict[dt.date, float], today: dt.date
+) -> FluidChart | None:
+    """Roadmap B15: the last 30 days of water as one stack, alcohol below the axis and the net marked.
+
+    Presentation only: the analysis keeps the three series apart. None when there's nothing to draw.
+    """
+    end = today - dt.timedelta(days=1)
+    days = []
+    for i in range(WINDOW_DAYS - 1, -1, -1):
+        day = end - dt.timedelta(days=i)
+        parts = (water.get(day), coffee.get(day), alcohol.get(day))
+        present = [v for v in parts if v is not None]
+        days.append(FluidDay(day, *parts, sum(present) if present else None))
+    if all(d.net is None for d in days):
+        return None
+    top = max((max(d.water or 0, 0) + max(d.coffee or 0, 0) for d in days), default=0)
+    bottom = max((-min(d.alcohol or 0, 0) for d in days), default=0)
+    return FluidChart(tuple(days), top or 1.0, bottom)
+
+
 def coverage(days_with_data: set[dt.date], end: dt.date, days: int = WINDOW_DAYS) -> list[tuple[dt.date, bool]]:
     """``(day, recorded)`` for the ``days`` days ending at ``end``, oldest first (the Overview coverage strip)."""
     start = end - dt.timedelta(days=days - 1)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 import uuid
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import select
@@ -244,6 +245,26 @@ def test_quick_add_shows_the_days_number_not_entries(signed_in, db, coffee):
     signed_in.post(f"/entries/{entry.client_id}/delete", data={"csrf": csrf, "back": "/"})
     db.refresh(entry)
     assert entry.deleted
+
+
+def test_an_entry_can_be_edited_from_the_tracker_page(signed_in, db, coffee):
+    capture.log(
+        db, coffee, 2, observed_at=None, client_id=None, source="test", zone=ZoneInfo("UTC"), boundary=dt.time(0)
+    )
+    db.flush()
+    entry = db.execute(select(Observation)).scalar_one()
+    page = signed_in.get("/trackers/coffee").text
+    assert f'action="/entries/{entry.client_id}/edit"' in page and "The original stays in the log" in page
+    csrf = _csrf(page)
+    day = (entry.day - dt.timedelta(days=1)).isoformat()
+    form = {"day": day, "at": "08:15", "value": "3", "back": "/trackers/coffee"}
+    assert signed_in.post(f"/entries/{entry.client_id}/edit", data=form).status_code == 403  # no CSRF
+    assert signed_in.post(f"/entries/{entry.client_id}/edit", data={**form, "csrf": csrf}).status_code == 200
+    db.refresh(entry)
+    assert entry.value_num == 3 and entry.day.isoformat() == day
+    bad = signed_in.post(f"/entries/{entry.client_id}/edit", data={**form, "csrf": csrf, "value": "-1"})
+    assert bad.status_code == 422 and "a count is a whole number" in bad.text
+    assert signed_in.post(f"/entries/{uuid.uuid4()}/edit", data={**form, "csrf": csrf}).status_code == 404
 
 
 def test_a_rating_has_one_value_a_day(signed_in, db):

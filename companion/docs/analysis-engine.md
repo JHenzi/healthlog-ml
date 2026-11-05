@@ -53,6 +53,12 @@ linked by definition to the families it is built from: the good-day score
   causal or diagnostic words. Each one carries its number of days and a
   strength word. A lint in the tests enforces both (R10, R13). The explain
   view shows the method, effect, raw and adjusted p, and effective n.
+- **Every run starts over.** The list is replaced on each run, so a finding
+  near the bar can come and go with one more day. The ones that drop out are
+  kept in `earlier_insights` with the days they held (roadmap B17,
+  `analysis/history.py`) and shown as *Earlier discoveries*. That history is
+  presentation only: the engine never reads it, so it can't bend the FDR
+  family (R8).
 
 ## Likely ranges
 

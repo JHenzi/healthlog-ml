@@ -120,7 +120,10 @@ def test_rebuild_equals_incremental_state(db, coffee, mood_scale):
             cid = rng.choice(live)
             row = db.get(Observation, cid)
             value = rng.randint(1, 3) if row.tracker_id == coffee.id else rng.randint(1, 5)
-            capture.edit(db, cid, value, observed_at=when, source="test", zone=NY, boundary=FOUR)
+            try:
+                capture.edit(db, cid, value, observed_at=when, source="test", zone=NY, boundary=FOUR)
+            except TrackerInputError:
+                pass  # a rating moved onto a day that has one: refused before anything is written
         elif action < 0.78:
             tag = rng.choice(["Slept badly", "travel"])
             capture.toggle_tag(
@@ -252,3 +255,27 @@ def test_a_time_tracker_can_be_changed_and_keeps_one_time_a_day(db, coffee):
         capture.set_day_time(db, walk, day, observed_at=other_day, **how)
     assert importer.run(db, _import_doc(), NY, FOUR)["kept yours"] == 0  # a repeat import leaves your time alone
     assert capture.day_values(db, walk, day)[0].observed_at == later
+
+
+def test_an_edit_is_a_new_event_and_survives_rebuild(db, coffee):
+    """History is editable: the fix is appended to the log, the original entry stays in it."""
+    entry = _log(db, coffee, 2, when=dt.datetime(2026, 10, 20, 9, 0, tzinfo=NY)).observation
+    moved = dt.datetime(2026, 10, 18, 15, 30, tzinfo=NY)
+    capture.edit(db, entry.client_id, 3, observed_at=moved, source="test", zone=NY, boundary=FOUR)
+    before = _state(db)
+    capture.rebuild(db, NY, FOUR)
+    assert _state(db) == before
+    row = db.get(Observation, entry.client_id)
+    assert row.value_num == 3 and row.day == dt.date(2026, 10, 18)
+    events = db.execute(select(Event).order_by(Event.seq)).scalars().all()
+    assert [e.op for e in events] == ["log", "edit"] and events[0].payload["value_num"] == 2
+
+
+def test_an_edit_cant_give_a_one_value_day_two_values(db, mood_scale):
+    one = _log(db, mood_scale, 3, when=dt.datetime(2026, 10, 18, 9, 0, tzinfo=NY)).observation
+    two = _log(db, mood_scale, 4, when=dt.datetime(2026, 10, 19, 9, 0, tzinfo=NY)).observation
+    with pytest.raises(TrackerInputError, match="already has a value"):
+        capture.edit(db, two.client_id, 4, observed_at=one.observed_at, source="test", zone=NY, boundary=FOUR)
+    # Changing the time within its own day is fine.
+    later = dt.datetime(2026, 10, 19, 21, 0, tzinfo=NY)
+    assert capture.edit(db, two.client_id, 5, observed_at=later, source="test", zone=NY, boundary=FOUR).value_num == 5

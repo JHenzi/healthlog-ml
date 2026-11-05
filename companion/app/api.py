@@ -15,7 +15,7 @@ from . import auth, capture, dayrating, today
 from .auth import TRACKER_KEY_RE
 from .config import get_settings
 from .db import get_db
-from .models import ApiToken, Insight, Observation, Tracker
+from .models import ApiToken, EarlierInsight, Insight, Observation, Tracker
 from .timeutil import current_day
 from .trackers import TrackerInputError
 
@@ -75,9 +75,28 @@ def get_insights(db: Session = Depends(get_db), _token: ApiToken = Depends(requi
                 "n": i.n,
                 "strength": i.strength,
                 "computed_at": i.computed_at.isoformat(),
+                "first_seen": i.first_seen.isoformat() if i.first_seen else None,
             }
             for i in rows
-        ]
+        ],
+        "earlier": [
+            {
+                "kind": e.kind,
+                "horizon": e.horizon,
+                "sentence": e.sentence,
+                "feature_a": e.feature_a,
+                "feature_b": e.feature_b,
+                "lag": e.lag,
+                "method": e.method,
+                "effect": e.effect,
+                "p_adj": e.p_adj,
+                "n": e.n,
+                "strength": e.strength,
+                "first_seen": e.first_seen.isoformat() if e.first_seen else None,
+                "last_held": e.last_held.isoformat(),
+            }
+            for e in db.execute(sa.select(EarlierInsight).order_by(EarlierInsight.dropped_on.desc())).scalars()
+        ],
     }
 
 

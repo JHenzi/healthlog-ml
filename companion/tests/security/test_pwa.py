@@ -14,6 +14,13 @@ def test_manifest_is_public_and_full_screen(client):
     assert r.json()["display"] == "standalone" and r.json()["start_url"] == "/"
 
 
+def test_manifest_icons_are_versioned_so_a_new_icon_replaces_a_cached_one(client):
+    v = pwa.static_version()
+    icons = client.get("/manifest.webmanifest").json()["icons"]
+    assert icons and all(i["src"].endswith(f"?v={v}") for i in icons)
+    assert f'href="/manifest.webmanifest?v={v}"' in client.get("/login").text
+
+
 def test_service_worker_carries_the_static_version_and_is_never_cached(client):
     r = client.get("/sw.js")
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/javascript")

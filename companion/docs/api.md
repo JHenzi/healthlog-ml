@@ -72,12 +72,20 @@ records) and data problems.
 
 ### `GET /api/insights`
 
-Scope `read`. Every reported finding, strongest first.
+Scope `read`. Every finding the latest run reported, strongest first, with
+`first_seen`, the first run's day that reported it. `earlier` holds findings
+an earlier run reported and the latest doesn't (they no longer clear the bar
+with the newer data), most recently dropped first, with the days they held;
+each is listed for 90 days or until it clears the bar again.
 
 ```json
 {"insights": [{"id": 12, "kind": "association", "horizon": "day", "sentence": "…",
   "feature_a": "sleep.total_h", "feature_b": "hl.step_count", "lag": 1, "method": "spearman",
-  "effect": 0.42, "p_adj": 0.01, "n": 61, "strength": "moderate", "computed_at": "2026-10-21T08:15:02+00:00"}]}
+  "effect": 0.42, "p_adj": 0.01, "n": 61, "strength": "moderate", "computed_at": "2026-10-21T08:15:02+00:00",
+  "first_seen": "2026-10-19"}],
+ "earlier": [{"kind": "association", "horizon": "day", "sentence": "…", "feature_a": "weather.precipitation",
+  "feature_b": "almanac.day_length", "lag": 1, "method": "spearman", "effect": 0.31, "p_adj": 0.09, "n": 58,
+  "strength": "weak", "first_seen": "2026-10-31", "last_held": "2026-11-01"}]}
 ```
 
 ### `GET /api/trackers`

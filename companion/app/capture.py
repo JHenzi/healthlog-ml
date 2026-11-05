@@ -464,6 +464,11 @@ def edit(
     when = observed_at or row.observed_at
     check_time(when, now_utc())
     value_num, value_text = parse_value(spec_of(tracker), raw_value)
+    new_day = local_day(when, zone, boundary)
+    if tracker.type in SINGLE_VALUE_TYPES + ("time",) and new_day != row.day:
+        taken = [o for o in day_values(db, tracker, new_day) if o.client_id != client_id]
+        if taken:  # one value per day: moving it there would give the day two
+            raise TrackerInputError(f"{new_day:%b %-d} already has a value; change that one instead")
     payload = {
         "tracker": tracker.key,
         "observed_at": when.isoformat(),

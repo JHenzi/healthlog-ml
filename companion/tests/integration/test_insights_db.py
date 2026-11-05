@@ -7,11 +7,11 @@ import re
 
 import numpy as np
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from app import auth
 from app.analysis import run as analysis
-from app.models import DailyFeature, FeatureDef, Insight
+from app.models import DailyFeature, EarlierInsight, FeatureDef, Insight
 
 START = dt.date(2026, 6, 1)
 DAYS = 100
@@ -79,6 +79,43 @@ def test_run_replaces_previous_insights(db, planted):
     assert db.execute(select(func.count()).select_from(Insight)).scalar_one() == first
 
 
+def _steps_sleep(rows):
+    return [i for i in rows if {i.feature_a, i.feature_b} == {"hl.step_count", "sleep.total_h"}]
+
+
+def test_a_finding_that_drops_out_is_kept_as_earlier_and_moves_back_when_it_returns(db, planted):
+    """Roadmap B17: the list is still replaced every run, but a dropped finding stays visible, with its days."""
+    analysis.run(db, TODAY - dt.timedelta(days=1))
+    analysis.run(db, TODAY)
+    link = _steps_sleep(db.execute(select(Insight)).scalars().all())[0]
+    assert link.first_seen == TODAY - dt.timedelta(days=1) and link.last_seen == TODAY  # carried over
+
+    saved = db.execute(select(DailyFeature).where(DailyFeature.feature == "sleep.total_h")).scalars().all()
+    kept = [(d.day, d.value) for d in saved]
+    db.execute(delete(DailyFeature).where(DailyFeature.feature == "sleep.total_h"))
+    later = TODAY + dt.timedelta(days=1)
+    analysis.run(db, later)
+    assert not _steps_sleep(db.execute(select(Insight)).scalars().all())
+    earlier = _steps_sleep(db.execute(select(EarlierInsight)).scalars().all())
+    assert earlier and earlier[0].last_held == TODAY and earlier[0].dropped_on == later
+    assert earlier[0].first_seen == TODAY - dt.timedelta(days=1) and earlier[0].sentence == link.sentence
+
+    db.add_all(DailyFeature(day=day, feature="sleep.total_h", value=value) for day, value in kept)
+    db.flush()
+    analysis.run(db, later + dt.timedelta(days=1))
+    assert _steps_sleep(db.execute(select(Insight)).scalars().all())
+    assert not _steps_sleep(db.execute(select(EarlierInsight)).scalars().all())
+
+
+def test_earlier_discoveries_expire(db, planted):
+    analysis.run(db, TODAY)
+    db.execute(delete(DailyFeature).where(DailyFeature.feature == "sleep.total_h"))
+    analysis.run(db, TODAY)
+    assert db.execute(select(func.count()).select_from(EarlierInsight)).scalar_one() >= 1
+    analysis.run(db, TODAY + dt.timedelta(days=200))
+    assert db.execute(select(func.count()).select_from(EarlierInsight)).scalar_one() == 0
+
+
 def _sign_in(client, db):
     auth.set_password(db, PASSWORD)
     db.flush()
@@ -97,9 +134,15 @@ def test_insights_pages_and_api(client, db, planted):
     detail = client.get(f"/insights/{insight_id}")
     assert detail.status_code == 200 and "Benjamini-Hochberg" in detail.text
     assert client.get("/insights/999999").status_code == 404
+    assert "Earlier discoveries" not in page.text and "since " in page.text
+
+    db.execute(delete(DailyFeature).where(DailyFeature.feature == "sleep.total_h"))
+    analysis.run(db, TODAY + dt.timedelta(days=1))
+    page = client.get("/insights")
+    assert "Earlier discoveries" in page.text and "no longer clears the bar" in page.text
 
     raw, _ = auth.create_token(db, "t", "read")
     api = client.get("/api/insights", headers={"Authorization": f"Bearer {raw}"}).json()
-    assert api["insights"] and {"sentence", "n", "strength", "p_adj"} <= set(api["insights"][0])
+    assert "insights" in api and api["earlier"] and {"sentence", "n", "strength", "last_held"} <= set(api["earlier"][0])
     log_only, _ = auth.create_token(db, "t2", "log:coffee")
     assert client.get("/api/insights", headers={"Authorization": f"Bearer {log_only}"}).status_code == 403

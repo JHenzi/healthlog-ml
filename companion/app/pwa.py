@@ -40,8 +40,8 @@ def rendered_at() -> str:
 
 
 MANIFEST = {
-    "name": "Companion",
-    "short_name": "Companion",
+    "name": "Health and Discovery Companion",
+    "short_name": "Companion",  # the label under the Home Screen icon: about 12 characters fit
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
@@ -57,7 +57,10 @@ MANIFEST = {
 
 @router.get("/manifest.webmanifest", include_in_schema=False)
 def manifest() -> Response:
-    return Response(json.dumps(MANIFEST), media_type="application/manifest+json")
+    """The icons carry ``?v=`` like every other static file, so a new icon replaces a cached one."""
+    v = static_version()
+    body = {**MANIFEST, "icons": [{**i, "src": f"{i['src']}?v={v}"} for i in MANIFEST["icons"]]}
+    return Response(json.dumps(body), media_type="application/manifest+json")
 
 
 @router.get("/sw.js", include_in_schema=False)

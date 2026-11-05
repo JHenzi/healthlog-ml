@@ -166,3 +166,30 @@ def test_mood_valence_is_one_chart(signed_in, db):
     db.flush()
     listing = signed_in.get("/metrics").text
     assert 'class="mood-chart"' in listing and 'class="mtile' not in listing
+
+
+def test_water_pages_show_the_three_series_as_one_stack(signed_in, db):
+    """Roadmap B15: water, water from coffee and water from alcohol read as one chart on each of their pages."""
+    import datetime as dt
+
+    from app.web import _today
+
+    for feature, label in (
+        ("hl.dietary_water", "Water Intake"),
+        ("hl.dietary_water_from_caffeine", "Water from coffee"),
+        ("hl.dietary_water_from_alcohol_consumption", "Water from alcohol"),
+    ):
+        db.add(FeatureDef(feature=feature, label=label, unit="mL", source="healthlog", kind="continuous"))
+    day = _today() - dt.timedelta(days=2)
+    db.add_all(
+        [
+            DailyFeature(day=day, feature="hl.dietary_water", value=500.0),
+            DailyFeature(day=day, feature="hl.dietary_water_from_caffeine", value=142.0),
+            DailyFeature(day=day, feature="hl.dietary_water_from_alcohol_consumption", value=-308.0),
+        ]
+    )
+    db.flush()
+    page = signed_in.get("/metrics/hl.dietary_water_from_alcohol_consumption").text
+    assert "All water together" in page and 'class="fl-alcohol"' in page and 'class="fl-coffee"' in page
+    assert "net 334 mL" in page and 'href="/metrics/hl.dietary_water"' in page
+    assert "All water together" not in signed_in.get("/metrics/hl.step_count").text

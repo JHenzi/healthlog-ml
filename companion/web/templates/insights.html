@@ -14,7 +14,9 @@
     <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/insights">
     <button type="submit" class="link">Run it now</button>
   </form>
-  {% if not any %}<p class="tag tag-quiet">Not enough data yet</p>
+  {% if not any and earlier %}<p class="tag tag-quiet">Nothing clears the bar today</p>
+  <p>With the newer days, no pattern clears the bar right now. The ones that did are under Earlier discoveries below; with more data they may come back.</p>
+  {% elif not any %}<p class="tag tag-quiet">Not enough data yet</p>
   <p>Nothing clears the bar yet. With many patterns tested, a strong-looking link on a few weeks of data is still often chance, so the engine waits for more days. Most patterns need 6–8 weeks of consistent data; this list grows as data accumulates.</p>{% endif %}
 </section>
 {% for title, items in sections %}{% if items %}
@@ -26,9 +28,22 @@
     <p class="detail-line">{{ i.sentence }}</p>
     {{ range_bar(ranges[i.id]) }}
     {% if adjusted[i.id] %}<p class="recheck recheck-{{ adjusted[i.id].verdict }}">{{ adjusted[i.id].text|capitalize }}</p>{% endif %}
-    <p class="meta">{{ i.strength|capitalize }} · adjusted p {{ "%.2g"|format(i.p_adj) }} · Inspect evidence ›</p>
+    <p class="meta">{{ i.strength|capitalize }} · adjusted p {{ "%.2g"|format(i.p_adj) }}{% if i.first_seen %} · since {{ i.first_seen.strftime("%b %-d") }}{% endif %} · Inspect evidence ›</p>
   </a>
   {% endfor %}
 </section>
 {% endif %}{% endfor %}
+{% if earlier %}
+<section class="card earlier">
+  <h2>Earlier discoveries</h2>
+  <p class="muted small">Patterns an earlier run reported that no longer clear the bar with the newer data. That's normal near the bar: one more day can tip it either way. Kept here for {{ keep_days }} days; if one clears the bar again it moves back up.</p>
+  {% for e in earlier %}
+  <div class="discovery glance earlier-item">
+    {{ discovery_head(earlier_cards[e.id], e.n, preliminary_days) }}
+    <p class="detail-line">{{ e.sentence }}</p>
+    <p class="meta">Held {% if e.first_seen and e.first_seen != e.last_held %}{{ e.first_seen.strftime("%b %-d") }} – {% endif %}{{ e.last_held.strftime("%b %-d") }} · {{ e.strength }} then · no longer clears the bar</p>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
 {% endblock %}
