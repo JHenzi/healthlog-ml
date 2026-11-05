@@ -311,6 +311,33 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
+**Paused 2026-11-04: not done yet** (fork PR #65 holds everything finished
+that day):
+- **Merge PR #65.** It also carries the rename, the icon and the README
+  tour, which missed #64's merge; `main` lacks them until #65 lands.
+- **README screenshots (Joe: "we should show photos").** Paused, nothing
+  committed. The way to make them, with synthetic data only (R4): run
+  `companion/scripts/test.sh` once (it starts the test DB), then
+  `companion/scripts/design_preview/run.sh <out-dir>`, which renders every
+  page to `<out-dir>/preview/screens/*.html`. Screenshot each one at phone
+  width with the local headless Chrome image:
+  `docker run --rm -v <dir>:/w zenika/alpine-chrome:124 --no-sandbox --headless --hide-scrollbars --window-size=390,1400 --screenshot=/w/<page>.png file:///w/<page>.html`.
+  Pick Overview, Discovery, My Metrics, a tracker and Good days, save them
+  under `companion/docs/screenshots/` and add them to the README tour.
+  Check every image for real data before committing.
+- **B15 on Grafana:** the stacked water chart is built on the Companion's
+  water pages only; the Companion Grafana dashboard still shows three lines.
+- **Editable history, the rest:** tag entries can't be edited (pick or
+  unpick them), and there's no edit over the API (`PATCH /api/entries/{id}`
+  would need a docs/api.md entry, R18).
+- **B17 has no backfill:** Earlier discoveries starts with the first run
+  after migration 0009. The two that vanished this autumn are only in the
+  nightly backups.
+- **Purge a tracker or tag (M11)** and the other items below are still open.
+- **Repo root:** `healthlog-ml-favicon-AIgenerated.jpg` and
+  `IntelligentHVAC.png` are untracked. The icon's source is already copied
+  to `docs/design/icon-source.jpg`; delete or ignore the root copies.
+
 **Fixed 2026-11-04** (one fork PR):
 - *Rebuild on Discovery sent you to My Metrics.* It now returns to the page
   it was pressed on (only `/insights` or `/metrics`, never an outside URL),
