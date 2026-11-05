@@ -92,7 +92,7 @@
   </svg>
   <p class="mood-dates muted small"><span>{{ bars[0].day.strftime("%b %-d") }}</span><span>{{ bars[-1].day.strftime("%b %-d") }}</span></p>
 </div>
-<p class="muted small">Each day's average mood, up for pleasant and down for unpleasant; the thin line marks the day's lowest moment. Hatched: nothing logged.
+<p class="muted small">Each day's average mood, up for pleasant and down for unpleasant; the thin line marks the day's lowest moment. Grey: nothing logged.
 {% if links %}Series: {% for d in links %}<a href="/metrics/{{ d.feature }}">{{ d.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}{% endif %}</p>
 {% endif %}
 {% endmacro %}
@@ -117,7 +117,7 @@
   <p class="mood-dates muted small"><span>{{ c.days[0].day.strftime("%b %-d") }}</span><span>{{ c.days[-1].day.strftime("%b %-d") }}</span></p>
 </div>
 <p class="fluids-key small"><span><i class="fl-water"></i>Water</span><span><i class="fl-coffee"></i>From coffee</span><span><i class="fl-alcohol"></i>From alcohol (taken off)</span><span><i class="fl-net"></i>Net, on days with a drink</span></p>
-<p class="muted small">Apple Health's water total is the three added up; here they're kept apart, the way the analysis keeps them. Hatched: nothing recorded.
+<p class="muted small">Apple Health's water total is the three added up; here they're kept apart, the way the analysis keeps them. Grey: nothing recorded.
 {% if links %}Series: {% for d in links %}<a href="/metrics/{{ d.feature }}">{{ d.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}{% endif %}</p>
 {% endif %}
 {% endmacro %}
