@@ -157,3 +157,5 @@ html.is-loading::before {
 .push-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 ul.plain { list-style: none; margin: 0 0 var(--space-3); padding: 0; }
 ul.plain li { padding: var(--space-1) 0; border-bottom: 1px solid var(--color-divider); font-size: 14px; }
+a.brand { color: var(--color-accent-strong); }
+@media (max-width: 480px) { .brand { font-size: 17px; } }

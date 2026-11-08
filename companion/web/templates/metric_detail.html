@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ d.label }} · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
-{% from "_metric.html" import spark as spark_chart, calendar, key, BAND_WORDS %}
+{% from "_metric.html" import spark as spark_chart, calendar, key, fluids_chart, BAND_WORDS %}
 {% block content %}
 <section class="card">
   <p class="kicker"><a href="/metrics">‹ My Metrics</a></p>
@@ -20,6 +20,13 @@
     <div><dt>30 days before</dt><dd>{% if s.prior and yes_no %}{{ (s.prior.mean * 100)|round|int }}% of days{% elif s.prior %}{{ fmt(s.prior.mean, d.unit) }} <span class="muted small">{{ s.prior.n }} days</span>{% else %}too few days{% endif %}</dd></div>
   </dl>
 </section>
+
+{% if fluids %}
+<section class="card">
+  <h2>All water together</h2>
+  {{ fluids_chart(fluids, d.unit or "", fluid_links) }}
+</section>
+{% endif %}
 
 <section class="card">
   <h2>The last 30 days</h2>

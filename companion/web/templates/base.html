@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta name="rendered-at" content="{{ rendered_at() }}">
-  <title>{% block title %}Companion{% endblock %}</title>
-  <link rel="manifest" href="/manifest.webmanifest">
+  <title>{% block title %}Health and Discovery Companion{% endblock %}</title>
+  <link rel="manifest" href="/manifest.webmanifest?v={{ static_v }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png?v={{ static_v }}">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v={{ static_v }}">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -20,7 +21,7 @@
 </head>
 <body>
   <header class="bar">
-    <span class="brand">Companion</span>
+    <a class="brand" href="/"><img src="/static/icons/favicon-32.png?v={{ static_v }}" alt="" width="24" height="24">Health and Discovery Companion</a>
     {% block nav %}{% endblock %}
   </header>
   <main>

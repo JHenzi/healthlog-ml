@@ -92,7 +92,32 @@
   </svg>
   <p class="mood-dates muted small"><span>{{ bars[0].day.strftime("%b %-d") }}</span><span>{{ bars[-1].day.strftime("%b %-d") }}</span></p>
 </div>
-<p class="muted small">Each day's average mood, up for pleasant and down for unpleasant; the thin line marks the day's lowest moment. Hatched: nothing logged.
+<p class="muted small">Each day's average mood, up for pleasant and down for unpleasant; the thin line marks the day's lowest moment. Grey: nothing logged.
+{% if links %}Series: {% for d in links %}<a href="/metrics/{{ d.feature }}">{{ d.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}{% endif %}</p>
+{% endif %}
+{% endmacro %}
+
+{% macro fluids_chart(c, unit, links) %}
+{% if c %}{% set span = c.top + c.bottom %}{% set H = 96 %}{% set zero = 4 + c.top / span * H %}{% set k = H / span %}
+<div class="fluids-chart">
+  <svg viewBox="0 0 300 104" preserveAspectRatio="none" role="img" aria-label="Water over the last 30 days: plain water and water from coffee stacked above the line, alcohol below it, and each day's net">
+    <line class="mood-zero" x1="0" y1="{{ zero }}" x2="300" y2="{{ zero }}"/>
+    {% for d in c.days %}{% set x = loop.index0 * 10 + 1.5 %}
+    {% if d.net is none %}<rect class="mood-none" x="{{ x }}" y="{{ zero - 3 }}" width="7" height="6" rx="1"/>
+    {% else %}
+    {% set w = [d.water or 0, 0]|max * k %}{% set cf = [d.coffee or 0, 0]|max * k %}{% set al = [-(d.alcohol or 0), 0]|max * k %}
+    <g><title>{{ d.day.strftime("%a %b %-d") }}: water {{ "%g"|format(d.water|round|int) if d.water is not none else "–" }}{% if d.coffee %}, from coffee {{ "%g"|format(d.coffee|round|int) }}{% endif %}{% if d.alcohol %}, from alcohol {{ "%g"|format(d.alcohol|round|int) }}{% endif %}; net {{ "%g"|format(d.net|round|int) }} {{ unit }}</title>
+    {% if w %}<rect class="fl-water" x="{{ x }}" y="{{ zero - w }}" width="7" height="{{ w }}"/>{% endif %}
+    {% if cf %}<rect class="fl-coffee" x="{{ x }}" y="{{ zero - w - cf }}" width="7" height="{{ cf }}"/>{% endif %}
+    {% if al %}<rect class="fl-alcohol" x="{{ x }}" y="{{ zero }}" width="7" height="{{ al }}"/>{% endif %}
+    {% if d.alcohol %}<line class="mood-low" x1="{{ x - 0.5 }}" x2="{{ x + 7.5 }}" y1="{{ zero - d.net * k }}" y2="{{ zero - d.net * k }}"/>{% endif %}
+    </g>
+    {% endif %}{% endfor %}
+  </svg>
+  <p class="mood-dates muted small"><span>{{ c.days[0].day.strftime("%b %-d") }}</span><span>{{ c.days[-1].day.strftime("%b %-d") }}</span></p>
+</div>
+<p class="fluids-key small"><span><i class="fl-water"></i>Water</span><span><i class="fl-coffee"></i>From coffee</span><span><i class="fl-alcohol"></i>From alcohol (taken off)</span><span><i class="fl-net"></i>Net, on days with a drink</span></p>
+<p class="muted small">Apple Health's water total is the three added up; here they're kept apart, the way the analysis keeps them. Grey: nothing recorded.
 {% if links %}Series: {% for d in links %}<a href="/metrics/{{ d.feature }}">{{ d.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}{% endif %}</p>
 {% endif %}
 {% endmacro %}

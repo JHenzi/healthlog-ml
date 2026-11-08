@@ -37,3 +37,18 @@ def test_mood_bars_colour_by_side_and_keep_gaps():
     assert (bars[-1].band, bars[-1].low) == (4, -0.2)  # pleasant: moss, with its lowest moment
     assert bars[-2].band == 0  # unpleasant: clay
     assert bars[0].mean is None and bars[0].band is None  # nothing logged is no bar, not neutral
+
+
+def test_fluid_chart_stacks_water_and_coffee_puts_alcohol_below_and_keeps_missing_missing():
+    today = dt.date(2026, 11, 4)
+    d1, d2, d3 = (today - dt.timedelta(days=n) for n in (3, 2, 1))
+    c = metrics_view.fluid_chart({d1: 500.0, d2: 300.0}, {d1: 142.0}, {d2: -308.0}, today)
+    by_day = {d.day: d for d in c.days}
+    assert len(c.days) == 30 and c.days[-1].day == d3
+    assert by_day[d1].net == 642.0 and by_day[d2].net == -8.0
+    assert by_day[d3].net is None  # nothing recorded is not zero (R7)
+    assert c.top == 642.0 and c.bottom == 308.0
+
+
+def test_fluid_chart_is_none_without_data():
+    assert metrics_view.fluid_chart({}, {}, {}, dt.date(2026, 11, 4)) is None

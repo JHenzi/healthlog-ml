@@ -46,9 +46,30 @@
   <ul class="entries">
     {% for e, shown, local in entries %}
     <li><span>{{ local.strftime("%a %b %-d, %H:%M") }}{% if shown %} · {{ shown }}{% endif %} <span class="muted small">{{ e.source }}</span></span>
+      <span class="entry-actions">
+      {% if e.tag is none %}
+      <details class="entry-edit"><summary class="link small">edit</summary>
+        <form method="post" action="/entries/{{ e.client_id }}/edit" class="settings">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/trackers/{{ t.key }}">
+          <div class="pair">
+            <div><label for="d-{{ e.client_id }}">Day</label><input id="d-{{ e.client_id }}" type="date" name="day" value="{{ e.day.isoformat() }}" max="{{ today.isoformat() }}" required></div>
+            <div><label for="a-{{ e.client_id }}">Time</label><input id="a-{{ e.client_id }}" type="time" name="at" value="{{ local.strftime('%H:%M') }}" required></div>
+          </div>
+          {% set vid = "v-" ~ e.client_id %}
+          {% if t.type == "choice" %}<label for="{{ vid }}">Value</label><select id="{{ vid }}" name="value">{% for o in t.options %}<option value="{{ o }}"{% if o == e.value_text %} selected{% endif %}>{{ o|replace("_", " ") }}</option>{% endfor %}</select>
+          {% elif t.type == "check" %}<label for="{{ vid }}">Value</label><select id="{{ vid }}" name="value"><option value="yes"{% if (e.value_num or 0) > 0 %} selected{% endif %}>yes</option><option value="no"{% if not (e.value_num or 0) > 0 %} selected{% endif %}>no</option></select>
+          {% elif t.type == "note" %}<label for="{{ vid }}">Text</label><textarea id="{{ vid }}" name="value" rows="3">{{ e.value_text or "" }}</textarea>
+          {% elif t.type in ("count", "quantity", "duration", "scale", "moment") %}<label for="{{ vid }}">{% if t.type == "moment" %}Intensity (optional){% else %}Value{% if t.unit %} ({{ t.unit }}){% endif %}{% endif %}</label><input id="{{ vid }}" name="value" inputmode="decimal" value="{{ '%g'|format(e.value_num) if e.value_num is not none else '' }}">
+          {% endif %}
+          <button type="submit" class="secondary">Save change</button>
+          <p class="muted small">The original stays in the log; the change is recorded next to it.</p>
+        </form>
+      </details>
+      {% endif %}
       <form method="post" action="/entries/{{ e.client_id }}/delete" class="inline">
         <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/trackers/{{ t.key }}">
-        <button type="submit" class="link small">delete</button></form></li>
+        <button type="submit" class="link small">delete</button></form>
+      </span></li>
     {% endfor %}
   </ul>
   {% else %}<p class="muted">Nothing logged yet.</p>{% endif %}

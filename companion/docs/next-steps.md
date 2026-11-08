@@ -311,6 +311,33 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
+**Paused 2026-11-04: not done yet** (fork PR #65 holds everything finished
+that day):
+- **Merge PR #65.** It also carries the rename, the icon and the README
+  tour, which missed #64's merge; `main` lacks them until #65 lands.
+- **README screenshots (Joe: "we should show photos").** Paused, nothing
+  committed. The way to make them, with synthetic data only (R4): run
+  `companion/scripts/test.sh` once (it starts the test DB), then
+  `companion/scripts/design_preview/run.sh <out-dir>`, which renders every
+  page to `<out-dir>/preview/screens/*.html`. Screenshot each one at phone
+  width with the local headless Chrome image:
+  `docker run --rm -v <dir>:/w zenika/alpine-chrome:124 --no-sandbox --headless --hide-scrollbars --window-size=390,1400 --screenshot=/w/<page>.png file:///w/<page>.html`.
+  Pick Overview, Discovery, My Metrics, a tracker and Good days, save them
+  under `companion/docs/screenshots/` and add them to the README tour.
+  Check every image for real data before committing.
+- **B15 on Grafana:** the stacked water chart is built on the Companion's
+  water pages only; the Companion Grafana dashboard still shows three lines.
+- **Editable history, the rest:** tag entries can't be edited (pick or
+  unpick them), and there's no edit over the API (`PATCH /api/entries/{id}`
+  would need a docs/api.md entry, R18).
+- **B17 has no backfill:** Earlier discoveries starts with the first run
+  after migration 0009. The two that vanished this autumn are only in the
+  nightly backups.
+- **Purge a tracker or tag (M11)** and the other items below are still open.
+- **Repo root:** `healthlog-ml-favicon-AIgenerated.jpg` and
+  `IntelligentHVAC.png` are untracked. The icon's source is already copied
+  to `docs/design/icon-source.jpg`; delete or ignore the root copies.
+
 **Fixed 2026-11-04** (one fork PR):
 - *Rebuild on Discovery sent you to My Metrics.* It now returns to the page
   it was pressed on (only `/insights` or `/metrics`, never an outside URL),
@@ -328,17 +355,22 @@ issue goes into `build.py` first.
 - *An amount without a value was refused.* Over the API it now logs 1, like a
   count, and a missing number says so in the error Siri speaks.
 
-- **Editable history (2026-11-04, Joe):** there's no place in the UI to fix
-  an entry's time or value; only undo. Add an edit on the tracker's entry
-  list that writes a correcting event (the old one stays in the event log,
-  like a tombstone), so derived tables still rebuild from the log.
+- ~~**Editable history (2026-11-04, Joe)**~~: done 2026-11-04. Each entry in
+  a tracker's History has **edit** (day, time, value; `POST
+  /entries/{id}/edit`), which appends an `edit` event, so the original stays
+  in the log and derived tables still rebuild from it. One-value-a-day kinds
+  can't be moved onto a day that has a value. Tags aren't editable (pick or
+  unpick them). Not over the API yet.
 
 - **A discovery can vanish on a rebuild (2026-11-04):** the nightly run
   reported 1 discovery (12,093 tests); a manual rebuild that morning, with one
   more day of data (12,101 tests), reported 0. Correct under the FDR bar, but
   to the user the pattern they were reading just disappears. Consider saying
   so ("1 pattern from the last run no longer clears the bar") rather than
-  showing an empty list. Planned as roadmap B17 (Earlier discoveries).
+  showing an empty list. **Built as roadmap B17** (2026-11-04): dropped
+  findings are listed under Earlier discoveries for 90 days. The history
+  starts with the first run after migration 0009; the two lost this autumn
+  aren't backfilled.
 
 - ~~**Coffee and beer counted as water (#45)**~~: done 2026-10-29. Water
   Llama writes each drink to Apple Health twice: as caffeine or alcohol,
