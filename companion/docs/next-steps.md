@@ -18,7 +18,7 @@ risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 | Fork `main` (`JHenzi/healthlog-ml`) | upstream `dev` as of #127 (synced 2026-10-29) + the Companion through reminders, the installable app and in-place forms (fork PRs #1–#50, CI green) |
 | Upstream PRs | all ours merged: #104, #105, #108, #111 (State of Mind), #113, #117 (caffeine, HRV RMSSD), #118 (heart rate notifications, ECG), #126 (Outdoor/Indoor Cycling names). His #116 (symptoms, medications), #119 (German symptom names) #120 (telemetry off), #122 (workout `source` as an object, by marciotoze) and #127 (`rederive-workout-types`) are in too |
 | Live HealthLog | `healthlog-local:c2131ca`, built from the fork (`deploy.sh healthlog build`), schema `0027_timescaledb_telemetry_off` |
-| Live Companion | `healthlog-companion` (web, `127.0.0.1:8020`) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis) |
+| Live Companion | `healthlog-companion` (web, `127.0.0.1:8020`) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis, and the same refresh within 15 min of new HealthLog data) |
 | Companion DB | schema `companion`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
 | Data | 106 daily series since 2026-07-15, weather (Cincinnati, since 2026-07-15) and the almanac included; sleep since 2026-09-24 (that is all Apple Health has); 3 heart rate notifications, 6 ECGs; 0 symptoms, 0 medications; workouts since 2026-10-28 (an HAE Workouts automation with workout metrics and route data on) |
 | Insights | engine live and validated; 0 findings yet: 3,459 tests over 51 of 105 series on 2026-10-20 (R17 tests everything both ways). Sleep reaches 56 days (spread-over-days) in mid-November |
@@ -310,6 +310,12 @@ issue goes into `build.py` first.
   refresh today. Watch it as trackers and weather add series (risks.md F1).
 
 ### 4.5 Found along the way (do when convenient)
+
+- **Health Auto Export went quiet for a day (2026-11-09):** nothing arrived
+  from 08:17 on 11/9 until 08:25 on 11/10, when the whole day came in one
+  batch. The Companion now refreshes within 15 minutes of new data, so the
+  late day shows up promptly. A "no HealthLog data for N hours" notice on
+  Today would make such gaps visible instead of looking like an empty day.
 
 **Paused 2026-11-04: not done yet** (fork PR #65 holds everything finished
 that day):

@@ -71,7 +71,8 @@ The app has five sections: **Overview**, **Discovery**, **Capture**,
   last two weeks coloured low → high, **your best days** (the top quarter),
   and **what your best days have in common**: series the analysis linked to
   the score, with their typical value on best days vs the rest.
-- Runs every night at 04:15, or **Run it now**. Statistically: residuals
+- Runs every night at 04:15, within 15 minutes of new HealthLog data
+  arriving, or **Run it now**. Statistically: residuals
   after removing weekday profiles and trends, effective sample sizes, one
   Benjamini-Hochberg family at 10% over every test of a run, effect floors,
   and a validation suite that plants effects and confounders on synthetic
@@ -343,7 +344,7 @@ curl -H "Authorization: Bearer hlc_…" https://<host>:8443/api/today
 | `companion token create NAME --scope …` / `list` / `revoke ID` | manage API tokens |
 | `companion push keys` | print a new VAPID key pair for `.env` (reminders) |
 | `companion import-days [--apply]` | bring in another app's day-by-day tags, trackers and notes from JSON on stdin (format: `app/importer.py`). A dry run unless `--apply`; repeatable, and a day you logged here keeps your entry |
-| `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, load the weather file, rebuild the daily feature table, run the insight engine (also nightly at 04:15, and *Run it now* on Discovery) |
+| `companion refresh` | seed metric settings from HealthLog, copy new State of Mind entries, load the weather file, rebuild the daily feature table, run the insight engine (also nightly at 04:15, every 15 minutes when HealthLog has received new data, and *Run it now* on Discovery) |
 | `companion web` | migrate, then serve on port 8000 (the `companion-web` service) |
 | `companion jobs` | run the scheduler (the `companion-jobs` service) |
 

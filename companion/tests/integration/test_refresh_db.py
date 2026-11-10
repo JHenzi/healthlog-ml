@@ -134,6 +134,29 @@ def test_only_one_refresh_runs_at_a_time(db, companion_engine):
     assert taken is False
 
 
+def test_refresh_on_new_data_runs_only_when_healthlog_received_something(db, archive, admin_engine):
+    """A day delivered after the 04:15 run is picked up within minutes, not the next night (seen live, 2026-11-10)."""
+    jobs.refresh(db)
+    assert jobs.refresh_if_new(db) is None  # nothing arrived since
+
+    late = {"data": {"stateOfMind": [_som(str(uuid.uuid4()), "2026-10-09T21:00:00Z", 0.6, ["calm"])]}}
+    body = json.dumps(late)
+    with admin_engine.begin() as conn:
+        conn.execute(
+            text("INSERT INTO raw_ingest (payload, content_hash) VALUES (CAST(:p AS jsonb), :h)"),
+            {"p": body, "h": hashlib.sha256(body.encode()).digest()},
+        )
+    result = jobs.refresh_if_new(db)
+    assert result is not None and result.mood.entries == 1
+    assert features.series(db, "mood.entries")[dt.date(2026, 10, 9)] == 1.0  # the late day now has its mood
+    assert jobs.refresh_if_new(db) is None  # and only once
+
+
+def test_refresh_on_new_data_runs_once_on_a_fresh_install(db, archive):
+    assert jobs.refresh_if_new(db) is not None  # never refreshed: everything is new
+    assert jobs.refresh_if_new(db) is None
+
+
 @pytest.fixture
 def outside_dir(tmp_path, monkeypatch):
     from app.config import get_settings
