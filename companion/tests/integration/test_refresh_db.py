@@ -152,6 +152,16 @@ def test_refresh_on_new_data_runs_only_when_healthlog_received_something(db, arc
     assert jobs.refresh_if_new(db) is None  # and only once
 
 
+def test_freshness_follows_the_refresh(db, archive):
+    from app import freshness
+
+    now = dt.datetime.now(dt.UTC)
+    assert freshness.load(db, now).state == "behind"  # payloads HealthLog has, the Companion hasn't processed
+    jobs.refresh(db)
+    assert freshness.load(db, now).state == "current"
+    assert freshness.load(db, now + freshness.SILENT_AFTER).state == "silent"
+
+
 def test_refresh_on_new_data_runs_once_on_a_fresh_install(db, archive):
     assert jobs.refresh_if_new(db) is not None  # never refreshed: everything is new
     assert jobs.refresh_if_new(db) is None

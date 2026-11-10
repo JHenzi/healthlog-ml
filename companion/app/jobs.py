@@ -98,11 +98,16 @@ def _mark_seen(db: Session, payload_id: int) -> None:
         setting.value = {"payload_id": payload_id}
 
 
+def seen_payload(db: Session) -> int:
+    """The newest HealthLog payload id the last refresh started from (0 before the first)."""
+    setting = db.get(Setting, SEEN_KEY)
+    return int(setting.value.get("payload_id", 0)) if setting else 0
+
+
 def refresh_if_new(db: Session) -> RefreshResult | None:
     """Refresh when HealthLog has received a payload since the last refresh started; else ``None`` (caller commits)."""
     db.execute(sa.text("SELECT pg_advisory_xact_lock(:key)"), {"key": REFRESH_LOCK})
-    setting = db.get(Setting, SEEN_KEY)
-    seen = int(setting.value.get("payload_id", 0)) if setting else 0
+    seen = seen_payload(db)
     newest = upstream.max_raw_ingest_id(db)
     if newest <= seen:
         return None

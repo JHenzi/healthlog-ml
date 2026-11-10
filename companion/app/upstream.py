@@ -29,8 +29,9 @@ CONTRACT: dict[str, tuple[str, ...]] = {
     "stress_intraday": ("ts", "stress", "state"),
     "body_battery_intraday": ("ts", "level"),
     "workouts": ("start_time", "duration_s", "active_energy_kcal", "source"),
-    # State of Mind straight from the raw archive until HealthLog parses it (upstream PR #111).
-    "raw_ingest": ("id", "payload"),
+    # State of Mind straight from the raw archive until HealthLog parses it (upstream PR #111); the newest
+    # payload's arrival time tells whether Health Auto Export is still sending (app/freshness.py).
+    "raw_ingest": ("id", "payload", "received_at"),
 }
 
 # HealthLog's stress states that carry a score (upstream analysis/constants.py).
@@ -302,6 +303,12 @@ def raw_state_of_mind_since(db: Session, cursor: int, limit: int = 200) -> list[
         {"cursor": cursor, "limit": limit},
     ).all()
     return [(int(r.id), r.entries) for r in rows]
+
+
+def newest_payload(db: Session) -> tuple[int, dt.datetime] | None:
+    """``(id, received_at)`` of the newest archived payload, or ``None`` before the first one."""
+    row = db.execute(sa.text("SELECT id, received_at FROM public.raw_ingest ORDER BY id DESC LIMIT 1")).first()
+    return (int(row.id), row.received_at) if row else None
 
 
 def max_raw_ingest_id(db: Session) -> int:

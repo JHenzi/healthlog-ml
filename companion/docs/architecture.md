@@ -19,7 +19,18 @@ One image, two services, like HealthLog's web/scheduler split.
 `companion-web` applies migrations, then serves pages and the API.
 `companion-jobs` runs scheduled work: the 04:10 contract check and the 04:15
 refresh (after HealthLog's 03:30 run, before its 04:30 backup), which ends
-with the insight engine. A full refresh takes about 7 s on the live data. The
+with the insight engine. A full refresh takes about 90 s on the live data,
+most of it the insight engine.
+
+Health Auto Export doesn't always deliver on time (on 2026-11-10 a whole day
+arrived at 08:25, after the 04:15 run). So every 15 minutes
+`jobs.refresh_if_new` compares HealthLog's newest `raw_ingest` id with the one
+the last refresh started from (setting `refresh_seen_payload`), and refreshes
+only when it moved. The same two facts, plus the newest payload's
+`received_at`, drive the notice on Overview (`app/freshness.py`). It is hidden
+when the Companion is current. When the Companion is *behind*, it offers
+*Refresh now*. When HealthLog has heard nothing for 6 hours (*silent*), it
+says the data has to come from the phone, since a refresh can't help. The
 jobs service has a memory and CPU cap so it can't starve the database.
 
 ## Database isolation

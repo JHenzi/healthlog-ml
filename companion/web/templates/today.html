@@ -12,6 +12,24 @@
   {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
 </section>
 
+{% if freshness.show %}
+{% set last = freshness.last_received.astimezone(zone).strftime("%a %-I:%M %p") if freshness.last_received else None %}
+<section class="card warn" role="status" aria-labelledby="fresh-h">
+  {% if freshness.state == "behind" %}
+  <h2 id="fresh-h">New Health data is waiting</h2>
+  <p>HealthLog received data at {{ last }} that isn't in these pages yet. It's picked up within 15 minutes on its own, or now:</p>
+  <form method="post" action="/refresh">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="back" value="/">
+    <button type="submit">Refresh now</button>
+  </form>
+  {% else %}
+  <h2 id="fresh-h">Nothing from Health Auto Export {% if last %}since {{ last }}{% else %}yet{% endif %}</h2>
+  <p>Missing mood, water or sleep has to come from your phone: open Health Auto Export and let it send. A refresh here can't help until it does; the Companion picks the data up within 15 minutes of it arriving.</p>
+  {% endif %}
+</section>
+{% endif %}
+
 <section class="card" aria-labelledby="rating-h">
   <div class="row"><h2 id="rating-h">Your day</h2><a class="small" href="/reminders">Reminders ›</a></div>
   {{ evening_row(capture.rating_today, csrf, "/", capture.new_id, "How was today?") }}

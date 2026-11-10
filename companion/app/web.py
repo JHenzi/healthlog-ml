@@ -14,7 +14,20 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from . import auth, capture, features, glance, goodday, jobs, metric_settings, metrics_view, pwa, today, upstream
+from . import (
+    auth,
+    capture,
+    features,
+    freshness,
+    glance,
+    goodday,
+    jobs,
+    metric_settings,
+    metrics_view,
+    pwa,
+    today,
+    upstream,
+)
 from .analysis import history as analysis_history
 from .analysis import run as analysis_run
 from .config import get_settings
@@ -129,6 +142,8 @@ def today_page(
             "capture": today_capture(db, day),
             "overview": _overview(db, day),
             "goodday": goodday.load_view(db, day),
+            "freshness": freshness.load(db, dt.datetime.now(dt.UTC)),
+            "zone": settings.zone,
             "error": error[:200],
         },
     )
@@ -387,7 +402,7 @@ def reset_metric_settings(
     return RedirectResponse(f"/metrics/{feature}", status_code=status.HTTP_303_SEE_OTHER)
 
 
-REFRESH_RETURNS = ("/insights", "/metrics")  # where Rebuild now may send you back to; anything else is /insights
+REFRESH_RETURNS = ("/insights", "/metrics", "/")  # where Rebuild now may send you back to; anything else is /insights
 
 
 @router.post("/refresh")
