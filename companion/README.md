@@ -72,7 +72,8 @@ The app has five sections: **Overview**, **Discovery**, **Capture**,
   and **what your best days have in common**: series the analysis linked to
   the score, with their typical value on best days vs the rest.
 - Runs every night at 04:15, within 15 minutes of new HealthLog data
-  arriving, or **Run it now**. Statistically: residuals
+  arriving, or **Run it now**. Overview tells you when it's behind (with
+  **Refresh now**) or when Health Auto Export has sent nothing for 6 hours. Statistically: residuals
   after removing weekday profiles and trends, effective sample sizes, one
   Benjamini-Hochberg family at 10% over every test of a run, effect floors,
   and a validation suite that plants effects and confounders on synthetic
