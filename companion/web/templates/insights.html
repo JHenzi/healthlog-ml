@@ -19,6 +19,15 @@
   {% elif not any %}<p class="tag tag-quiet">Not enough data yet</p>
   <p>Nothing clears the bar yet. With many patterns tested, a strong-looking link on a few weeks of data is still often chance, so the engine waits for more days. Most patterns need 6–8 weeks of consistent data; this list grows as data accumulates.</p>{% endif %}
 </section>
+{% for c in clumps %}
+<section class="card clump">
+  <h2>These clump</h2>
+  <p>{% for t in c.tags %}<span class="tag-pill tc-{{ t.colour }}">{{ t.label }}</span> {% endfor %}
+    all turn up around {% for m in c.metrics %}<strong>{{ m.label }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}.
+    {% if c.spikes %}{{ c.spikes|join(", ") }} also shows a recent change.{% endif %}</p>
+  <p class="muted small">{{ c.links }} discoveries tie them together. They tend to go together; that is not proof that one drives another.</p>
+</section>
+{% endfor %}
 {% for title, items in sections %}{% if items %}
 <section class="card">
   <h2>{{ title }}</h2>

@@ -192,6 +192,20 @@ def _cards(db: Session, insights: list[Insight] | list[EarlierInsight]) -> dict[
     return {i.id: glance.card(i, defs, tags) for i in insights}
 
 
+def _clumps(db: Session, insights: list[Insight]) -> list[glance.Clump]:
+    """Day tags that cluster around the same series in today's discoveries."""
+    features = {f for i in insights for f in (i.feature_a, i.feature_b) if f}
+    defs = {d.feature: d for d in db.execute(sa.select(FeatureDef).where(FeatureDef.feature.in_(features))).scalars()}
+    day = capture.day_tags(db)
+    used = db.execute(
+        sa.select(DailyFeature.feature)
+        .where(DailyFeature.feature.like(glance.DAY_TAG_PREFIX + "%"), DailyFeature.value > 0)
+        .group_by(DailyFeature.feature)
+        .having(sa.func.count() >= glance.HABITUAL_DAYS)
+    ).scalars()
+    return glance.clumps(insights, defs, glance.tag_colours(day.tags if day else ()), set(used))
+
+
 # --- metrics (M2) -----------------------------------------------------------
 
 
@@ -485,6 +499,7 @@ def insights_page(
         "insights.html",
         {
             "sections": sections,
+            "clumps": _clumps(db, list(rows)),
             "cards": _cards(db, list(rows)),
             "ranges": {i.id: glance.likely_range(i) for i in rows},
             "adjusted": {i.id: glance.adjusted(i) for i in rows},
