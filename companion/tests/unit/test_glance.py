@@ -95,3 +95,44 @@ def test_spread_link_reads_days_later_and_draws_its_curve():
     assert len(bars) == 8 and [b.lag for b in bars if b.peak] == [3]
     assert bars[3].height == 26 and bars[3].up and not bars[6].up
     assert lag_bars(_insight()) == []
+
+
+def _assoc(a: str, b: str) -> Insight:
+    return _insight(feature_a=a, feature_b=b)
+
+
+TAGS = {f"t{k}": (f"Tag {k}", k) for k in range(4)}
+T = ["tracker.day_tags.tag.t0", "tracker.day_tags.tag.t1", "tracker.day_tags.tag.t2"]
+
+
+def test_three_tags_around_one_series_clump():
+    from app.glance import clumps
+
+    found = clumps([_assoc(t, "sleep.total_h") for t in T], DEFS, TAGS)
+    assert len(found) == 1 and len(found[0].tags) == 3 and found[0].links == 3
+
+
+def test_two_tags_need_a_spike_metric():
+    from app.glance import clumps
+
+    pair = [_assoc(t, "sleep.total_h") for t in T[:2]]
+    assert clumps(pair, DEFS, TAGS) == []
+    spike = _insight(kind="change", feature_a="sleep.total_h", feature_b=None, effect=0.5, details={"pct": 12.0})
+    assert clumps([*pair, spike], DEFS, TAGS) == []  # tags not in regular use
+    found = clumps([*pair, spike], DEFS, TAGS, habitual=set(T))
+    assert len(found) == 1 and found[0].spikes == ("Sleep (total)",)
+
+
+def test_separate_series_do_not_clump():
+    from app.glance import clumps
+
+    split = [_assoc(T[0], "sleep.total_h"), _assoc(T[1], "sleep.total_h"), _assoc(T[2], "tracker.coffee.total")]
+    assert clumps(split, DEFS, TAGS) == []
+
+
+def test_a_drop_is_not_a_spike():
+    from app.glance import clumps
+
+    pair = [_assoc(t, "sleep.total_h") for t in T[:2]]
+    drop = _insight(kind="change", feature_a="sleep.total_h", feature_b=None, details={"pct": -12.0})
+    assert clumps([*pair, drop], DEFS, TAGS, habitual=set(T)) == []

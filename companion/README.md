@@ -63,6 +63,10 @@ The app has five sections: **Overview**, **Discovery**, **Capture**,
   can drop out after one more day of data. It isn't lost: it moves to a
   quieter list with the days it held, for 90 days, and moves back up if it
   clears the bar again. Current ones say *since* when they first appeared.
+- **These clump**: discoveries that share a series form a group. When 3 or
+  more day tags land in one group, or 2 tags you normally use (on 5+ days) and
+  a series running above normal (a "spike"), Discoveries says so above the
+  list. Presentation only; it never feeds back into the analysis.
 - **Evidence page** for each: the method in words, effect size, raw and
   adjusted p, effective days after allowing for day-to-day carry-over, and
   for links over days a bar per day 0–7 showing when the link peaks.

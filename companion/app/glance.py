@@ -6,7 +6,7 @@ direction, never a judgement: whether "up" is good is for the person to decide.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 
 from .models import FeatureDef, Insight
@@ -201,3 +201,73 @@ def card(i: Insight, defs: Mapping[str, FeatureDef], tags: Mapping[str, tuple[st
     else:
         link = "by weekday"
     return Card(_side(i.feature_a, defs, None, tags), None, link, False, dots)
+
+
+@dataclass(frozen=True)
+class Clump:
+    """Day tags that keep turning up together in discoveries, with the metrics they are linked to."""
+
+    tags: tuple[Side, ...]
+    metrics: tuple[Side, ...]
+    spikes: tuple[str, ...]  # labels of the linked metrics that also show a recent change
+    links: int  # discoveries that tie the group together
+
+
+CLUMP_TAGS = 3  # this many day tags in one group is a clump on its own …
+CLUMP_TAGS_WITH_SPIKE = 2  # … or this many habitual tags when a linked metric runs above normal (a "spike")
+HABITUAL_DAYS = 5  # a tag counts as normally used once it is on this many days
+
+
+def clumps(
+    insights: Sequence[Insight],
+    defs: Mapping[str, FeatureDef],
+    tags: Mapping[str, tuple[str, int]],
+    habitual: Collection[str] = (),
+) -> list[Clump]:
+    """Groups of discoveries joined through shared series; reported when they hold 3+ day tags, or 2+ and a spike.
+
+    Two discoveries belong to one group when they share a series, so "Travel ▲ Sleep ▼", "Late dinner ▲ Sleep ▼" and
+    "Alcohol ▲ Sleep ▼" make one group of three tags around Sleep. Only associations join groups; a "change" finding
+    marks its series as a spike when it is above normal (steps higher than usual).
+    The 2-tag case needs both tags in ``habitual`` (tags the person normally uses), so a one-off tag cannot make a
+    clump. Associations are never causes, and neither are these groups.
+    """
+    parent: dict[str, str] = {}
+
+    def find(x: str) -> str:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    links: dict[str, int] = {}
+    for i in insights:
+        if i.kind == "association" and i.feature_b:
+            parent[find(i.feature_a)] = find(i.feature_b)
+    for i in insights:
+        if i.kind == "association" and i.feature_b:
+            root = find(i.feature_a)
+            links[root] = links.get(root, 0) + 1
+    changed = {i.feature_a for i in insights if i.kind == "change" and (i.details or {}).get("pct", i.effect) >= 0}
+
+    members: dict[str, list[str]] = {}
+    for feature in parent:
+        members.setdefault(find(feature), []).append(feature)
+
+    out = []
+    for root, features in members.items():
+        group_tags = sorted(f for f in features if f.startswith(DAY_TAG_PREFIX))
+        metrics = sorted(f for f in features if not f.startswith(DAY_TAG_PREFIX))
+        spikes = [f for f in metrics if f in changed]
+        usual = [t for t in group_tags if t in habitual]
+        if len(group_tags) >= CLUMP_TAGS or (len(usual) >= CLUMP_TAGS_WITH_SPIKE and spikes):
+            out.append(
+                Clump(
+                    tuple(_side(f, defs, None, tags) for f in group_tags),
+                    tuple(_side(f, defs, None, tags) for f in metrics),
+                    tuple(_side(f, defs, None, tags).label for f in spikes),
+                    links[root],
+                )
+            )
+    return sorted(out, key=lambda c: (-len(c.tags), -c.links))
