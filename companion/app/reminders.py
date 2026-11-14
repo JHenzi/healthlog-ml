@@ -1,4 +1,5 @@
-"""Reminders: a nudge at 10:00 to look back on yesterday and at 19:00 to rate today (both times are settings).
+"""Reminders: a nudge at 10:00 to look back on yesterday, at 13:00 to log your mood in Apple Health, and at 19:00
+to rate today (all times are settings).
 
 Every minute the jobs process checks whether a reminder is due: its time has passed today, it hasn't gone out
 today, and it's at most ``LATE_LIMIT`` late (after downtime a 10:00 reminder isn't sent at 15:00). A reminder
@@ -18,8 +19,8 @@ from sqlalchemy.orm import Session
 from . import capture, dayrating, push
 from .auth import now_utc
 from .config import Settings
-from .models import PushSubscription, Setting, Tracker
-from .timeutil import current_day
+from .models import PushSubscription, Setting, StateOfMindEntry, Tracker
+from .timeutil import current_day, day_bounds
 
 log = logging.getLogger("companion.reminders")
 
@@ -35,10 +36,19 @@ class Kind:
     default: dt.time
     title: str
     body: str
+    url: str = "/"
 
 
 KINDS = (
     Kind("morning", "Morning", dt.time(10, 0), "Looking back", "How was yesterday, now that you've slept on it?"),
+    Kind(
+        "mood",
+        "Mood",
+        dt.time(13, 0),
+        "How are you feeling?",
+        "Log it as a State of Mind in Apple Health, or in Mindfulness on your Watch.",
+        "/mood",
+    ),
     Kind("evening", "Evening", dt.time(19, 0), "How was today?", "Rate your day, and log anything else from today."),
 )
 BY_KEY = {k.key: k for k in KINDS}
@@ -90,10 +100,23 @@ def _answered(db: Session, key: str, day: dt.date) -> bool:
     return tracker is not None and bool(capture.day_values(db, tracker, day))
 
 
-def already_answered(db: Session, kind: str, today: dt.date) -> bool:
-    """The morning reminder asks about yesterday's look back, the evening one about today's rating."""
+def mood_logged(db: Session, settings: Settings, today: dt.date) -> bool:
+    """A State of Mind for today has reached the Companion (it comes through Health Auto Export, so maybe late)."""
+    start, end = day_bounds(today, settings.zone, settings.day_boundary)
+    found = db.execute(
+        sa.select(StateOfMindEntry.hae_id)
+        .where(StateOfMindEntry.start_time >= start, StateOfMindEntry.start_time < end)
+        .limit(1)
+    ).first()
+    return found is not None
+
+
+def already_answered(db: Session, kind: str, today: dt.date, settings: Settings | None = None) -> bool:
+    """Morning: yesterday's look back. Mood: a State of Mind today. Evening: today's rating."""
     if kind == "morning":
         return _answered(db, dayrating.LOOKBACK_KEY, today - dt.timedelta(days=1))
+    if kind == "mood":
+        return settings is not None and mood_logged(db, settings, today)
     return _answered(db, dayrating.EVENING_KEY, today)
 
 
@@ -136,10 +159,11 @@ def run_due(db: Session, settings: Settings, now: dt.datetime) -> list[str]:
     today = current_day(now, settings.zone, settings.day_boundary)
     for key in handled:
         kind = BY_KEY[key]
-        if already_answered(db, key, today):
+        if already_answered(db, key, today, settings):
             log.info("reminder %s: already answered, skipped", key)
         else:
-            log.info("reminder %s: sealed for %d device(s)", key, send(db, settings, kind.title, kind.body))
+            sealed = send(db, settings, kind.title, kind.body, kind.url)
+            log.info("reminder %s: sealed for %d device(s)", key, sealed)
         sent[key] = local.date().isoformat()
     if handled:
         if row is None:

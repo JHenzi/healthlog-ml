@@ -31,11 +31,19 @@ The app has five sections: **Overview**, **Discovery**, **Capture**,
 ### Overview: your day at a glance
 
 - **Your day**: the built-in day rating. "How was today?" (1–10) in the
-  evening, and a blind "Looking back, how was yesterday?" the next morning.
+  evening, and a blind "Looking back, how was yesterday?" the next morning:
+  until you've answered it, yesterday's evening rating and good-day score stay
+  hidden (here, in Capture and on Good days), so neither sways the answer.
   Nothing to set up. Both ratings and the change between them become daily
   series like any other.
-- **Good day**: today's good-day score (below) and its parts as coloured
-  bars.
+- **Momentum**: encouragement when you're moving more. Workout days in a
+  row, workout days this week against the week before (or your most in any 7
+  days), and exercise, steps, active energy or stand hours above your own
+  usual several days running, or up on the week before. Only what's going
+  well shows here; a missed workout gets one gentle "one today starts a new
+  run". Drops stay on the tiles below.
+- **Good day**: yesterday's good-day score (below) and its parts as coloured
+  bars, once you've looked back on yesterday.
 - **Compared with your usual**: tiles for last night's sleep and yesterday's
   HRV, resting heart rate, steps, stress, energy reserve and mood, each with
   ▲/▼ against your 30-day average and the number of days behind it. The same
@@ -93,8 +101,8 @@ The app has five sections: **Overview**, **Discovery**, **Capture**,
 - **Reviewed days**: marking a day reviewed is what lets an unlogged count
   or yes/no count as zero. Otherwise a forgotten entry stays *unknown*,
   never "none" (R7: missing is not zero).
-- **Reminders** (optional): a push at 10:00 for the look back and at 19:00
-  for the rating, skipped when already answered. Times are adjustable;
+- **Reminders** (optional): a push at 10:00 for the look back, at 13:00 to
+  log your mood in Apple Health, and at 19:00 for the rating, skipped when already answered. Times are adjustable;
   **Send a test** checks the whole path.
 
 ### My Metrics: every series, readable
@@ -355,9 +363,18 @@ curl -H "Authorization: Bearer hlc_…" https://<host>:8443/api/today
 
 ## Reminders (optional)
 
-A nudge at 10:00 to look back on yesterday and at 19:00 to rate today (change
-the times on the **Reminders** page, linked from *Your day*). A reminder
-whose question you've already answered isn't sent.
+A nudge at 10:00 to look back on yesterday, at 13:00 to log your mood, and at
+19:00 to rate today (change the times, or turn one off, on the **Reminders**
+page, linked from *Your day*). A reminder whose question you've already
+answered isn't sent.
+
+The mood reminder opens the **Mood** page: an **Open Health** button and the
+steps to log a *State of Mind* (Health → Browse → Mental Wellbeing → State of
+Mind, or Mindfulness on the Watch), plus when the last mood reached the
+Companion. Mood is logged in Apple Health, not here, so it arrives through
+Health Auto Export: a day is "answered" once one of that day's moods has
+arrived, and with no State of Mind automation in HAE the reminder comes
+anyway.
 
 1. Make a key pair and add it to `.env`, with `PUSH_ENABLED=true`:
    ```bash

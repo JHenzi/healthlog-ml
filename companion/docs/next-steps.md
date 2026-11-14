@@ -5,7 +5,7 @@ set up a machine to work on it, and the work queue in order. Strategy is in
 [`roadmap.md`](roadmap.md), the milestone checklist in [`plan.md`](plan.md),
 risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 
-*Last updated 2026-10-29.*
+*Last updated 2026-11-13.*
 
 > **Back from the vacation pause on 2026-10-29.** The notes from the road are in
 > [#45](https://github.com/JHenzi/healthlog-ml/issues/45) (`gh issue view 45 --comments`); what's
@@ -60,7 +60,9 @@ In order of how much they unblock:
    Metrics one):
    - ~~**Workouts**~~: done 2026-10-28, with workout metrics and route data on.
    - **State of Mind**: today mood only arrives with manual exports. The
-     last one landed on Oct 16.
+     last one landed on Oct 16. **Matters more since 2026-11-13**: the new
+     13:00 mood reminder counts the day as answered only once a mood has
+     arrived, and the Mood page shows when the last one did.
 6. **Rate each day** on the Overview: "How was today?" in the evening and
    the look back the next morning (built in since 2026-10-21, nothing to
    create). It is what the personal good-day weights will learn from (60–90
@@ -147,6 +149,14 @@ contract check and a refresh. HealthLog upgrades, rehearsals and rollback:
 
 Follow upstream: merge his `dev` about monthly, or sooner for something we
 need ([`upgrading.md`](upgrading.md), *Folding in upstream changes*).
+
+- **Waiting to sync (checked 2026-11-13, nothing needs a reply):** #129
+  (Grafana 13.3, an optional `grafana` compose service), #130 (TimescaleDB
+  2.31, the extension updated at container start: rehearse it), #134 (Python
+  deps, FastAPI 0.162), #136 (dashboard SQL test), #137 (his copies of our two
+  dashboards: delete his two files per the Grafana decision) and #138 (a
+  data-freshness audit section and hourly check, next to our own Overview
+  notice). #135 (Python 3.15 base) is open and ignored by him for now.
 
 - **Read API v1 (A6):** offered by the maintainer, requirements on #107. He
   mentions it again on #116 ("once that exists"). Not scheduled.
@@ -258,8 +268,9 @@ issue goes into `build.py` first.
 
 - **Reflection and prediction over time** (roadmap B16, research
   2026-10-30, [`reflection-and-prediction.md`](reflection-and-prediction.md)):
-  decided 2026-10-30 (§0). To build: the look-back hides the evening
-  answer (log the date); a Sunday "How was last week?" at 18:00, set on
+  decided 2026-10-30 (§0). ~~The look-back hides the evening answer~~:
+  done 2026-11-13, and yesterday's good-day score is hidden too until the
+  look-back is in. To build: a Sunday "How was last week?" at 18:00, set on
   the Reminders page like the others; the ratings become inputs to the
   good-day score (how much each counts is learned, §4c). Also noted: sleep
   timing features (§4d) and warnings (§4e). Readiness is shelved (§4b).
@@ -276,8 +287,12 @@ issue goes into `build.py` first.
 - ~~Streaks and records~~: done 2026-10-20, "Worth noting" on the Overview
   (`app/highlights.py`): tracker streaks (3+ days) and quiet runs (7+ recorded
   days), and records over 60+ days of data. Records wait for 60 days, so the
-  first appear in mid-November for sleep. Later: a streak against your own
-  30-day median for key metrics, if the notes feel too sparse.
+  first appear in mid-November for sleep. ~~Later: a streak against your own
+  30-day median for key metrics~~: done 2026-11-13 as the **Momentum** card
+  (roadmap B18, `app/momentum.py`): workout runs and weekly counts, activity
+  above your usual or up on the week before, encouragement only. Next for
+  it: a Sunday workout summary push, and tracker streaks you choose to
+  cheer on (exercise-type trackers) in the same card.
 - ~~Good-day score and best days~~: done 2026-10-20 (`app/goodday.py`,
   analysis-engine.md). Next for it:
   - **Personal weights** (M7): equal weights are the standard; a learned
@@ -310,6 +325,12 @@ issue goes into `build.py` first.
   refresh today. Watch it as trackers and weather add series (risks.md F1).
 
 ### 4.5 Found along the way (do when convenient)
+
+- **Mood can't be logged in the Companion (2026-11-13):** the mood reminder
+  sends you to Apple Health, and the Companion only knows a mood was logged
+  once HAE delivers it. Without a State of Mind automation (§2.5) the
+  reminder can't tell. A deep link straight to the State of Mind screen
+  would save taps; `x-apple-health://` only opens Health's front page.
 
 - **Health Auto Export went quiet for a day (2026-11-09):** nothing arrived
   from 08:17 on 11/9 until 08:25 on 11/10, when the whole day came in one

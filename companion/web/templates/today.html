@@ -37,6 +37,15 @@
   <p class="muted small">Rate each evening, then look back the next morning. Both are kept, and so is the change between them: they're your own measure of a good day.</p>
 </section>
 
+{% if momentum %}
+<section class="card" aria-labelledby="momentum-h">
+  <h2 id="momentum-h">Momentum</h2>
+  <ul class="sentences">
+    {% for line in momentum %}<li>{{ line }}</li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 <section class="card" aria-labelledby="coverage-h">
   <div class="coverage-head">
     <h2 id="coverage-h">Data for analysis</h2>
@@ -51,7 +60,9 @@
 {% from "_good_day.html" import parts_bars %}
 <section class="card" aria-labelledby="goodday-h">
   <div class="row"><h2 id="goodday-h">Good day</h2><a class="small" href="/good-days">Your best days ›</a></div>
-  {% if goodday.yesterday.score is not none %}
+  {% if blind %}
+  <p class="muted small">Yesterday's score is hidden until you look back on yesterday above, so the numbers can't sway your answer. Last night's sleep and this morning's mood would already pull it one way.</p>
+  {% elif goodday.yesterday.score is not none %}
   <p class="goodday-score"><strong>{{ goodday.yesterday.score|round|int }}</strong> <span class="muted">/ 100 yesterday</span>{% if goodday.yesterday.best %} <span class="tag">one of your best days</span>{% endif %}</p>
   {{ parts_bars(goodday.yesterday.parts) }}
   <p class="muted small">Higher than {{ goodday.rank }}% of your {{ goodday.scored }} scored days. Each part is ranked against your own history.</p>

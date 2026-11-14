@@ -24,6 +24,7 @@ from . import (
     jobs,
     metric_settings,
     metrics_view,
+    momentum,
     pwa,
     today,
     upstream,
@@ -131,7 +132,9 @@ def today_page(
     settings = get_settings()
     day = current_day(dt.datetime.now(dt.UTC), settings.zone, settings.day_boundary)
     view = today.load_today(db, settings.zone, settings.day_boundary, day)
-    from .web_trackers import today_capture  # late import: web_trackers builds on this module
+    from .web_trackers import lookback_blind, today_capture  # late import: web_trackers builds on this module
+
+    blind = lookback_blind(db, day)
 
     return templates.TemplateResponse(
         request,
@@ -141,7 +144,9 @@ def today_page(
             "csrf": session.csrf_token,
             "capture": today_capture(db, day),
             "overview": _overview(db, day),
-            "goodday": goodday.load_view(db, day),
+            "goodday": goodday.load_view(db, day, blind=blind),
+            "blind": blind,
+            "momentum": momentum.load_momentum(db, day),
             "freshness": freshness.load(db, dt.datetime.now(dt.UTC)),
             "zone": settings.zone,
             "error": error[:200],
@@ -444,12 +449,16 @@ def good_days_page(
 ) -> Response:
     if (redirect := _signed_in(session)) is not None:
         return redirect
-    view = goodday.load_view(db, _today())
+    from .web_trackers import lookback_blind  # late import: web_trackers builds on this module
+
+    blind = lookback_blind(db, _today())
+    view = goodday.load_view(db, _today(), blind=blind)
     return templates.TemplateResponse(
         request,
         "good_days.html",
         {
             "g": view,
+            "blind": blind,
             "cards": _cards(db, [c.insight for c in view.common]),
             "fmt": metrics_view.fmt,
             "min_parts": goodday.MIN_PARTS,

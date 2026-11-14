@@ -73,3 +73,8 @@ def test_times_are_saved_and_can_be_turned_off(signed_in, db):
     assert r.status_code == 303
     times = reminders.load_schedule(db)
     assert times["morning"].isoformat(timespec="minutes") == "09:30" and times["evening"] is None
+
+
+def test_the_mood_page_links_to_health(signed_in):
+    html = signed_in.get("/mood").text
+    assert 'href="x-apple-health://"' in html and "No mood has arrived yet." in html

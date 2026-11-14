@@ -10,7 +10,9 @@
 {% macro lookback_row(r, csrf, back, new_id, label) %}
 <div class="tracker-row rating-row">
   <span class="tracker-name">{{ label }}</span>
-  <span class="muted small">{% if r.evening_state %}That evening you said <strong>{{ "%g"|format(r.evening_state.num) }}</strong>.{% else %}No evening rating that day.{% endif %}</span>
+  {# Blind: the evening answer shows only once the look back is in, so it can't anchor it (reflection-and-prediction.md §0). #}
+  {% if r.lookback_state %}<span class="muted small">{% if r.evening_state %}That evening you said <strong>{{ "%g"|format(r.evening_state.num) }}</strong>.{% else %}No evening rating that day.{% endif %}</span>
+  {% else %}<span class="muted small">Answer fresh: that evening's rating and the day's score show once you have.</span>{% endif %}
   {{ log_controls(r.lookback, csrf, back, new_id, day=r.day, state=r.lookback_state) }}
 </div>
 {% endmacro %}

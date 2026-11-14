@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 from . import auth, push, reminders
 from .config import get_settings
 from .db import get_db
-from .models import PushSubscription, WebSession
+from .models import PushSubscription, StateOfMindEntry, WebSession
+from .timeutil import current_day
 from .web import _signed_in, current_session, templates
 
 router = APIRouter()
@@ -137,3 +138,30 @@ def send_test(
     db.commit()
     note = f"Test sent to {sent} device(s); it should arrive within a minute" if sent else "No devices to send to yet"
     return RedirectResponse(f"/reminders?note={note}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# Apple Health's URL scheme: opens the Health app (iOS asks once to confirm leaving the Companion).
+HEALTH_APP_URL = "x-apple-health://"
+
+
+@router.get("/mood", response_class=HTMLResponse)
+def mood_page(
+    request: Request,
+    session: WebSession | None = Depends(current_session),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Where the mood reminder lands: how to log a State of Mind, and when the last one arrived."""
+    if (redirect := _signed_in(session)) is not None:
+        return redirect
+    settings = get_settings()
+    now = dt.datetime.now(dt.UTC)
+    last = db.execute(sa.select(sa.func.max(StateOfMindEntry.start_time))).scalar_one_or_none()
+    return templates.TemplateResponse(
+        request,
+        "mood.html",
+        {
+            "health_url": HEALTH_APP_URL,
+            "last": last.astimezone(settings.zone) if last else None,
+            "logged_today": reminders.mood_logged(db, settings, current_day(now, settings.zone, settings.day_boundary)),
+        },
+    )

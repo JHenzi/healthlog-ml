@@ -17,7 +17,11 @@
 </section>
 <section class="card" aria-labelledby="rating-h">
   <div class="row"><h2 id="rating-h">Your day</h2><a class="small" href="/reminders">Reminders ›</a></div>
+  {% if rating.blind %}{# yesterday, not looked back on yet: the evening answer stays hidden #}
+  <p class="muted small">Your evening rating for {{ day.strftime("%A") }} is hidden until you've looked back on it.</p>
+  {% else %}
   {{ evening_row(rating, csrf, "/review?day=" ~ day.isoformat(), new_id, "How was " ~ day.strftime("%A") ~ "?") }}
+  {% endif %}
   {% if rating.ask_lookback %}{{ lookback_row(rating, csrf, "/review?day=" ~ day.isoformat(), new_id, "Looking back, how was " ~ day.strftime("%A") ~ "?") }}{% endif %}
 </section>
 <section class="card">
