@@ -815,7 +815,16 @@ def rating_card(db: Session, day: dt.date) -> dict:
         "evening_state": state.get(evening.id) if evening.id else None,
         "lookback_state": state.get(lookback.id) if lookback.id else None,
         "ask_lookback": day < _today(),
+        # Blind until answered: yesterday's evening answer and score stay hidden so they can't sway the look back.
+        "blind": day == _today() - dt.timedelta(days=1) and not (lookback.id and state.get(lookback.id)),
     }
+
+
+def lookback_blind(db: Session, today: dt.date) -> bool:
+    """True while yesterday's look back is unanswered: its evening rating and good-day score are hidden till then."""
+    lookback = dayrating.trackers(db)[dayrating.LOOKBACK_KEY]
+    yesterday = today - dt.timedelta(days=1)
+    return not (lookback.id and day_state(db, yesterday).get(lookback.id))
 
 
 def today_capture(db: Session, day: dt.date) -> dict:
@@ -828,5 +837,6 @@ def today_capture(db: Session, day: dt.date) -> dict:
         "tagged": capture.tags_for_day(db, day),
         "rating_today": rating_card(db, day),
         "rating_yesterday": rating_card(db, day - dt.timedelta(days=1)),
+        "diary_text": capture.diary_text(db, day),
         "new_id": lambda: str(uuid.uuid4()),
     }

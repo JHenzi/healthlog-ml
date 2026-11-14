@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Mood · Companion{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="kicker"><a href="/reminders">‹ Reminders</a></p>
+  <h1>How are you feeling?</h1>
+  <p>Log it as a <strong>State of Mind</strong> in Apple Health. It takes a few seconds, and it's the mood part of your good-day score.</p>
+  <p><a class="button" href="{{ health_url }}">Open Health</a></p>
+  <ul class="sentences">
+    <li><strong>On your iPhone:</strong> Health → Browse → Mental Wellbeing → State of Mind → Log.</li>
+    <li><strong>On your Watch:</strong> open Mindfulness and choose State of Mind.</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>What the Companion has</h2>
+  {% if logged_today %}
+  <p>A mood from today has already arrived. Log another whenever it changes: each one counts.</p>
+  {% elif last %}
+  <p>The latest mood here is from {{ last.strftime("%a, %b %-d at %-I:%M %p") }}.</p>
+  {% else %}
+  <p>No mood has arrived yet.</p>
+  {% endif %}
+  <p class="muted small">Moods reach the Companion through Health Auto Export. If one you logged doesn't show up here within the hour, check that Health Auto Export has a REST automation for State of Mind.</p>
+</section>
+{% endblock %}

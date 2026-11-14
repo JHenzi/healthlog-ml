@@ -6,6 +6,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import uuid
 
 import pytest
 from cryptography.hazmat.primitives import serialization
@@ -14,7 +15,7 @@ from sqlalchemy import select
 
 from app import capture, dayrating, push, reminders
 from app.config import get_settings
-from app.models import PushSubscription
+from app.models import PushSubscription, StateOfMindEntry
 
 
 @pytest.fixture
@@ -67,6 +68,19 @@ def test_an_answered_question_is_not_asked(db, settings, phone):
     )
     assert reminders.run_due(db, settings, _at(settings, 19)) == ["evening"]  # handled: marked for today
     assert _outbox(settings) == []
+
+
+def test_the_mood_reminder_opens_the_mood_page_and_skips_a_logged_day(db, settings, phone):
+    assert reminders.run_due(db, settings, _at(settings, 13)) == ["mood"]
+    assert len(_outbox(settings)) == 1
+    db.add(StateOfMindEntry(hae_id=uuid.uuid4(), start_time=_at(settings, 9), valence=0.4, payload_id=1))
+    db.flush()
+    nextday = _at(settings, 13) + dt.timedelta(days=1)
+    assert reminders.mood_logged(db, settings, dt.date(2026, 10, 1))
+    db.add(StateOfMindEntry(hae_id=uuid.uuid4(), start_time=nextday - dt.timedelta(hours=2), valence=0.1, payload_id=1))
+    db.flush()
+    assert reminders.run_due(db, settings, nextday) == ["mood"]  # handled, but already answered
+    assert len(_outbox(settings)) == 1
 
 
 def test_without_keys_nothing_is_prepared(db, settings, phone):

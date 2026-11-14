@@ -242,9 +242,19 @@ class TrackerFeatures:
         self.values.setdefault(feature, {})[day] = value
 
 
-def observed_days(spec: TrackerSpec, logged: set[dt.date], reviewed: set[dt.date], last_day: dt.date) -> set[dt.date]:
+def observed_days(
+    spec: TrackerSpec,
+    logged: set[dt.date],
+    reviewed: set[dt.date],
+    last_day: dt.date,
+    checked_in: Iterable[dt.date] = (),
+) -> set[dt.date]:
     """Days on which an absence of entries means zero (R7).
 
+    ``reviewed`` are days marked reviewed by hand (the old Capture button). ``checked_in`` are days you logged
+    anything at all on: that counts as checking in, because nobody remembers to mark a day done (owner,
+    2026-11-14). A check-in only zero-fills a tracker from its own first entry on, so a tracker made later
+    never gets zeros for days before you used it. A day with nothing logged stays unknown.
     An archived tracker is no longer shown for review or logging, so its zeros stop at its last entry.
     """
     if spec.archived:
@@ -254,7 +264,9 @@ def observed_days(spec: TrackerSpec, logged: set[dt.date], reviewed: set[dt.date
     if spec.always_logged and logged:
         first = min(logged)
         return {first + dt.timedelta(days=i) for i in range((last_day - first).days + 1)}
-    return logged | {d for d in reviewed if d <= last_day}
+    first = min(logged) if logged else None
+    implied = {d for d in checked_in if first is not None and first <= d}
+    return logged | {d for d in (set(reviewed) | implied) if d <= last_day}
 
 
 def daily_features(
@@ -264,6 +276,7 @@ def daily_features(
     last_day: dt.date,
     zone: ZoneInfo,
     boundary: dt.time,
+    checked_in: Iterable[dt.date] = (),
 ) -> TrackerFeatures:
     """Features of one tracker. ``last_day`` is the last complete day (zero-fill never reaches today)."""
     out = TrackerFeatures()
@@ -277,7 +290,7 @@ def daily_features(
             (tag_off if o.value_num == 0 else tag_on).setdefault(o.tag, set()).add(o.day)
     base = f"tracker.{spec.key}"
     name, unit = spec.name, spec.unit
-    zero_days = {d for d in observed_days(spec, set(by_day), reviewed, last_day) if d <= last_day}
+    zero_days = {d for d in observed_days(spec, set(by_day), reviewed, last_day, checked_in) if d <= last_day}
 
     def label(feature: str, text: str, unit_: str | None, kind: str) -> None:
         out.labels[feature] = (text, unit_, kind)
@@ -327,7 +340,7 @@ def daily_features(
     if tag_on or tag_off or spec.tags:
         listed = {d for days in tag_off.values() for d in days}
         used = set(by_day) | ({d for days in tag_on.values() for d in days} - listed)
-        offered = {d for d in observed_days(spec, used, reviewed, last_day) if d <= last_day}
+        offered = {d for d in observed_days(spec, used, reviewed, last_day, checked_in) if d <= last_day}
         current = {tag_slug(t): t for t in spec.tags}
         for slug in [*current, *sorted((tag_on.keys() | tag_off.keys()) - current.keys())]:
             on, off = tag_on.get(slug, set()), tag_off.get(slug, set())

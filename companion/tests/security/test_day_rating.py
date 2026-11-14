@@ -54,7 +54,21 @@ def test_evening_and_look_back_land_on_the_day_they_are_about(signed_in, db):
     assert _rate(signed_in, csrf, dayrating.LOOKBACK_KEY, 8, yesterday).status_code == 303
     rows = db.execute(select(Tracker.key, Observation.day, Observation.value_num).join(Observation)).all()
     assert sorted(rows) == [(dayrating.EVENING_KEY, yesterday, 6.0), (dayrating.LOOKBACK_KEY, yesterday, 8.0)]
-    assert "That evening you said <strong>6</strong>" in signed_in.get("/").text
+    assert "That evening you said <strong>6</strong>" in signed_in.get("/").text  # shown once looked back
+
+
+def test_the_look_back_is_blind_until_answered(signed_in, db):
+    csrf = _csrf(signed_in.get("/").text)
+    yesterday = _today() - dt.timedelta(days=1)
+    _rate(signed_in, csrf, dayrating.EVENING_KEY, 6, yesterday)
+    overview = signed_in.get("/").text
+    assert "That evening you said" not in overview and "score is hidden until you look back" in overview
+    review = signed_in.get(f"/review?day={yesterday.isoformat()}").text
+    assert "hidden until you've looked back" in review and f"How was {yesterday:%A}?" not in review
+    assert "Yesterday stays blank" in signed_in.get("/good-days").text
+    _rate(signed_in, csrf, dayrating.LOOKBACK_KEY, 4, yesterday)
+    assert "score is hidden" not in signed_in.get("/").text
+    assert "Yesterday stays blank" not in signed_in.get("/good-days").text
 
 
 def test_the_look_back_waits_until_the_day_is_over(signed_in, db):

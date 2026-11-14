@@ -19,7 +19,12 @@ end as open questions.
 
 1. **The look-back is blind.** "Looking back, how was yesterday?" no
    longer shows the evening answer, so the shift isn't pulled toward 0
-   (§5, risks.md C10). Log the date of the change.
+   (§5, risks.md C10). Log the date of the change. **Built 2026-11-13**:
+   blind from that date on. The owner extended it the same day: until the
+   look-back is answered, yesterday's **good-day score** is hidden too
+   (Overview, Capture, Good days), because last night's sleep and the
+   morning's mood already pull the answer one way. Look-backs before
+   2026-11-13 were anchored; worth a flag if the shift is ever analysed.
 2. **A weekly look-back on Sunday:** "How was last week?", 1–10, asked at
    18:00 by default and changeable like the other reminders (Reminders
    page). Picking the best and worst day is **optional, decided later**.

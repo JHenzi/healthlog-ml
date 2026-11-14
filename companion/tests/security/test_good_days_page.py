@@ -7,7 +7,7 @@ import re
 
 import pytest
 
-from app import auth
+from app import auth, dayrating
 from app.auth import now_utc
 from app.config import get_settings
 from app.goodday import FEATURE
@@ -27,6 +27,11 @@ def signed_in(client, db):
     db.flush()
     page = client.get("/login")
     client.post("/login", data={"password": PASSWORD, "csrf": _csrf(page.text)})
+    # Look back on yesterday, so its score isn't blind (test_day_rating.py covers the blind state).
+    settings = get_settings()
+    yesterday = current_day(now_utc(), settings.zone, settings.day_boundary) - dt.timedelta(days=1)
+    data = {"csrf": _csrf(client.get("/").text), "value": "7", "day": yesterday.isoformat()}
+    client.post(f"/log/{dayrating.LOOKBACK_KEY}", data=data)
     return client
 
 
@@ -74,7 +79,8 @@ def test_the_page_shows_parts_best_days_and_what_they_share(signed_in, scored):
 
 def test_the_overview_has_the_good_day_card(signed_in, scored):
     html = signed_in.get("/").text
-    assert "Good day" in html and "/ 100 yesterday" in html and "Higher than 95% of your 20 scored days" in html
+    assert "Yesterday's score" in html and "/ 100 yesterday" in html
+    assert "Higher than 95% of your 20 scored days" in html
 
 
 def test_without_scores_the_page_says_what_it_needs(signed_in):

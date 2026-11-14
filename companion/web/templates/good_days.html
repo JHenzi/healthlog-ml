@@ -15,6 +15,7 @@
   <h2>The last {{ g.recent|length }} days</h2>
   <p class="muted small">Each part ranked against your own history: 0 is your lowest day, 100 your highest.</p>
   {{ days_grid(g.recent) }}
+  {% if blind %}<p class="muted small">Yesterday stays blank until you <a href="/">look back on it</a>, so its score can't sway your answer.</p>{% endif %}
 </section>
 
 <section class="card">

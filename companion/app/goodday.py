@@ -221,7 +221,8 @@ def view(
     )
 
 
-def load_view(db: Session, today: dt.date) -> GoodDayView:
+def load_view(db: Session, today: dt.date, blind: bool = False) -> GoodDayView:
+    """``blind``: leave yesterday out (no score, rank or best-day mark) until its look back is answered."""
     insights = list(
         db.execute(
             sa.select(Insight)
@@ -234,7 +235,8 @@ def load_view(db: Session, today: dt.date) -> GoodDayView:
     series: dict[str, dict[dt.date, float]] = {}
     rows = db.execute(
         sa.select(DailyFeature.feature, DailyFeature.day, DailyFeature.value).where(
-            DailyFeature.feature.in_(wanted), DailyFeature.day < today
+            DailyFeature.feature.in_(wanted),
+            DailyFeature.day < (today - dt.timedelta(days=1) if blind else today),
         )
     )
     for r in rows:

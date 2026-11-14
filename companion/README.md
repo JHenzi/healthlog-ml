@@ -30,22 +30,34 @@ The app has five sections: **Overview**, **Discovery**, **Capture**,
 
 ### Overview: your day at a glance
 
+The Overview runs top to bottom: your ratings, yesterday against your usual,
+yesterday's score, Momentum, then today's tags and diary.
+
 - **Your day**: the built-in day rating. "How was today?" (1–10) in the
-  evening, and a blind "Looking back, how was yesterday?" the next morning.
+  evening, and a blind "Looking back, how was yesterday?" the next morning:
+  until you've answered it, yesterday's evening rating and good-day score stay
+  hidden (here, in Capture and on Good days), so neither sways the answer.
   Nothing to set up. Both ratings and the change between them become daily
   series like any other.
-- **Good day**: today's good-day score (below) and its parts as coloured
-  bars.
-- **Compared with your usual**: tiles for last night's sleep and yesterday's
-  HRV, resting heart rate, steps, stress, energy reserve and mood, each with
-  ▲/▼ against your 30-day average and the number of days behind it. The same
-  as sentences, if you prefer words.
-- **Worth exploring**: the strongest current discoveries.
-- **Worth noting**: streaks and personal records, as plain facts ("7 days in
-  a row", "the highest of your 60+ days"), never judged good or bad.
-- **Data for analysis**: a 30-day coverage strip, so gaps are visible, and
-  any problem reading HealthLog's data, stated outright.
+- **Yesterday, compared with your usual**: tiles for last night's sleep and
+  yesterday's HRV, resting heart rate, steps, stress, energy reserve and mood,
+  each with ▲/▼ against your 30-day average and the number of days behind it.
+  The same as sentences, if you prefer words.
+- **Yesterday's score**: the good-day score (below) and its parts as coloured
+  bars, once you've looked back on yesterday.
+- **Momentum**: one card for what's moving. Encouragement when you're moving
+  more: workout days in a row, workout days this week against the week before
+  (or your most in any 7 days), and exercise, steps, active energy or stand
+  hours above your own usual several days running, or up on the week before.
+  Only what's going well; a missed workout gets one gentle "one today starts
+  a new run", and drops stay on the tiles. Then streaks and personal records
+  as plain facts ("7 days in a row", "the highest of your 60+ days"), and
+  *Worth exploring*: the strongest current discoveries.
+- **Today was…**: today's day tags and today's diary entry.
 - **Quick add**: one tap for your pinned trackers.
+- **Data for analysis**: a 30-day coverage strip, so gaps are visible,
+  shown until all of the last 30 days have something logged; and any problem
+  reading HealthLog's data, stated outright.
 
 ### Discovery: what goes together in your data
 
@@ -90,11 +102,13 @@ The app has five sections: **Overview**, **Discovery**, **Capture**,
   (one tap each: "worked from home", "late meal", anything you add), every
   tracker with a control that fits its type, and a short **diary** entry.
   Diary text is never analysed and never logged.
-- **Reviewed days**: marking a day reviewed is what lets an unlogged count
-  or yes/no count as zero. Otherwise a forgotten entry stays *unknown*,
-  never "none" (R7: missing is not zero).
-- **Reminders** (optional): a push at 10:00 for the look back and at 19:00
-  for the rating, skipped when already answered. Times are adjustable;
+- **Checked-in days**: there's nothing to mark. Logging anything for a day
+  (a rating, a tag, the diary, any tracker) checks it in, and on it an
+  unlogged count or yes/no you've used before counts as zero. A day with
+  nothing logged at all stays *unknown*, never "none" (R7: missing is not
+  zero).
+- **Reminders** (optional): a push at 10:00 for the look back, at 13:00 to
+  log your mood in Apple Health, and at 19:00 for the rating, skipped when already answered. Times are adjustable;
   **Send a test** checks the whole path.
 
 ### My Metrics: every series, readable
@@ -321,8 +335,8 @@ curl -X POST -H "Authorization: Bearer hlc_…" -H "Content-Type: application/js
 - `DELETE /api/entries/<client_id>` (scope `all`) removes an entry.
 
 **Missing is not zero.** An unlogged count or yes/no tracker counts as 0
-only on a day you marked reviewed, or every day for a tracker you mark "I log
-this every time". On other days it stays unknown, so a forgotten entry never
+only on a day you logged anything on (a rating, a tag, the diary, any tracker), from the tracker's own first entry on, or every day for a tracker you mark "I log this every
+time". (Days marked reviewed with the old Capture button still count.) On other days it stays unknown, so a forgotten entry never
 looks like "none" to the analysis.
 
 ## API tokens
@@ -355,9 +369,18 @@ curl -H "Authorization: Bearer hlc_…" https://<host>:8443/api/today
 
 ## Reminders (optional)
 
-A nudge at 10:00 to look back on yesterday and at 19:00 to rate today (change
-the times on the **Reminders** page, linked from *Your day*). A reminder
-whose question you've already answered isn't sent.
+A nudge at 10:00 to look back on yesterday, at 13:00 to log your mood, and at
+19:00 to rate today (change the times, or turn one off, on the **Reminders**
+page, linked from *Your day*). A reminder whose question you've already
+answered isn't sent.
+
+The mood reminder opens the **Mood** page: an **Open Health** button and the
+steps to log a *State of Mind* (Health → Browse → Mental Wellbeing → State of
+Mind, or Mindfulness on the Watch), plus when the last mood reached the
+Companion. Mood is logged in Apple Health, not here, so it arrives through
+Health Auto Export: a day is "answered" once one of that day's moods has
+arrived, and with no State of Mind automation in HAE the reminder comes
+anyway.
 
 1. Make a key pair and add it to `.env`, with `PUSH_ENABLED=true`:
    ```bash

@@ -507,4 +507,10 @@ def entries_for_day(db: Session, day: dt.date) -> list[tuple[Observation, Tracke
 
 
 def is_reviewed(db: Session, day: dt.date) -> bool:
-    return db.get(DayReview, day) is not None
+    """Marked by hand, or checked in: anything logged that day (trackers.observed_days)."""
+    if db.get(DayReview, day) is not None:
+        return True
+    found = db.execute(
+        sa.select(Observation.day).where(Observation.day == day, Observation.deleted.is_(False)).limit(1)
+    ).first()
+    return found is not None

@@ -8,16 +8,20 @@
 <section class="card">
   <div class="row kicker">
     <a href="/review?day={{ prev.isoformat() }}">‹ {{ prev.strftime("%a") }}</a>
-    <span>{% if reviewed %}<span class="tag">Reviewed</span>{% else %}<span class="tag tag-quiet">Not reviewed</span>{% endif %}</span>
+    <span>{% if reviewed %}<span class="tag">Checked in</span>{% else %}<span class="tag tag-quiet">Nothing logged yet</span>{% endif %}</span>
     {% if next %}<a href="/review?day={{ next.isoformat() }}">{{ next.strftime("%a") }} ›</a>{% else %}<span></span>{% endif %}
   </div>
   <h1>Capture · {{ day.strftime("%a, %b %-d") }}</h1>
-  <p class="muted">Tap what applies, then mark the day reviewed. Once it's reviewed, anything you left empty counts as "none"; until then it stays unknown, so a forgotten entry never looks like zero.</p>
+  <p class="muted">Tap what applies. Logging anything for a day checks it in: from then on, a tracker you've used before and left empty that day counts as "none". A day with nothing logged at all stays unknown, so a forgotten day never looks like zero.</p>
   {% if error %}<p class="error" role="alert">Not saved: {{ error }}</p>{% endif %}
 </section>
 <section class="card" aria-labelledby="rating-h">
   <div class="row"><h2 id="rating-h">Your day</h2><a class="small" href="/reminders">Reminders ›</a></div>
+  {% if rating.blind %}{# yesterday, not looked back on yet: the evening answer stays hidden #}
+  <p class="muted small">Your evening rating for {{ day.strftime("%A") }} is hidden until you've looked back on it.</p>
+  {% else %}
   {{ evening_row(rating, csrf, "/review?day=" ~ day.isoformat(), new_id, "How was " ~ day.strftime("%A") ~ "?") }}
+  {% endif %}
   {% if rating.ask_lookback %}{{ lookback_row(rating, csrf, "/review?day=" ~ day.isoformat(), new_id, "Looking back, how was " ~ day.strftime("%A") ~ "?") }}{% endif %}
 </section>
 <section class="card">
@@ -47,12 +51,4 @@
 {% else %}
 <section class="card"><p>No trackers yet. <a href="/trackers#new">Create one</a>.</p></section>
 {% endfor %}
-<section class="card">
-  <form method="post" action="/review" class="inline">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <input type="hidden" name="day" value="{{ day.isoformat() }}">
-    <input type="hidden" name="reviewed" value="{{ '' if reviewed else 'on' }}">
-    <button type="submit"{% if reviewed %} class="secondary"{% endif %}>{% if reviewed %}Reviewed ✓ (undo){% else %}Mark {{ day.strftime("%A") }} reviewed{% endif %}</button>
-  </form>
-</section>
 {% endblock %}

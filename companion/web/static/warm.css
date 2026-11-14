@@ -99,8 +99,8 @@ main > .card:first-child { background: none; border: 0; padding: var(--space-2) 
 .coverage span { border-radius: 4px; background: var(--color-accent); }
 
 /* Buttons and inputs: rounded, centred, moss for the main action. */
-button { justify-content: center; text-align: center; border-radius: 999px; font-weight: 800; padding: 9px 18px; }
-button:hover { background: var(--color-accent-strong); border-color: var(--color-accent-strong); }
+button, a.button { justify-content: center; text-align: center; border-radius: 999px; font-weight: 800; padding: 9px 18px; }
+button:hover, a.button:hover { background: var(--color-accent-strong); border-color: var(--color-accent-strong); }
 button:active { background: #2f4d2c; border-color: #2f4d2c; }
 button.secondary { border: 1.5px solid var(--color-rule); }
 button.secondary:hover { border-color: var(--color-text); }
