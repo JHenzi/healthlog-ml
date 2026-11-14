@@ -248,13 +248,14 @@ def tracker_features(
     last_day: dt.date,
     zone: ZoneInfo,
     boundary: dt.time,
+    checked_in: set[dt.date] = frozenset(),
 ) -> FeatureSet:
     """Each tracker is its own family: its total and its first time are linked by definition. Each tag is too."""
     out = FeatureSet()
     for spec, obs in specs:
         if dayrating.is_built_in(spec.key):
             continue  # the day rating has its own features (``rating.*``)
-        tf = trackers.daily_features(spec, obs, reviewed, last_day, zone, boundary)
+        tf = trackers.daily_features(spec, obs, reviewed, last_day, zone, boundary, checked_in)
         for feature, values in tf.values.items():
             label, unit, kind = tf.labels[feature]
             # Tags on one tracker aren't linked by definition: each is its own family, so they're tested together.
@@ -263,7 +264,10 @@ def tracker_features(
     return out
 
 
-def load_tracker_inputs(db: Session) -> tuple[list[tuple[trackers.TrackerSpec, list[trackers.Obs]]], set[dt.date]]:
+def load_tracker_inputs(
+    db: Session,
+) -> tuple[list[tuple[trackers.TrackerSpec, list[trackers.Obs]]], set[dt.date], set[dt.date]]:
+    """Every tracker with its entries, the days marked reviewed by hand, and the days with any entry (check-ins)."""
     by_tracker: dict[int, list[trackers.Obs]] = {}
     for o in db.execute(sa.select(Observation).where(Observation.deleted.is_(False))).scalars():
         by_tracker.setdefault(o.tracker_id, []).append(
@@ -271,16 +275,17 @@ def load_tracker_inputs(db: Session) -> tuple[list[tuple[trackers.TrackerSpec, l
         )
     specs = [(spec_of(t), by_tracker.get(t.id, [])) for t in db.execute(sa.select(Tracker)).scalars()]
     reviewed = set(db.execute(sa.select(DayReview.day)).scalars())
-    return specs, reviewed
+    checked_in = {o.day for obs in by_tracker.values() for o in obs}
+    return specs, reviewed, checked_in
 
 
 def rebuild(
     db: Session, zone: ZoneInfo, boundary: dt.time, latitude: float | None = None, country: str | None = None
 ) -> RebuildResult:
     """Recompute every feature from scratch and replace the cache (caller commits)."""
-    specs, reviewed = load_tracker_inputs(db)
+    specs, reviewed, checked_in = load_tracker_inputs(db)
     last_day = current_day(now_utc(), zone, boundary) - dt.timedelta(days=1)  # zero-fill never reaches today
-    tracked = tracker_features(specs, reviewed, last_day, zone, boundary)
+    tracked = tracker_features(specs, reviewed, last_day, zone, boundary, checked_in)
     fs = assemble(
         upstream.metric_day_rows(db, zone, boundary),
         load_rules(db),

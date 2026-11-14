@@ -326,6 +326,16 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
+- **Overview reworked (2026-11-14, Joe):** order is ratings, yesterday vs
+  usual, yesterday's score, one Momentum card (momentum, worth noting and
+  worth exploring together), then *Today was…* with the diary. *Data for
+  analysis* hides once all of the last 30 days have something logged.
+  **Reviewing is implied**: any entry checks the day in (R7 updated); the
+  Capture page's "Mark reviewed" button is gone. Hand-marked days still
+  count. Watch: a day with only a diary note or one rating now zero-fills
+  every tracker you've used before; if that dilutes effects, narrow
+  check-ins to days with a tracker or tag entry.
+
 - **Mood can't be logged in the Companion (2026-11-13):** the mood reminder
   sends you to Apple Health, and the Companion only knows a mood was logged
   once HAE delivers it. Without a State of Mind automation (§2.5) the

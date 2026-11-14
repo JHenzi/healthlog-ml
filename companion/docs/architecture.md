@@ -120,7 +120,13 @@ family per tracker:
 | any tracker with tags | `.tag.<slug>` per tag (1 picked, 0 not picked) |
 
 Count, yes/no, choice and moment features are 0 only on reviewed days, or on
-every day since the first entry for an "always logged" tracker. They never
+every day since the first entry for an "always logged" tracker. Since
+2026-11-14 a day is reviewed when anything at all was logged on it (a
+check-in: `trackers.observed_days`, `checked_in`), counted from each
+tracker's own first entry so a newer tracker gets no zeros before it was in
+use; days marked by hand (`day_reviews`, the old Capture button, now gone)
+still count. Nobody remembers to mark a day done (owner, 2026-11-14), so the
+mark is implied; a day with nothing logged stays unknown. They never
 zero-fill today. Scale and time features are never zero-filled.
 
 **Day tags** (migration 0005) describe the day, not a measure ("meeting

@@ -837,5 +837,6 @@ def today_capture(db: Session, day: dt.date) -> dict:
         "tagged": capture.tags_for_day(db, day),
         "rating_today": rating_card(db, day),
         "rating_yesterday": rating_card(db, day - dt.timedelta(days=1)),
+        "diary_text": capture.diary_text(db, day),
         "new_id": lambda: str(uuid.uuid4()),
     }

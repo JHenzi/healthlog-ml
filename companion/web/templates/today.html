@@ -37,63 +37,8 @@
   <p class="muted small">Rate each evening, then look back the next morning. Both are kept, and so is the change between them: they're your own measure of a good day.</p>
 </section>
 
-{% if momentum %}
-<section class="card" aria-labelledby="momentum-h">
-  <h2 id="momentum-h">Momentum</h2>
-  <ul class="sentences">
-    {% for line in momentum %}<li>{{ line }}</li>{% endfor %}
-  </ul>
-</section>
-{% endif %}
-
-<section class="card" aria-labelledby="coverage-h">
-  <div class="coverage-head">
-    <h2 id="coverage-h">Data for analysis</h2>
-    <strong>{{ overview.recorded }} of {{ overview.cells|length }} days</strong>
-  </div>
-  <div class="coverage" role="img" aria-label="{{ overview.recorded }} of the last {{ overview.cells|length }} days have something you logged">
-    {% for d, ok in overview.cells %}<span{% if not ok %} class="missing"{% endif %} title="{{ d.strftime('%b %-d') }}: {{ 'logged' if ok else 'not recorded' }}"></span>{% endfor %}
-  </div>
-  <p class="muted small">Days with something you logged yourself (trackers, mood). Hatched days are not recorded, never zero. Most comparisons need about {{ overview.preliminary_days }} logged days; until then, findings are preliminary.</p>
-</section>
-
-{% from "_good_day.html" import parts_bars %}
-<section class="card" aria-labelledby="goodday-h">
-  <div class="row"><h2 id="goodday-h">Good day</h2><a class="small" href="/good-days">Your best days ›</a></div>
-  {% if blind %}
-  <p class="muted small">Yesterday's score is hidden until you look back on yesterday above, so the numbers can't sway your answer. Last night's sleep and this morning's mood would already pull it one way.</p>
-  {% elif goodday.yesterday.score is not none %}
-  <p class="goodday-score"><strong>{{ goodday.yesterday.score|round|int }}</strong> <span class="muted">/ 100 yesterday</span>{% if goodday.yesterday.best %} <span class="tag">one of your best days</span>{% endif %}</p>
-  {{ parts_bars(goodday.yesterday.parts) }}
-  <p class="muted small">Higher than {{ goodday.rank }}% of your {{ goodday.scored }} scored days. Each part is ranked against your own history.</p>
-  {% else %}
-  <p class="muted small">No score for yesterday: a day needs at least two of active, sleep, water and mood, each with two weeks of history. {{ goodday.scored }} days scored so far.</p>
-  {% endif %}
-</section>
-
-{% if overview.top %}
 <section class="card">
-  <div class="row"><h2>Worth exploring</h2><a class="small" href="/insights">All discoveries</a></div>
-  {% for i in overview.top %}
-  <a class="discovery glance" href="/insights/{{ i.id }}">
-    {{ discovery_head(overview.cards[i.id], i.n, overview.preliminary_days) }}
-    <p class="detail-line">{{ i.sentence }}</p>
-  </a>
-  {% endfor %}
-</section>
-{% endif %}
-
-{% if view.notes %}
-<section class="card" aria-labelledby="notes-h">
-  <h2 id="notes-h">Worth noting</h2>
-  <ul class="sentences">
-    {% for line in view.notes %}<li>{{ line }}</li>{% endfor %}
-  </ul>
-</section>
-{% endif %}
-
-<section class="card">
-  <h2>Compared with your usual</h2>
+  <h2>Yesterday, compared with your usual</h2>
   {% if view.tiles %}
   <p class="muted small">Last night's sleep and yesterday's day, against your 30-day average. Coloured when it's clearly above or below.</p>
   <ul class="tiles">
@@ -114,9 +59,53 @@
   {% if view.tiles %}</details>{% endif %}
 </section>
 
-<section class="card">
-  <div class="row"><h2>Today was…</h2></div>
+{% from "_good_day.html" import parts_bars %}
+<section class="card" aria-labelledby="goodday-h">
+  <div class="row"><h2 id="goodday-h">Yesterday's score</h2><a class="small" href="/good-days">Your best days ›</a></div>
+  {% if blind %}
+  <p class="muted small">Yesterday's score is hidden until you look back on yesterday above, so the numbers can't sway your answer. Last night's sleep and this morning's mood would already pull it one way.</p>
+  {% elif goodday.yesterday.score is not none %}
+  <p class="goodday-score"><strong>{{ goodday.yesterday.score|round|int }}</strong> <span class="muted">/ 100 yesterday</span>{% if goodday.yesterday.best %} <span class="tag">one of your best days</span>{% endif %}</p>
+  {{ parts_bars(goodday.yesterday.parts) }}
+  <p class="muted small">Higher than {{ goodday.rank }}% of your {{ goodday.scored }} scored days. Each part is ranked against your own history.</p>
+  {% else %}
+  <p class="muted small">No score for yesterday: a day needs at least two of active, sleep, water and mood, each with two weeks of history. {{ goodday.scored }} days scored so far.</p>
+  {% endif %}
+</section>
+
+{% if momentum or view.notes or overview.top %}
+<section class="card" aria-labelledby="momentum-h">
+  <h2 id="momentum-h">Momentum</h2>
+  {% if momentum or view.notes %}
+  <ul class="sentences">
+    {% for line in momentum %}<li>{{ line }}</li>{% endfor %}
+    {% for line in view.notes %}<li>{{ line }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+  {% if overview.top %}
+  <div class="row"><h3>Worth exploring</h3><a class="small" href="/insights">All discoveries</a></div>
+  {% for i in overview.top %}
+  <a class="discovery glance" href="/insights/{{ i.id }}">
+    {{ discovery_head(overview.cards[i.id], i.n, overview.preliminary_days) }}
+    <p class="detail-line">{{ i.sentence }}</p>
+  </a>
+  {% endfor %}
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card" aria-labelledby="today-was-h">
+  <div class="row"><h2 id="today-was-h">Today was…</h2></div>
   {{ day_tags_block(capture.day_tags, capture.tagged.get(capture.day_tags.id, ()) if capture.day_tags else (), csrf, "/") }}
+  <form method="post" action="/log/diary" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="client_id" value="{{ capture.new_id() }}">
+    <input type="hidden" name="back" value="/">
+    <input type="hidden" name="day" value="{{ view.day.isoformat() }}">
+    <label for="diary-today" class="small">Diary</label>
+    <textarea id="diary-today" name="value" rows="4" maxlength="20000">{{ capture.diary_text }}</textarea>
+    <button type="submit" class="secondary">Save</button>
+  </form>
 </section>
 
 {% if capture.trackers %}
@@ -128,6 +117,19 @@
     {{ log_controls(t, csrf, "/", capture.new_id, state=capture.state.get(t.id), tagged=capture.tagged.get(t.id, ())) }}
   </div>
   {% endfor %}
+</section>
+{% endif %}
+
+{% if overview.recorded < overview.preliminary_days %}{# hidden once there are enough logged days #}
+<section class="card" aria-labelledby="coverage-h">
+  <div class="coverage-head">
+    <h2 id="coverage-h">Data for analysis</h2>
+    <strong>{{ overview.recorded }} of {{ overview.cells|length }} days</strong>
+  </div>
+  <div class="coverage" role="img" aria-label="{{ overview.recorded }} of the last {{ overview.cells|length }} days have something you logged">
+    {% for d, ok in overview.cells %}<span{% if not ok %} class="missing"{% endif %} title="{{ d.strftime('%b %-d') }}: {{ 'logged' if ok else 'not recorded' }}"></span>{% endfor %}
+  </div>
+  <p class="muted small">Days with something you logged yourself (trackers, mood). Hatched days are not recorded, never zero. Most comparisons need about {{ overview.preliminary_days }} logged days; until then, findings are preliminary.</p>
 </section>
 {% endif %}
 

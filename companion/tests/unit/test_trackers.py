@@ -105,6 +105,15 @@ def _obs(day: dt.date, hour: int, value: float | None = None, text: str | None =
     return Obs(dt.datetime.combine(day, dt.time(hour), tzinfo=NY), day, value, text)
 
 
+def test_logging_anything_checks_the_day_in():
+    # D2: something else was logged, so coffee's absence is a zero; D3: nothing logged anywhere, still unknown.
+    f = daily_features(COFFEE, [_obs(D1, 8, 1)], set(), D3, NY, FOUR, checked_in={D1, D2})
+    assert f.values["tracker.coffee.total"] == {D1: 1.0, D2: 0.0}
+    # A check-in before the tracker's first entry isn't a zero: it wasn't in use yet.
+    f = daily_features(COFFEE, [_obs(D2, 8, 1)], set(), D3, NY, FOUR, checked_in={D1, D2, D3})
+    assert f.values["tracker.coffee.total"] == {D2: 1.0, D3: 0.0}
+
+
 def test_count_is_zero_only_on_reviewed_days():
     f = daily_features(COFFEE, [_obs(D1, 8, 1), _obs(D1, 14, 2)], {D2}, D3, NY, FOUR)
     assert f.values["tracker.coffee.total"] == {D1: 3.0, D2: 0.0}  # D3 not reviewed: unknown, not 0

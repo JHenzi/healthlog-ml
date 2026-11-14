@@ -39,7 +39,10 @@ pipeline; the Companion owns its own schema, engine and UI.
   and docs use synthetic data only: no Health Auto Export files, dumps, real
   entry ids or real logged values.
 - **R7: Missing is not zero.** An absent tracker value is 0 only on a
-  reviewed day (or for an "always logged" tracker); otherwise it's NaN.
+  reviewed day (or for an "always logged" tracker); otherwise it's NaN. A
+  day is reviewed when you logged anything on it (a check-in, since
+  2026-11-14), counted from the tracker's own first entry on, or when it
+  was marked by hand. A day with nothing logged stays NaN.
 - **R12: Schema changes only through companion Alembic, in schema
   `companion`.** A tracker's type, unit and scale are locked once data
   exists; changes create a successor version.

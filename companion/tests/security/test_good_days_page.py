@@ -79,7 +79,8 @@ def test_the_page_shows_parts_best_days_and_what_they_share(signed_in, scored):
 
 def test_the_overview_has_the_good_day_card(signed_in, scored):
     html = signed_in.get("/").text
-    assert "Good day" in html and "/ 100 yesterday" in html and "Higher than 95% of your 20 scored days" in html
+    assert "Yesterday's score" in html and "/ 100 yesterday" in html
+    assert "Higher than 95% of your 20 scored days" in html
 
 
 def test_without_scores_the_page_says_what_it_needs(signed_in):

@@ -318,3 +318,22 @@ def test_an_amount_without_a_body_logs_one(client, db):
     raw, _ = auth.create_token(db, "t", "log:sessions")
     reply = client.post("/api/log/sessions", json={}, headers=_bearer(raw))
     assert reply.status_code == 201 and reply.json()["value"] == 1.0
+
+
+def test_overview_order_diary_and_coverage_hiding(signed_in, db, coffee, monkeypatch):
+    html = signed_in.get("/").text
+    order = [html.index(h) for h in ("Your day", "Yesterday, compared", "Yesterday's score", "Today was…")]
+    assert order == sorted(order) and 'id="diary-today"' in html
+    csrf = _csrf(html)
+    signed_in.post("/log/diary", data={"csrf": csrf, "value": "a synthetic note", "back": "/"})
+    assert "a synthetic note" in signed_in.get("/").text
+    import app.web as web
+
+    full = web._overview  # with every day logged, the coverage card steps aside
+
+    def every_day(db_, day):
+        out = full(db_, day)
+        return {**out, "recorded": len(out["cells"])}
+
+    monkeypatch.setattr(web, "_overview", every_day)
+    assert "Data for analysis" not in signed_in.get("/").text
