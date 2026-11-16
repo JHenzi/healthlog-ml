@@ -326,6 +326,14 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
+- **Catch-up syncs doubled a night's sleep (2026-11-14, fixed in the
+  Companion):** HealthLog keys `sleep_sessions` on (sleep_end, source), so a
+  night sent once cut off at sync time and again in full is stored twice and
+  the Companion summed 4.5 h + 5.8 h into 10 h. The Companion now skips a
+  session that lies inside a longer one from the same source (3 of 60 rows
+  so far). The rows themselves stay in HealthLog; worth raising upstream,
+  since their own sleep analysis sees the same duplicates.
+
 - **Overview reworked (2026-11-14, Joe):** order is ratings, yesterday vs
   usual, yesterday's score, one Momentum card (momentum, worth noting and
   worth exploring together), then *Today was…* with the diary. *Data for

@@ -80,7 +80,7 @@ rebuilds them from scratch, so a changed rule applies to all history:
 | Feature | From | Rule |
 |---|---|---|
 | `hl.<metric>` | `metric_samples` (a water sample written for a coffee or a beer becomes `hl.dietary_water_from_<drink>`, in the drink's family) | per Companion day: one source (priority list → merged stream → busiest source), then the metric's aggregation, then its bounds (outside → missing) |
-| `sleep.total_h`, `deep_h`, `core_h`, `rem_h`, `awake_h` | `sleep_sessions` | per wake date; the source with the most total sleep |
+| `sleep.total_h`, `deep_h`, `core_h`, `rem_h`, `awake_h` | `sleep_sessions` | per wake date; the source with the most total sleep; a session lying inside a longer one from the same source (a catch-up sync's cut-off copy) is skipped |
 | `stress.mean` | `stress_intraday` | mean over measured minutes |
 | `energy.low`, `energy.high` | `body_battery_intraday` | lowest / highest level |
 | `workout.minutes` | `workouts` | per Companion day, one source |
