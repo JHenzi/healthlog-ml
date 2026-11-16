@@ -56,9 +56,10 @@ def upstream_rows(admin_engine):
         conn.execute(
             text(
                 "INSERT INTO sleep_sessions (sleep_start, sleep_end, source, total_sleep_h) "
-                "VALUES (:s, :e, 'Watch', 6.5)"
+                "VALUES (:s, :e, 'Watch', 6.5), (:s, :cut, 'Watch', 4.0)"
             ),
-            {"s": at(YESTERDAY, 23, 30), "e": at(TODAY, 6)},
+            # A catch-up sync also sent the night cut off at 04:00; that copy must not add to the 6.5 hours.
+            {"s": at(YESTERDAY, 23, 30), "e": at(TODAY, 6), "cut": at(TODAY, 4)},
         )
         conn.execute(
             text(

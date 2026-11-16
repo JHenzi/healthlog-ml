@@ -43,6 +43,17 @@ MEASURED_STRESS_STATES = ("rest", "low", "medium", "high")
 WATER_DRINKS = ("caffeine", "alcohol_consumption")
 DRINK_WATER_PREFIX = "dietary_water_from_"
 
+# A catch-up sync can send the same night twice: once cut off at the sync time and again in full, with the same
+# start. HealthLog keys a session on (sleep_end, source), so both rows stay and summing them double-counts the
+# night. A session that lies inside another one from the same source is that earlier partial copy and is skipped;
+# separate sessions (a nap and the night) don't overlap and still add up.
+SLEEP_SESSIONS = (
+    "(SELECT s.* FROM public.sleep_sessions s WHERE s.sleep_end IS NOT NULL AND s.total_sleep_h IS NOT NULL "
+    "AND NOT EXISTS (SELECT 1 FROM public.sleep_sessions o WHERE o.source = s.source AND o.sleep_end IS NOT NULL "
+    "AND o.sleep_start <= s.sleep_start AND o.sleep_end >= s.sleep_end "
+    "AND (o.sleep_start, o.sleep_end) <> (s.sleep_start, s.sleep_end))) AS sleep"
+)
+
 
 @dataclass(frozen=True)
 class ContractProblem:
@@ -136,9 +147,8 @@ def sleep_by_source(db: Session, zone: ZoneInfo, first: dt.date, last: dt.date) 
     rows = db.execute(
         sa.text(
             "SELECT (sleep_end AT TIME ZONE :tz)::date AS day, source, sum(total_sleep_h) AS value, count(*) AS n "
-            "FROM public.sleep_sessions "
-            "WHERE sleep_end IS NOT NULL AND total_sleep_h IS NOT NULL "
-            "AND (sleep_end AT TIME ZONE :tz)::date BETWEEN :first AND :last "
+            f"FROM {SLEEP_SESSIONS} "
+            "WHERE (sleep_end AT TIME ZONE :tz)::date BETWEEN :first AND :last "
             "GROUP BY 1, 2"
         ),
         {"tz": zone.key, "first": first, "last": last},
@@ -249,7 +259,7 @@ def sleep_day_rows(db: Session, zone: ZoneInfo) -> list[SleepDayRow]:
         sa.text(
             "SELECT (sleep_end AT TIME ZONE :tz)::date AS day, source, sum(total_sleep_h) AS total, "
             "sum(deep_h) AS deep, sum(core_h) AS core, sum(rem_h) AS rem, sum(awake_h) AS awake, count(*) AS n "
-            "FROM public.sleep_sessions WHERE sleep_end IS NOT NULL AND total_sleep_h IS NOT NULL GROUP BY 1, 2"
+            f"FROM {SLEEP_SESSIONS} GROUP BY 1, 2"
         ),
         {"tz": zone.key},
     ).all()
