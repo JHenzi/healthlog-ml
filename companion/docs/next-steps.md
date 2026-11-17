@@ -486,6 +486,10 @@ logging alerts are false positives, dismissed with a reason. Still open:
 - **Keep `.github/dependabot.yml` on an upstream sync.** It's ours now, and his
   `dev` changes to it will conflict. `/backend` and upstream's workflows are
   left out on purpose: those PRs would fail `companion: check paths`.
+- **The fork's front page is `.github/README.md`** (2026-11-17). GitHub shows
+  it in place of the root `README.md`, so the Companion leads on the fork's
+  page while upstream's README stays untouched (R1). Upstream has no
+  `.github/README.md`, so syncs don't conflict; if they ever add one, keep ours.
 - **Grafana and HealthLog stay on `0.0.0.0`** (`3001`, `8000`): a tailnet client
   uses `:3001` directly. Moving Grafana to localhost needs a Tailscale Serve
   route first.
