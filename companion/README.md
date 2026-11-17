@@ -133,6 +133,9 @@ yesterday's score, Momentum, then today's tags and diary.
   prefer (never added together, R16), plausibility bounds, and whether it's
   analysed.
 
+<p align="center"><img src="docs/screenshots/metric-detail-cortisol.png" width="560" alt="A tracker's page in the Companion: Cortisol awakening response level (highest), 37 days of data. A 60-day sparkline, the latest value against the last 30 days and the 30 before, a 30-day calendar with each day coloured low, usual or high for you, and the average per weekday coloured the same way."></p>
+<p align="center"><sub>A self-tracked series (a cortisol awakening response test, logged as a tracker) on its own page: where each day falls among your own days, and your weekday pattern.</sub></p>
+
 What's there: all of HealthLog's metrics (not just its core ones), sleep and
 its stages, stress and energy reserve, workout minutes, Apple Health State of
 Mind (valence, every feeling and what it was about), the good-day score, the
