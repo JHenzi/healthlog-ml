@@ -4,6 +4,14 @@
 
 <p align="center"><b>What goes together in <i>your</i> health data, in plain sentences, on your own server.</b></p>
 
+> [!IMPORTANT]
+> **This is a fork. Report bugs and ask questions here, not upstream.**
+> Anything you hit while running this repository, including its HealthLog, goes to
+> **[this fork's issues](https://github.com/JHenzi/healthlog-ml/issues)**. Please don't file it on
+> [anym001/healthlog](https://github.com/anym001/healthlog): its maintainer didn't write the
+> Companion and shouldn't have to sort out our changes. If the bug turns out to be in HealthLog itself,
+> we reproduce it on plain upstream and report it there ourselves, with a fix when we can.
+
 The Companion brings your Apple Health data together with what you log
 yourself and the world outside (weather, daylight, the moon, holidays). It
 turns all of it into one number per day per series and compares everything
@@ -45,20 +53,46 @@ that plants effects and confounders before any method ships.
 **→ [The full Companion README](../companion/README.md)**: features, install,
 settings, Shortcuts, API and CLI.
 
-## Built on HealthLog
+## HealthLog: the foundation, and where we contribute
 
-The Companion runs on top of [HealthLog](https://github.com/anym001/healthlog),
-the data pipeline: Health Auto Export → FastAPI ingest → TimescaleDB, with
-nightly statistics and Grafana dashboards. This fork follows HealthLog
-upstream and adds the Companion beside it. The Companion reads HealthLog's
-tables **read-only** and keeps its own data in its own schema, so each one
-upgrades on its own.
+**None of this exists without [HealthLog](https://github.com/anym001/healthlog)** by
+[@anym001](https://github.com/anym001). It is the whole data pipeline: Health Auto Export →
+FastAPI ingest → TimescaleDB, idempotent and metric-agnostic. It also has nightly statistics, a stress
+and energy-reserve model, Grafana dashboards and optional local narration, all self-hosted with no
+outbound calls. It is careful, well-documented work, and the Companion stands entirely on it. If you
+only want your Apple Health data in your own database and dashboards, **use HealthLog directly**;
+it's excellent.
 
-- **HealthLog's own README** (set up the pipeline first):
-  [`README.md`](../README.md)
-- **Companion design and rules**:
-  [`companion/docs/`](../companion/docs/) ·
+This fork isn't a split. It follows HealthLog upstream, and we contribute back. Improvements that
+belong in the pipeline go upstream first, as their own pull requests, and the fork picks them up from
+there. Merged so far:
+
+| Upstream PR | What it added to HealthLog |
+|---|---|
+| [#104](https://github.com/anym001/healthlog/pull/104) | Split oversized backfill files to fit the jsonb size limit |
+| [#108](https://github.com/anym001/healthlog/pull/108) | The `daily_metrics` view and dashboards follow `TZ` |
+| [#111](https://github.com/anym001/healthlog/pull/111) | Apple Health State of Mind entries in their own table |
+| [#117](https://github.com/anym001/healthlog/pull/117) | Caffeine and HRV RMSSD in the metric registry |
+| [#118](https://github.com/anym001/healthlog/pull/118) | Apple Watch heart rate notifications and ECG summaries |
+| [#126](https://github.com/anym001/healthlog/pull/126) | "Outdoor/Indoor Cycling" workout names mapped to cycling |
+
+Ongoing: the Companion itself was proposed upstream as the optional "dedicated web app"
+([#107](https://github.com/anym001/healthlog/issues/107)), and there's more to come.
+
+How the two fit together: the Companion reads HealthLog's tables **read-only**, through one checked
+contract, and keeps its own data in its own schema. It never creates anything that depends on
+HealthLog's schema, so HealthLog upgrades stay HealthLog's business.
+
+- **HealthLog's own README** (set up the pipeline first): [`README.md`](../README.md)
+- **Companion design and rules**: [`companion/docs/`](../companion/docs/) ·
   [`companion/CLAUDE.md`](../companion/CLAUDE.md)
 
+## Bugs, ideas, questions
+
+**[Open an issue on this fork](https://github.com/JHenzi/healthlog-ml/issues/new)**, for the Companion
+*and* for this repository's HealthLog. We triage everything here first; what really belongs to
+HealthLog gets reported upstream by us, reproduced on plain upstream and usually with a pull request.
+
 <sub>Why this page lives in `.github/`: GitHub shows `.github/README.md` in place of the root one, so
-the fork gets its own front page while HealthLog's `README.md` stays exactly as upstream wrote it.</sub>
+the fork gets its own front page while HealthLog's `README.md` stays exactly as upstream wrote it.
+Licence: AGPL-3.0, as HealthLog's ([`LICENSE`](../LICENSE)).</sub>

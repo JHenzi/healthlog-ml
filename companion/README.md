@@ -9,6 +9,13 @@ the data pipeline (Apple Health → TimescaleDB). The Companion reads its tables
 plain-language sentences. Design: [`docs/companion-app-design.md`](docs/companion-app-design.md).
 Rules: [`CLAUDE.md`](CLAUDE.md). Build plan: [`docs/plan.md`](docs/plan.md).
 
+> [!IMPORTANT]
+> **Bugs and questions about the Companion go to
+> [this fork's issues](https://github.com/JHenzi/healthlog-ml/issues), never to HealthLog upstream.**
+> HealthLog ([anym001/healthlog](https://github.com/anym001/healthlog)) is the excellent pipeline this
+> stands on, and we contribute to it; its maintainer shouldn't have to field our bugs. If something turns
+> out to be HealthLog's, we report it upstream ourselves.
+
 Everything runs on your own server. The Companion makes **no outbound
 calls**: no telemetry, no cloud, no model APIs. The two opt-in exceptions
 (weather, phone reminders) leave from separate containers that hold no health
