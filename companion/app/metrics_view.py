@@ -6,6 +6,7 @@ import datetime as dt
 import statistics
 from dataclasses import dataclass
 
+from .clock import clock_text, is_clock
 from .goodday import percentiles
 
 WINDOW_DAYS = 30
@@ -64,12 +65,19 @@ def summarize(values: dict[dt.date, float], today: dt.date) -> Summary:
 def fmt(value: float | None, unit: str | None = None) -> str:
     if value is None:
         return "–"
+    if is_clock(unit):
+        return clock_text(value, unit)
     magnitude = abs(value)
     if magnitude >= 100 or float(value).is_integer():
         text = f"{value:,.0f}"  # counts and scale steps read as whole numbers: "3 cups", not "3.00 cups"
     else:
         text = f"{value:,.1f}" if magnitude >= 10 else f"{value:,.2f}"
     return f"{text} {unit}" if unit else text
+
+
+def num(value: float | None, unit: str | None = None) -> str:
+    """A value without its unit (the tile shows the unit apart); a clock time still reads as one: 7:42."""
+    return fmt(value, unit) if is_clock(unit) else fmt(value)
 
 
 def sparkline(values: dict[dt.date, float], end: dt.date, days: int = 60, width: int = 240, height: int = 40) -> str:

@@ -245,6 +245,15 @@ yet different" (R9, R13).
 
 ## 4d. Sleep timing, not just sleep amount
 
+> **Built 2026-11-17** (roadmap B19, piece 1): `app/sleeptiming.py`, rules
+> in [`architecture.md`](architecture.md) (feature table). Bedtime, wake
+> time, midpoint, midpoint vs your usual and a 7-night spread are features
+> in their own family (`sleep_timing`), so bedtime is tested against how
+> long you slept. Not built: the Sleep Regularity Index (needs minute-level
+> sleep state; the spread stands in for it) and a weekday-vs-weekend shift
+> (the engine already removes each series' weekday profile, and a fixed
+> "workdays" set would be a presumption, R17).
+
 Late to bed and late up can look like good sleep, but may go with
 anxiety, slipped goals or a less active next day. HealthLog already stores
 the times (`sleep_sessions.sleep_start`, `sleep_end`, `in_bed_start`), so
@@ -289,6 +298,34 @@ by side, each with its own direction and evidence: the equal-weight
 good-day score (the fixed reference), the latent state, the forecast,
 carry-over and recovery. That fits "different things show different signs"
 and keeps the one-number trap out.
+
+## 4f. Timing against your day (roadmap B19)
+
+*Owner's ask, 2026-11-17:* "if you XYZ within an hour [of waking], it's
+good, at noon, it's bad." Anything with a timestamp gets placed against the
+day you actually lived, not only the clock: minutes after you woke and
+minutes before you went to sleep. Wake and bedtime come from §4d.
+
+| Piece | What | State |
+|---|---|---|
+| 1 | Sleep timing features (§4d) and clock-time handling: shown as 7:42, changes as minute shifts | **built 2026-11-17** |
+| 2 | `X.after_wake_min` and `X.before_bed_min` for every timed source: tracker first and last entries, first workout start, first caffeine, last alcohol, mood entries; symptoms and medications once they're in the read contract | to build |
+| 3 | A "sweet spot" test: each offset cut into early, middle and late thirds of *your own* distribution, Kruskal-Wallis against every outcome, with a validation suite (R8) | to build |
+
+Rules it keeps:
+
+- **No hand-picked windows (R17).** "Within an hour of waking" is never a
+  built-in threshold. Earlier-is-better shows up as a Spearman link on the
+  offset; a sweet spot shows up in piece 3, and only the wording uses the
+  measured cut points ("within ~70 min of waking"). Rolling windows are
+  your own baseline ("later than your usual"), never a fixed expectation.
+- **Linked by definition.** `coffee.after_wake_min` is made from
+  `coffee.first_time` and `sleep.wake_time`, so it is never tested against
+  either (it belongs to both parents' families).
+- **Missing is not zero (R7).** No sleep record, no offsets that day.
+- **Every new series makes each test harder to pass** (one FDR family).
+  Start with after-wake and before-bed; add a vs-usual offset only if it
+  earns its place.
 
 ## 5. Issues and limitations
 

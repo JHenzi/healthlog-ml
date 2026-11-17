@@ -191,3 +191,22 @@ def test_weekday_rhythm_is_found(phase):
     found = analyse({"y": _series(y)}, _meta(["y"]), TODAY)
     weekday = [f for f in found if f.kind == "weekday"]
     assert weekday and weekday[0].details["high"] in (5, 6)
+
+
+def test_a_clock_time_change_is_a_shift_in_minutes_not_a_percentage():
+    """A bedtime has no natural zero, so "15% later" means nothing: its change is reported and floored in minutes."""
+    clock_meta = {"bed": FeatureMeta("Bedtime", "min after 18:00", family="t")}
+
+    def week(seed: int, jump: float) -> list:
+        rng = np.random.default_rng(8100 + seed)
+        y = 300 + 20 * rng.normal(size=DAYS)
+        y[-7:] += jump
+        found = analyse({"bed": _series(y)}, clock_meta, TODAY)
+        return [f for f in found if f.kind == "change" and f.horizon == "week"]
+
+    found = [week(s, 75.0) for s in SEEDS]
+    assert float(np.mean([bool(f) for f in found])) >= 0.9
+    assert all("shift_min" in f.details and "pct" not in f.details for fs in found for f in fs)
+    # Nothing under the minutes floor is reported, and no change at all stays quiet.
+    assert all(abs(f.details["shift_min"]) >= 30 for s in SEEDS for f in week(s, 20.0))
+    assert float(np.mean([bool(week(s, 0.0)) for s in SEEDS])) <= 0.1

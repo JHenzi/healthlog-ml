@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from ..clock import is_clock
 from . import constants as C
 from .pure import (
     acf,
@@ -287,7 +288,11 @@ def _lag_curves(prepared: Mapping[str, _Prepared], meta: Mapping[str, FeatureMet
     return out
 
 
-def _changes(prepared_raw: Mapping[str, pd.Series], today: dt.date) -> list[Finding]:
+def _changes(
+    prepared_raw: Mapping[str, pd.Series], today: dt.date, meta: Mapping[str, FeatureMeta] | None = None
+) -> list[Finding]:
+    """Week and month changes. A clock-time series (bedtime) has no natural zero, so its change is a shift in
+    minutes, not a percentage."""
     out: list[Finding] = []
     end = pd.Timestamp(today - dt.timedelta(days=1))  # today is still running
     for feature, raw in prepared_raw.items():
@@ -304,9 +309,16 @@ def _changes(prepared_raw: Mapping[str, pd.Series], today: dt.date) -> list[Find
             shift = mean_shift(recent.to_numpy(), base.to_numpy(), lag1_autocorr(raw))
             p = shift.p
             base_mean = float(base.mean())
-            pct = (float(recent.mean()) - base_mean) / abs(base_mean) * 100 if base_mean else 0.0
             lo, hi = shift.interval()
-            pct_ci = [round(lo / abs(base_mean) * 100, 1), round(hi / abs(base_mean) * 100, 1)] if base_mean else None
+            m = (meta or {}).get(feature)
+            if m is not None and is_clock(m.unit):
+                size = {"shift_min": float(recent.mean()) - base_mean, "shift_ci": [round(lo, 1), round(hi, 1)]}
+            else:
+                pct = (float(recent.mean()) - base_mean) / abs(base_mean) * 100 if base_mean else 0.0
+                pct_ci = (
+                    [round(lo / abs(base_mean) * 100, 1), round(hi / abs(base_mean) * 100, 1)] if base_mean else None
+                )
+                size = {"pct": pct, "pct_ci": pct_ci}
             out.append(
                 Finding(
                     "change",
@@ -323,10 +335,9 @@ def _changes(prepared_raw: Mapping[str, pd.Series], today: dt.date) -> list[Find
                     details={
                         "recent_mean": float(recent.mean()),
                         "base_mean": base_mean,
-                        "pct": pct,
+                        **size,
                         "recent_days": recent_days,
                         "base_days": base_days,
-                        "pct_ci": pct_ci,
                     },
                 )
             )
@@ -438,6 +449,8 @@ def _passes_floor(f: Finding) -> bool:
     if f.kind == "association":
         return abs(f.effect) >= (C.RHO_FLOOR if f.method in ("spearman", "fisher") else C.CLIFF_FLOOR)
     if f.kind == "change":
+        if "shift_min" in f.details:
+            return abs(f.details["shift_min"]) >= C.CHANGE_CLOCK_FLOOR_MIN and abs(f.effect) >= C.CHANGE_CLIFF_FLOOR
         return abs(f.details["pct"]) >= C.CHANGE_PCT_FLOOR and abs(f.effect) >= C.CHANGE_CLIFF_FLOOR
     return f.effect >= C.WEEKDAY_ETA2_FLOOR
 
@@ -475,7 +488,9 @@ def analyse(
             prepared[feature] = p
     raw = {f: p.raw for f, p in prepared.items()}
 
-    candidates = _associations(prepared, meta) + _lag_curves(prepared, meta) + _changes(raw, today) + _weekdays(raw)
+    candidates = (
+        _associations(prepared, meta) + _lag_curves(prepared, meta) + _changes(raw, today, meta) + _weekdays(raw)
+    )
     adjusted = benjamini_hochberg([f.p for f in candidates])  # one family for everything (R8)
     reported: list[Finding] = []
     for f, p_adj in zip(candidates, adjusted, strict=True):

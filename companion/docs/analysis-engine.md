@@ -43,7 +43,9 @@ linked by definition to the families it is built from: the good-day score
   all changes, all weekday tests) goes through one Benjamini-Hochberg pass
   at a 10% false-discovery target (R8).
 - **Effect floors.** |ρ| ≥ 0.25, |Cliff's δ| ≥ 0.25, changes ≥ 15% *and*
-  |δ| ≥ 0.33, weekday η² ≥ 0.06. A tiny effect on lots of data stays quiet.
+  |δ| ≥ 0.33 (a clock time, such as bedtime, has no natural zero, so its
+  change is a shift of ≥ 30 min instead of a percentage), weekday
+  η² ≥ 0.06. A tiny effect on lots of data stays quiet.
 - **Minimum support.** A series needs 21 days, a yes/no series 8 days on
   each side, and a change window 70% of its days observed.
 - **One line per pair.** Of a pair's same-day and next-day results, only
@@ -73,7 +75,7 @@ days widens it:
 | Spearman ρ | Fisher z with Fieller's variance 1.06 / (n − 3), on the effective n |
 | Cliff's δ (yes/no vs a measure) | through the AUC, Hanley-McNeil variance widened by n / effective n |
 | φ (two yes/no series) | Fisher z on n |
-| week / month change | the mean shift's t interval on the effective window sizes, as % of the earlier window |
+| week / month change | the mean shift's t interval on the effective window sizes, as % of the earlier window (in minutes for a clock time) |
 
 Weekday rhythms have no range. Stored in `insights.details` (`ci`, `pct_ci`).
 

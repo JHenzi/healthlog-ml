@@ -31,7 +31,7 @@
 <section class="card">
   <h2>The last 30 days</h2>
   {% if counted %}<p class="muted small">Filled on the days it happened.</p>{% else %}<p class="muted small">Each day coloured by where it falls among all your own days.</p>{% endif %}
-  {{ calendar(g.cells, fmt, counted, yes_no) }}
+  {{ calendar(g.cells, fmt, counted, yes_no, d.unit) }}
   {% if not counted %}{{ key() }}{% endif %}
 </section>
 
@@ -41,7 +41,7 @@
   <div class="gd-grid-wrap">
   <table class="gd-grid">
     <thead><tr>{% for w in weekdays %}<th scope="col">{{ w }}</th>{% endfor %}</tr></thead>
-    <tbody><tr>{% for w in s.weekday %}{% set wb = weekday_bands[loop.index0] %}{% if w %}<td class="gd-cell{% if counted %}{% if w.mean %} gd-b3{% endif %}{% elif wb is not none %} gd-b{{ wb }}{% endif %}">{% if yes_no %}{{ (w.mean * 100)|round|int }}%{% else %}{{ fmt(w.mean) }}{% endif %}<span class="mcal-day">{{ w.n }} days</span></td>{% else %}<td class="gd-cell gd-missing">–</td>{% endif %}{% endfor %}</tr></tbody>
+    <tbody><tr>{% for w in s.weekday %}{% set wb = weekday_bands[loop.index0] %}{% if w %}<td class="gd-cell{% if counted %}{% if w.mean %} gd-b3{% endif %}{% elif wb is not none %} gd-b{{ wb }}{% endif %}">{% if yes_no %}{{ (w.mean * 100)|round|int }}%{% else %}{{ num(w.mean, d.unit) }}{% endif %}<span class="mcal-day">{{ w.n }} days</span></td>{% else %}<td class="gd-cell gd-missing">–</td>{% endif %}{% endfor %}</tr></tbody>
   </table>
   </div>
 </section>

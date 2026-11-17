@@ -81,12 +81,19 @@ rebuilds them from scratch, so a changed rule applies to all history:
 |---|---|---|
 | `hl.<metric>` | `metric_samples` (a water sample written for a coffee or a beer becomes `hl.dietary_water_from_<drink>`, in the drink's family) | per Companion day: one source (priority list → merged stream → busiest source), then the metric's aggregation, then its bounds (outside → missing) |
 | `sleep.total_h`, `deep_h`, `core_h`, `rem_h`, `awake_h` | `sleep_sessions` | per wake date; the source with the most total sleep; a session lying inside a longer one from the same source (a catch-up sync's cut-off copy) is skipped |
+| `sleep.bedtime`, `wake_time`, `midpoint`, `midpoint_vs_usual`, `timing_spread` | `sleep_sessions` | per wake date, family `sleep_timing` (`app/sleeptiming.py`): the main sleep is the block (sessions ≤ 90 min apart) with the most sleep, from the source with the most sleep that night, holding 3 h or more, so a nap is never the night; bedtime and midpoint in minutes after 18:00 the evening before, wake time in minutes after midnight, on the wall clock (DST, R14); vs-usual is the midpoint minus the median of the 28 days before (14+ nights, past only); spread is the midpoint's standard deviation over the 7 nights ending that day (5+ nights) |
 | `stress.mean` | `stress_intraday` | mean over measured minutes |
 | `energy.low`, `energy.high` | `body_battery_intraday` | lowest / highest level |
 | `workout.minutes` | `workouts` | per Companion day, one source |
 | `mood.entries`, `valence_mean`, `valence_min`, `daily_valence`, `momentary_valence`, `label.<x>`, `assoc.<x>` | `mood_entries` | per Companion day; label and association counts are 0 only on days with at least one entry |
 
 A day without data for a feature has no row. It is never stored as 0 (R7).
+
+**Clock times.** A feature whose unit is `min after midnight` or `min after
+18:00` (`app/clock.py`) is a time of day: tracker first and last times,
+bedtime, wake time. It shows as a clock time (7:42) everywhere, and since a
+clock has no natural zero, its week and month changes are shifts in minutes,
+never percentages (analysis-engine.md, Guardrails).
 The full rebuild takes a few seconds on ~6M HealthLog samples.
 
 ## Capture: trackers and the event log
