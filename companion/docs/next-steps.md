@@ -17,7 +17,7 @@ risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 |---|---|
 | Fork `main` (`JHenzi/healthlog-ml`) | upstream `dev` as of #127 (synced 2026-10-29) + the Companion through reminders, the installable app and in-place forms (fork PRs #1–#50, CI green) |
 | Upstream PRs | all ours merged: #104, #105, #108, #111 (State of Mind), #113, #117 (caffeine, HRV RMSSD), #118 (heart rate notifications, ECG), #126 (Outdoor/Indoor Cycling names). His #116 (symptoms, medications), #119 (German symptom names) #120 (telemetry off), #122 (workout `source` as an object, by marciotoze) and #127 (`rederive-workout-types`) are in too |
-| Live HealthLog | `healthlog-local:c2131ca`, built from the fork (`deploy.sh healthlog build`), schema `0027_timescaledb_telemetry_off` |
+| Live HealthLog | `healthlog-local:f4d271b`, built from the fork (`deploy.sh healthlog build`), schema `0027_timescaledb_telemetry_off`, on TimescaleDB 2.31.0 / PostgreSQL 16.15 (since 2026-11-18) |
 | Live Companion | `healthlog-companion` (web, `127.0.0.1:8020`) and `healthlog-companion-jobs` (04:10 contract check, 04:15 refresh + analysis, and the same refresh within 15 min of new HealthLog data) |
 | Companion DB | schema `companion`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
 | Data | 106 daily series since 2026-07-15, weather (Cincinnati, since 2026-07-15) and the almanac included; sleep since 2026-09-24 (that is all Apple Health has); 3 heart rate notifications, 6 ECGs; 0 symptoms, 0 medications; workouts since 2026-10-28 (an HAE Workouts automation with workout metrics and route data on) |
@@ -333,12 +333,9 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
-- **Move the database to TimescaleDB 2.31** (upstream #130). Ready and
-  rehearsed 2026-11-18, move and rollback both:
-  `companion/scripts/deploy.sh database timescale/timescaledb:2.31.0-pg16`,
-  best right after the 04:30 backup. Then move `test.sh` and the companion
-  workflows to 2.31 and drop the 2.17.2 default
-  ([`upgrading.md`](upgrading.md), "Moving the database engine").
+- ~~**Move the database to TimescaleDB 2.31**~~: done 2026-11-18
+  (`deploy.sh database`, rehearsed move and rollback; tests and CI on 2.31
+  too). [`upgrading.md`](upgrading.md), "Moving the database engine".
 
 - **LLM narration is upstream's** (decided 2026-11-17): HealthLog owns
   `healthlog narrate` and its Ollama setup, so we don't build on it. Note

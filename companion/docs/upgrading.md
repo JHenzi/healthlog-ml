@@ -56,11 +56,11 @@ lines when a sync touches either file.
 
 ### Moving the database engine
 
-Upstream moved TimescaleDB from 2.17.2 to 2.31.0 (#130). HealthLog updates
-the extension on start (`app.db_extensions`). `compose.local.yml` holds
-`healthlog-db` on `HEALTHLOG_DB_IMAGE` (default
-`timescale/timescaledb:2.17.2-pg16`), so no `up` changes the engine by
-accident. The move is its own deploy:
+HealthLog updates the extension on start (`app.db_extensions`), but an
+engine move is still a deploy of its own. `compose.local.yml` holds
+`healthlog-db` on `HEALTHLOG_DB_IMAGE` (set in `.env` by the move; the
+default is the current engine), so an upstream bump of the image in
+`docker-compose.yml` changes nothing until we move. The move:
 
 ```bash
 companion/scripts/deploy.sh database timescale/timescaledb:2.31.0-pg16
@@ -96,12 +96,17 @@ and a rollback first takes `template1` and `postgres` back.
 runs), set `HEALTHLOG_DB_IMAGE` back, `up -d healthlog-db`, then
 `restore.sh <backup from before the move> --replace-live-data`.
 
-**After the move:** set `companion/scripts/test.sh` and the companion
-workflows to the new tag, and drop the default in `compose.local.yml`.
+**After a move:** set the default in `compose.local.yml` and the image in
+the companion workflows to the new tag (`test.sh` reads it from
+`compose.local.yml` and replaces an older test database).
 
-Rehearsed 2026-11-18 on the 12:03 backup (288 MB, 6.0 M samples): 2.17.2
-→ 2.31.0, vector 0.7.2 → 0.8.1, same rows; new-engine backup and the
-rollback both restored the same rows.
+**Done 2026-11-18:** 2.17.2 → 2.31.0 (upstream #130), PostgreSQL 16.6 →
+16.15, pgvector 0.7.2 → 0.8.1. Rehearsed on the 12:03 backup and again on
+the 12:50 one inside the deploy (6.0 M samples, same rows; new-engine
+backup and rollback both restored the same rows), then moved live in
+about two minutes of downtime. Backup from just before:
+`healthlog-20261118-125023.dump` (restores only into 2.17.2; see Rolling
+back above).
 
 The path check (R1) compares against `upstream/dev`, so after a sync only
 our own paths show as changed. Nothing is pulled from his registry, so
