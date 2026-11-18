@@ -115,9 +115,9 @@ Running this fork gets you all of HealthLog too:
 - **Written reports from a local LLM** (`healthlog narrate`): status, weekly and monthly reviews in plain
   prose, from an [Ollama](https://ollama.com) model on your own hardware. It's off until you point it at
   Ollama. `healthlog narrate --dry-run` shows exactly what a model would receive, with no model at all.
-  One catch in this fork: HealthLog has no route out, so it can't reach an Ollama on another machine
-  as-is. [HealthLog's README](../README.md#llm-narration) has the setup, and running Ollama inside the
-  stack is on our list.
+  Narration is HealthLog's feature and its setup is in [HealthLog's README](../README.md#llm-narration).
+  In this fork's locked-down network HealthLog has no route out, so it can't reach an Ollama on another
+  machine as shipped.
 
 **→ [The full Companion README](../companion/README.md)**: features, install,
 settings, Shortcuts, API and CLI.
