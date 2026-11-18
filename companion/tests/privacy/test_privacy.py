@@ -38,6 +38,7 @@ def _compose_files() -> tuple[dict, dict]:
         pass
 
     Loader.add_constructor("!reset", lambda _loader, _node: [])
+    Loader.add_constructor("!override", lambda loader, node: loader.construct_sequence(node))
     local = yaml.load((REPO_DIR / "compose.local.yml").read_text(), Loader=Loader)
     companion = yaml.load((REPO_DIR / "compose.companion.yml").read_text(), Loader=Loader)
     return local, companion
@@ -57,6 +58,14 @@ def test_only_the_edge_containers_publish_ports():
     local, companion = _compose_files()
     publishing = {n for n, s in {**local["services"], **companion["services"]}.items() if s.get("ports")}
     assert publishing == {"healthlog-edge", "grafana-edge", "companion-edge"}
+
+
+def test_upstreams_optional_grafana_is_replaced_not_merged():
+    """Upstream's docker-compose.yml has its own grafana (a profile and a published port). Merged as-is, ours would
+    only start with --profile grafana and would publish a port; compose.local.yml resets both."""
+    text = (REPO_DIR / "compose.local.yml").read_text()
+    grafana = text[text.index("\n  grafana:\n") :]
+    assert "profiles: !reset []" in grafana and "ports: !reset []" in grafana and "volumes: !override" in grafana
 
 
 def test_outbound_containers_cannot_reach_the_database():

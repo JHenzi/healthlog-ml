@@ -62,6 +62,13 @@ file under `/config/state/` and, when the most recent cron slot passed without a
 run (container down at 03:30), runs the analysis immediately on startup — the
 snapshot-replace write makes the extra run idempotent.
 
+A missing sync raises no error anywhere (no request, no failure), so the scheduler
+also runs an hourly **data-freshness check** (`python -m app.freshness`, same
+subprocess pattern): when the last new payload or the newest data point is older
+than `freshness.max_age_hours`, it pushes one alert per gap and an all-clear once
+data arrives again, remembering a sent alert in `/config/state/` like the catch-up
+marker. `healthlog audit` reports the same two timestamps.
+
 | Component | Where | Why |
 |---|---|---|
 | Ingestion (uvicorn) | app container, long-running process | 24/7 intake of HAE POSTs |
@@ -726,6 +733,13 @@ table feeds the analysis or the narration yet.
   Grafana behind auth, reverse proxy/TLS in front of ingest.
 - **Public readiness:** shipped `docker-compose.yml` + `.env.example`, sensible
   defaults, no telemetry, documented HAE automation setup.
+- **Database image updates:** a newer TimescaleDB image does not upgrade the
+  extension installed in the database. The s6 `migrate` oneshot runs
+  `app.db_extensions` before `alembic upgrade`: if the image offers a newer version
+  and the app's role is a superuser, it runs `ALTER EXTENSION timescaledb UPDATE` as
+  the first statement of a fresh connection (the update must precede anything that
+  loads the old library); otherwise it logs the manual command, as migration 0027
+  does for telemetry. A failed update is logged and does not block the start.
 
 ## 7. Tests & quality
 
@@ -747,9 +761,17 @@ where the test focus sits.
 - **Migrations against real Postgres/TimescaleDB:** a `service` container in CI,
   `alembic upgrade head` from an empty schema — otherwise the DDL only ever runs at the
   end user's the first time.
-- **Smoke:** build the image, boot it with `PUID/PGID` + `/config` mount + Timescale
-  service, query `/api/health`, check that the entrypoint chowns and both s6 services
-  come up.
+- **Dashboard queries:** every SQL query of the shipped Grafana dashboards (panels and
+  query variables) is rendered the way Grafana's PostgreSQL datasource does it
+  (variables, including the quoting of multi-value ones, and the `$__time*` macros) and
+  executed against the migrated schema with the sample payload loaded. A migration that
+  renames or drops something a panel reads fails the suite instead of leaving an empty
+  panel; time-series queries must return a `time` column. A new macro or variable fails
+  until the test knows how to render it.
+- **Smoke:** build the image, boot it with `PUID/PGID` + `/config` mount against a
+  TimescaleDB volume created by an older image and taken over by the current one,
+  query `/api/health`, check that the entrypoint chowns, both s6 services come up and
+  the extension was updated.
 
 ## 8. CI/CD – GitHub workflows
 
@@ -837,4 +859,6 @@ Dependabot PRs pass the same `test.yml` gate as any other PR.
 - Don't enable telemetry in any component. Upstream defaults that phone home are switched
   off: TimescaleDB's usage report (`TIMESCALEDB_TELEMETRY=off` for new volumes, migration
   0027 for existing ones) and, in the documented Grafana setup, usage stats, update
-  checks, the news feed, Gravatar and external snapshots.
+  checks, the news feed, Gravatar, external snapshots, plugin preinstalls and
+  signing-key downloads. CI boots the pinned Grafana on a network without internet
+  access and fails on any outbound attempt in its log.

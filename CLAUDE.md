@@ -40,7 +40,8 @@ local LLM. Everything runs on the user's own hardware — no external calls.
     (metric registry, unit guard, localised workout / symptom / medication values →
     canonical slugs)
   - `appconfig.py` — `config.yaml` model; `config.py` — env-var `Settings`
-  - `notify.py`, `audit.py`, `diagnostics.py`, `rederive.py`,
+  - `notify.py`, `audit.py`, `freshness.py` (is new data still arriving; hourly
+    check + audit section), `diagnostics.py`, `rederive.py`,
     `stress_backfill.py`, `body_battery_backfill.py`, `backfill.py`, `scheduler.py`
 - `backend/migrations/versions/` — Alembic migrations (the schema is migrations-only)
 - `backend/tests/` — pytest (parser, idempotency, analysis math, registry, …)
@@ -58,7 +59,7 @@ local LLM. Everything runs on the user's own hardware — no external calls.
   ```bash
   docker run -d -p 5432:5432 \
     -e POSTGRES_USER=healthlog -e POSTGRES_PASSWORD=healthlog -e POSTGRES_DB=healthlog \
-    timescale/timescaledb:2.17.2-pg16
+    "$(grep -oE 'timescale/timescaledb:\S+' ../docker-compose.yml)"
   ```
 - **Dev deps:** `pip install -r requirements-dev.txt`.
 - **New migration:** `alembic revision -m "…"`, then hand-edit. Guard
