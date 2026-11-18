@@ -333,12 +333,12 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
-- **Move the database to TimescaleDB 2.31** (upstream #130, synced
-  2026-11-18). Held on 2.17.2 by `HEALTHLOG_DB_IMAGE` in `compose.local.yml`
-  until rehearsed. `upgrade_rehearsal.sh` needs an engine-swap step first
-  (restore on the old image, restart the copy on the new one). Steps:
-  [`upgrading.md`](upgrading.md), "Moving the database engine". pgvector is
-  in the new image (0.8.1).
+- **Move the database to TimescaleDB 2.31** (upstream #130). Ready and
+  rehearsed 2026-11-18, move and rollback both:
+  `companion/scripts/deploy.sh database timescale/timescaledb:2.31.0-pg16`,
+  best right after the 04:30 backup. Then move `test.sh` and the companion
+  workflows to 2.31 and drop the 2.17.2 default
+  ([`upgrading.md`](upgrading.md), "Moving the database engine").
 
 - **LLM narration is upstream's** (decided 2026-11-17): HealthLog owns
   `healthlog narrate` and its Ollama setup, so we don't build on it. Note

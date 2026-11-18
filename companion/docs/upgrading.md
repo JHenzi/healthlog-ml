@@ -58,21 +58,50 @@ lines when a sync touches either file.
 
 Upstream moved TimescaleDB from 2.17.2 to 2.31.0 (#130). HealthLog updates
 the extension on start (`app.db_extensions`). `compose.local.yml` holds
-`healthlog-db` on the live engine (`HEALTHLOG_DB_IMAGE`, default
-`timescale/timescaledb:2.17.2-pg16`), because otherwise any `up` would
-recreate the database on the new engine with no rehearsal. To move:
+`healthlog-db` on `HEALTHLOG_DB_IMAGE` (default
+`timescale/timescaledb:2.17.2-pg16`), so no `up` changes the engine by
+accident. The move is its own deploy:
 
-1. Rehearse on a copy. A TimescaleDB dump restores only into the
-   extension version it came from, so: restore into the old image (as
-   `upgrade_rehearsal.sh` does), stop that copy, start the new image on the
-   same data, start HealthLog against it (its start updates the extension),
-   then run the contract check and a refresh. `upgrade_rehearsal.sh` doesn't
-   do the swap yet (next-steps §4.5).
-2. Take a fresh backup, set `HEALTHLOG_DB_IMAGE=timescale/timescaledb:2.31.0-pg16`
-   in `.env`, `up -d healthlog-db healthlog`, and check
-   `SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'`.
-3. Move `companion/scripts/test.sh` and the companion workflows to the same
-   tag, then drop the default from `compose.local.yml`.
+```bash
+companion/scripts/deploy.sh database timescale/timescaledb:2.31.0-pg16
+```
+
+Best right after the 04:30 nightly backup. It takes a fresh backup, then
+rehearses on a copy of it (`upgrade_rehearsal.sh` with `DB_IMAGE_TO`):
+
+1. Restore into the old engine (a TimescaleDB dump restores only into the
+   extension version that wrote it).
+2. Restart the copy on the new engine with the same data; HealthLog's start
+   updates the extension; pgvector, `template1` and `postgres` follow.
+   HealthLog's row counts must not change; the Companion's contract check
+   and refresh run.
+3. A backup taken on the new engine must restore on it (so the nightly
+   backups stay good after the move).
+4. The rollback: `prepare_engine_rollback.sh` puts `template1` and
+   `postgres` back on the old version, the copy goes back to the old
+   engine, and `restore.sh` puts the backup back with the same rows.
+
+Only then does it stop what uses the database, set `HEALTHLOG_DB_IMAGE`,
+recreate `healthlog-db`, and make the same checks live. Downtime is a
+minute or two.
+
+**Why the extra steps.** A new database copies `template1`'s extension
+version, and the old engine can't open a database whose extension is newer
+than its libraries ("could not access file timescaledb-2.31.0"). So
+`restore.sh` updates the extension in the fresh database before restoring,
+and a rollback first takes `template1` and `postgres` back.
+
+**Rolling back** (the deploy prints this if it stops):
+`prepare_engine_rollback.sh <old image>` (only if the new engine already
+runs), set `HEALTHLOG_DB_IMAGE` back, `up -d healthlog-db`, then
+`restore.sh <backup from before the move> --replace-live-data`.
+
+**After the move:** set `companion/scripts/test.sh` and the companion
+workflows to the new tag, and drop the default in `compose.local.yml`.
+
+Rehearsed 2026-11-18 on the 12:03 backup (288 MB, 6.0 M samples): 2.17.2
+→ 2.31.0, vector 0.7.2 → 0.8.1, same rows; new-engine backup and the
+rollback both restored the same rows.
 
 The path check (R1) compares against `upstream/dev`, so after a sync only
 our own paths show as changed. Nothing is pulled from his registry, so

@@ -26,8 +26,11 @@ docker exec "$db" psql -U healthlog -d postgres -q -c "drop database healthlog w
 if [ -s "$roles" ]; then
     docker exec -i "$db" psql -U healthlog -d postgres -q < "$roles" 2>&1 | grep -v "already exists" || true
 fi
-docker exec "$db" psql -U healthlog -d healthlog -tAX -c "create extension if not exists timescaledb" \
-    -c "select timescaledb_pre_restore()" > /dev/null
+# A new database copies template1's extension version, which can lag the engine after an engine move; a dump
+# restores only into the version that wrote it, which is the running engine's. The update must open the session.
+docker exec "$db" psql -U healthlog -d healthlog -tAXq -c "create extension if not exists timescaledb"
+docker exec "$db" psql -U healthlog -d healthlog -tAXq -c "alter extension timescaledb update"
+docker exec "$db" psql -U healthlog -d healthlog -tAX -c "select timescaledb_pre_restore()" > /dev/null
 docker exec -i "$db" pg_restore -U healthlog -d healthlog < "$dump" 2>&1 \
     | grep -Ev 'circular foreign-key|^pg_restore: (detail|hint)|already exists' || true
 docker exec "$db" psql -U healthlog -d healthlog -tAX -c "select timescaledb_post_restore()" > /dev/null
