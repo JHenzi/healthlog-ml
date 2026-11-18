@@ -326,6 +326,11 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
+- **LLM narration is upstream's** (decided 2026-11-17): HealthLog owns
+  `healthlog narrate` and its Ollama setup, so we don't build on it. Note
+  only: on our internal `private` network HealthLog can't reach an Ollama on
+  another machine; the front page says so.
+
 - **Catch-up syncs doubled a night's sleep (2026-11-14, fixed in the
   Companion):** HealthLog keys `sleep_sessions` on (sleep_end, source), so a
   night sent once cut off at sync time and again in full is stored twice and
@@ -486,6 +491,10 @@ logging alerts are false positives, dismissed with a reason. Still open:
 - **Keep `.github/dependabot.yml` on an upstream sync.** It's ours now, and his
   `dev` changes to it will conflict. `/backend` and upstream's workflows are
   left out on purpose: those PRs would fail `companion: check paths`.
+- **The fork's front page is `.github/README.md`** (2026-11-17). GitHub shows
+  it in place of the root `README.md`, so the Companion leads on the fork's
+  page while upstream's README stays untouched (R1). Upstream has no
+  `.github/README.md`, so syncs don't conflict; if they ever add one, keep ours.
 - **Grafana and HealthLog stay on `0.0.0.0`** (`3001`, `8000`): a tailnet client
   uses `:3001` directly. Moving Grafana to localhost needs a Tailscale Serve
   route first.
