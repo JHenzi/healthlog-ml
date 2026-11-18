@@ -61,6 +61,64 @@ effective sample sizes for day-to-day carry-over, one Benjamini-Hochberg
 family over every test of a run, effect floors, and a validation suite
 that plants effects and confounders before any method ships.
 
+## Quick start
+
+You need a machine with Docker, an iPhone with
+[Health Auto Export](https://www.healthyapps.dev/), and about twenty minutes:
+
+```bash
+git clone https://github.com/JHenzi/healthlog-ml.git && cd healthlog-ml
+cp .env.example .env && cat companion/.env.example >> .env   # HealthLog's settings + the Companion's, one file
+# fill in the passwords and TZ (the README has one-liners), then:
+COMPOSE="docker compose -f docker-compose.yml -f compose.local.yml -f compose.companion.yml"
+$COMPOSE up -d healthlog-db          # then create the two read-only database roles (README, step 2)
+$COMPOSE up -d --build
+sh companion/scripts/check_egress.sh  # proves nothing holding health data can reach the internet
+docker exec -it healthlog-companion companion set-password
+```
+
+Put HTTPS in front (one `tailscale serve` line does it), point Health Auto
+Export at HealthLog, and open the Companion on your phone.
+**[Step by step, with every command →](../companion/README.md#quick-start)**
+
+## Security and privacy
+
+Your health data is about as personal as data gets, so the defaults are strict and the claims are checked:
+
+- **Nothing leaves your server.** No telemetry, no cloud, no model APIs. Everything that holds or reads
+  health data (the database, HealthLog, Grafana, the Companion) sits on an **internal Docker network with no
+  route out**; small forwarders publish the ports. `check_egress.sh` proves it on every deploy.
+- **Opt-in outside data stays outside.** Weather and phone reminders leave from a separate collector
+  container that holds no health data. Your location is rounded to ~10 km first, and reminders are
+  encrypted for your phone before they leave.
+- **Least privilege in the database.** The Companion and Grafana log in as their own **read-only** roles
+  on HealthLog's tables, and the Companion writes only to its own schema.
+- **The web app is hardened.** Password sign-in with lockout, HTTPS-only session cookies, CSRF protection
+  on every form, a strict content security policy, and API tokens stored hashed with one scope each. It
+  listens on localhost only, behind your HTTPS.
+- **HealthLog's side:** a shared-secret ingest token, server-side de-duplication, raw payloads
+  archived for replay, and TimescaleDB's and Grafana's phone-home switched off.
+- **Public code, no personal data in it,** with secret scanning, CodeQL and Dependabot on every change.
+  Found a security issue? See [`SECURITY.md`](SECURITY.md).
+
+Details: [`companion/docs/privacy.md`](../companion/docs/privacy.md).
+
+## Included from HealthLog
+
+Running this fork gets you all of HealthLog too:
+
+- **Its nightly analysis**: lagged correlations, anomalies, trends and seasonality, a recovery
+  early-warning, sleep consistency and training load (TRIMP, ACWR).
+- **A stress score and an energy reserve** (Body Battery-style) from heart rate and HRV, minute by minute.
+  The Companion uses both.
+- **Grafana dashboards**, HealthLog's and ours, provisioned on start.
+- **Written reports from a local LLM** (`healthlog narrate`): status, weekly and monthly reviews in plain
+  prose, from an [Ollama](https://ollama.com) model on your own hardware. It's off until you point it at
+  Ollama. `healthlog narrate --dry-run` shows exactly what a model would receive, with no model at all.
+  One catch in this fork: HealthLog has no route out, so it can't reach an Ollama on another machine
+  as-is. [HealthLog's README](../README.md#llm-narration) has the setup, and running Ollama inside the
+  stack is on our list.
+
 **→ [The full Companion README](../companion/README.md)**: features, install,
 settings, Shortcuts, API and CLI.
 

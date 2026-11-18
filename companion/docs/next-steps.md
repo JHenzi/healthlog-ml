@@ -326,6 +326,14 @@ issue goes into `build.py` first.
 
 ### 4.5 Found along the way (do when convenient)
 
+- **LLM narration in the locked-down stack** (2026-11-17). HealthLog's
+  `healthlog narrate` works (`--dry-run` renders its context here), but
+  HealthLog sits on the internal `private` network, so it can't reach an
+  Ollama on another machine. Options: an optional `compose.ollama.yml` that
+  runs Ollama on `private` (models pulled once through a temporary route,
+  then offline), or an edge forwarder from `private` to one allowlisted LAN
+  host. The front page promises this is on our list.
+
 - **Catch-up syncs doubled a night's sleep (2026-11-14, fixed in the
   Companion):** HealthLog keys `sleep_sessions` on (sleep_end, source), so a
   night sent once cut off at sync time and again in full is stored twice and

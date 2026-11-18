@@ -221,60 +221,105 @@ sleep" can turn up, and so can its absence.
   (`companion check-upstream`), and nothing that depends on its schema, so
   HealthLog upgrades stay its own business (R2, R3).
 
-## Install
+## Quick start
 
-Prerequisites: HealthLog running from this repository's `docker-compose.yml`,
-and `TZ` set in `.env` (the Companion refuses to start without it).
+From nothing to the Companion running on your server, HealthLog included.
+You need a machine with Docker and the compose plugin, an iPhone with
+[Health Auto Export](https://www.healthyapps.dev/) (HAE), and about twenty
+minutes. Run everything from the repository root.
 
-1. **Database role and schema (once).** Add a password for the Companion's
-   database role to `.env`:
+**1. Get the code and write your `.env`.** HealthLog's settings and the
+fork's go into one file:
 
-   ```bash
-   echo "COMPANION_DB_PASSWORD=$(python3 -c 'import secrets;print(secrets.token_urlsafe(24))')" >> .env
-   ```
+```bash
+git clone https://github.com/JHenzi/healthlog-ml.git && cd healthlog-ml
+cp .env.example .env && cat companion/.env.example >> .env
+```
 
-   Then create the role and schema. This needs HealthLog's database owner,
-   and it's idempotent:
+Fill in the required values. These one-liners do the passwords; set `TZ`
+yourself (e.g. `America/New_York`):
 
-   ```bash
-   set -a; . ./.env; set +a
-   docker exec -i healthlog-db psql -q -U healthlog -d healthlog -v ON_ERROR_STOP=1 \
-     -v companion_password="$COMPANION_DB_PASSWORD" < companion/bootstrap/bootstrap.sql
-   ```
+```bash
+for v in POSTGRES_PASSWORD INGEST_SECRET COMPANION_DB_PASSWORD GRAFANA_ADMIN_PASSWORD GRAFANA_RO_PASSWORD; do
+  sed -i "s|^$v=$|$v=$(openssl rand -hex 24)|" .env
+done
+sed -i "s|^TZ=$|TZ=America/New_York|" .env      # your zone
+grep -E '^(POSTGRES_PASSWORD|INGEST_SECRET|COMPANION_DB_PASSWORD|GRAFANA_ADMIN_PASSWORD|GRAFANA_RO_PASSWORD|TZ)=' .env
+```
 
-   It creates the `companion` role (SELECT-only on HealthLog's tables,
-   including tables HealthLog adds later), the `companion` schema it owns, and
-   the pgvector extension inside that schema. It creates nothing that
-   depends on HealthLog's objects, so HealthLog's upgrades are unaffected.
+Every optional setting (weather, reminders, ports) is a commented line in
+`.env`, with what it does. The table below lists them too.
 
-2. **Start it**, layered on HealthLog's compose file:
+**2. Start the database and create the two read-only roles.** The
+Companion's role and Grafana's can read HealthLog's tables and write
+nothing there. Both scripts are safe to re-run:
 
-   ```bash
-   docker compose -f docker-compose.yml -f compose.local.yml -f compose.companion.yml up -d --build
-   ```
+```bash
+COMPOSE="docker compose -f docker-compose.yml -f compose.local.yml -f compose.companion.yml"
+$COMPOSE up -d healthlog-db && sleep 10
+set -a; . ./.env; set +a
+docker exec -i healthlog-db psql -q -U healthlog -d healthlog -v ON_ERROR_STOP=1 \
+  -v companion_password="$COMPANION_DB_PASSWORD" < companion/bootstrap/bootstrap.sql
+docker exec -i healthlog-db psql -q -U healthlog -d healthlog -v ON_ERROR_STOP=1 \
+  -v grafana_ro_password="$GRAFANA_RO_PASSWORD" < companion/bootstrap/grafana_ro.sql
+```
 
-   `companion-web` applies the Companion's migrations on start and serves on
-   `127.0.0.1:8020` (`COMPANION_BIND`, `COMPANION_PORT`): this machine only,
-   so reach it through Tailscale Serve or a reverse proxy. `companion-jobs`
-   runs scheduled work.
+**3. Start everything:**
 
-3. **Set your password:**
+```bash
+$COMPOSE up -d --build
+```
 
-   ```bash
-   docker exec -it healthlog-companion companion set-password
-   ```
+That's HealthLog (ingest and its nightly analysis), Grafana with the
+dashboards provisioned, the Companion's web app and jobs, and the
+collector. Nothing that holds health data can reach the internet; the
+`*-edge` containers publish the ports. Prove it:
 
-4. **Check the read contract:**
+```bash
+sh companion/scripts/check_egress.sh          # "ok … has no route out" for every container
+curl -fsS http://localhost:8000/api/health   # HealthLog: {"status":"ok",…}
+docker exec healthlog-companion companion check-upstream
+```
 
-   ```bash
-   docker exec healthlog-companion companion check-upstream
-   ```
+**4. Set your password and put HTTPS in front.** Sign-in needs HTTPS (see
+[HTTPS](#https-required)). With Tailscale:
+
+```bash
+docker exec -it healthlog-companion companion set-password
+tailscale serve --bg --https=8443 http://127.0.0.1:8020
+```
+
+Then open `https://<host>.<tailnet>.ts.net:8443`, and on the iPhone
+**Share → Add to Home Screen**.
+
+**5. Send your Health data.** HAE posts to HealthLog's ingest endpoint
+(port 8000), which needs its own TLS reverse proxy if the phone reaches it
+over the internet. Do the one-time history import first, then add the
+automations. HealthLog's README has the steps and the exact HAE settings:
+[bulk backfill](../README.md#bulk-backfill-full-history), then
+[sending data from your iPhone](../README.md#sending-data-from-your-iphone)
+(Health Metrics, Workouts, and State of Mind for the mood series; see
+[Data the Companion needs](#data-the-companion-needs-from-health-auto-export)).
+The header value is your `INGEST_SECRET`.
+
+**6. Use it.** The Companion rebuilds its series within 15 minutes of new
+data and analyses every night at 04:15 (or **Run it now** on Discovery).
+Rate your days on the Overview, make a few trackers, and give it time: the
+first discoveries need about 21 days of a series, and links spread over days
+need 56.
+
+Grafana is on port 3001 (user `admin`, your `GRAFANA_ADMIN_PASSWORD`).
+Updating later: `git pull`, then step 3 again.
 
 ## Settings (environment)
+
+All of them are in [`.env.example`](.env.example), commented, to append to
+the root `.env` (Quick start, step 1).
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `COMPANION_DB_PASSWORD` | *(required)* | password of the `companion` database role |
+| `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_RO_PASSWORD` | *(required)* | Grafana's admin password, and the password of its read-only database role `grafana_ro` |
 | `TZ` | *(required)* | your IANA time zone, e.g. `America/New_York` |
 | `DAY_BOUNDARY` | `04:00` | local time at which one day ends and the next begins, so late nights count as the evening before |
 | `COMPANION_PORT` | `8020` | host port for the web app |
