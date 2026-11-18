@@ -66,6 +66,9 @@ yesterday's score, Momentum, then today's tags and diary.
   shown until all of the last 30 days have something logged; and any problem
   reading HealthLog's data, stated outright.
 
+<p align="center"><img src="docs/screenshots/overview-score.png" width="520" alt="Yesterday's score card: 53 out of 100, with bars for its four parts: active 73, sleep 14, water 89, mood 36. Higher than 51% of 55 scored days."></p>
+<p align="center"><sub>Yesterday's score on the Overview: each part ranked against your own history.</sub></p>
+
 ### Discovery: what goes together in your data
 
 - **Discoveries**, strongest first, grouped as *Relationships* (two series
@@ -103,6 +106,12 @@ yesterday's score, Momentum, then today's tags and diary.
   data before any method ships (R8,
   [`docs/analysis-engine.md`](docs/analysis-engine.md)).
 
+<p align="center"><img src="docs/screenshots/discovery-card.png" width="560" alt="A discovery card: Feeling peaceful, up, and day length (sunrise to sunset), up: rise together, next day, 34 days. Higher feeling peaceful tends to be followed by higher day length the next day (34 days, strong)."></p>
+<p align="center"><sub>A discovery, with its days and strength. Nothing is assumed about what matters (R17), so a link to day length counts as much as any other.</sub></p>
+
+<p align="center"><img src="docs/screenshots/good-day-score.png" width="520" alt="The good-day score's page: 55 days of data, a 60-day line, latest 52.8 against 50.0 for the last 30 days and 53.9 for the 30 before, and a 30-day calendar coloured low, usual or high for you."></p>
+<p align="center"><sub>The good-day score over the last 30 days, each day coloured among your own days.</sub></p>
+
 ### Capture: logging the day
 
 - **The day page** (today or any earlier day): the day rating, **day tags**
@@ -139,6 +148,9 @@ yesterday's score, Momentum, then today's tags and diary.
   day's value is formed (sum, average, lowest, highest), which sources to
   prefer (never added together, R16), plausibility bounds, and whether it's
   analysed.
+
+<p align="center"><img src="docs/screenshots/metrics-sleep-tiles.png" width="520" alt="My Metrics sleep tiles: awake in bed, core, deep, REM and total sleep, each with its latest value, a 60-day sparkline, a chip such as very low for you or high for you, and the 30-day average against the month before."></p>
+<p align="center"><sub>My Metrics: a tile per series, coloured by where the latest day falls among your own days.</sub></p>
 
 <p align="center"><img src="docs/screenshots/metric-detail-cortisol.png" width="560" alt="A tracker's page in the Companion: Cortisol awakening response level (highest), 37 days of data. A 60-day sparkline, the latest value against the last 30 days and the 30 before, a 30-day calendar with each day coloured low, usual or high for you, and the average per weekday coloured the same way."></p>
 <p align="center"><sub>A self-tracked series (a cortisol awakening response test, logged as a tracker) on its own page: where each day falls among your own days, and your weekday pattern.</sub></p>

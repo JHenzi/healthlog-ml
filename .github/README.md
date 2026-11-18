@@ -28,6 +28,17 @@ leaves your machine: no telemetry, no cloud, no model APIs.
 <p align="center"><img src="../companion/docs/screenshots/metric-detail-cortisol.png" width="560" alt="A tracker's page in the Companion: Cortisol awakening response level (highest), 37 days of data. A 60-day sparkline, the latest value against the last 30 days and the 30 before, a 30-day calendar with each day coloured low, usual or high for you, and the average per weekday coloured the same way."></p>
 <p align="center"><sub>A self-tracked series on its own page: each day coloured by where it falls among your own days, and your weekday pattern.</sub></p>
 
+<table>
+<tr>
+<td width="50%"><img src="../companion/docs/screenshots/discovery-card.png" alt="A discovery card: higher feeling peaceful tends to be followed by higher day length the next day (34 days, strong)."><br><sub><b>Discovery</b>: a link in your data, with its days and strength.</sub></td>
+<td width="50%"><img src="../companion/docs/screenshots/overview-score.png" alt="Yesterday's score: 53 out of 100, with bars for active, sleep, water and mood."><br><sub><b>Overview</b>: yesterday's score, each part ranked against your own history.</sub></td>
+</tr>
+<tr>
+<td><img src="../companion/docs/screenshots/metrics-sleep-tiles.png" alt="My Metrics sleep tiles with sparklines and chips such as very low for you."><br><sub><b>My Metrics</b>: a tile per series, coloured low, usual or high <i>for you</i>.</sub></td>
+<td><img src="../companion/docs/screenshots/good-day-score.png" alt="The good-day score page with a 30-day calendar coloured low, usual or high for you."><br><sub><b>Good days</b>: the score over 30 days, each day among your own.</sub></td>
+</tr>
+</table>
+
 ## What's in it
 
 - **Overview**: rate your day in the evening, then look back blind the next
