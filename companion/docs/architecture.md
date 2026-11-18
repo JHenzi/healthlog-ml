@@ -80,7 +80,7 @@ rebuilds them from scratch, so a changed rule applies to all history:
 | Feature | From | Rule |
 |---|---|---|
 | `hl.<metric>` | `metric_samples` (a water sample written for a coffee or a beer becomes `hl.dietary_water_from_<drink>`, in the drink's family) | per Companion day: one source (priority list → merged stream → busiest source), then the metric's aggregation, then its bounds (outside → missing) |
-| `sleep.total_h`, `deep_h`, `core_h`, `rem_h`, `awake_h` | `sleep_sessions` | per wake date; the source with the most total sleep; a session lying inside a longer one from the same source (a catch-up sync's cut-off copy) is skipped |
+| `sleep.total_h`, `deep_h`, `core_h`, `rem_h`, `awake_h` | `sleep_sessions` | per wake date; the source with the most total sleep; a session overlapping one from the same source with more total sleep (a catch-up sync's cut-off copy or a later re-capture) is skipped; naps that don't overlap still add up |
 | `sleep.bedtime`, `wake_time`, `midpoint`, `midpoint_vs_usual`, `timing_spread` | `sleep_sessions` | per wake date, family `sleep_timing` (`app/sleeptiming.py`): the main sleep is the block (sessions ≤ 90 min apart) with the most sleep, from the source with the most sleep that night, holding 3 h or more, so a nap is never the night; bedtime and midpoint in minutes after 18:00 the evening before, wake time in minutes after midnight, on the wall clock (DST, R14); vs-usual is the midpoint minus the median of the 28 days before (14+ nights, past only); spread is the midpoint's standard deviation over the 7 nights ending that day (5+ nights) |
 | `stress.mean` | `stress_intraday` | mean over measured minutes |
 | `energy.low`, `energy.high` | `body_battery_intraday` | lowest / highest level |

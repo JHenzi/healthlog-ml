@@ -25,7 +25,17 @@ UPSTREAM_SCHEMA = "public"
 CONTRACT: dict[str, tuple[str, ...]] = {
     "metric_samples": ("time", "metric", "source", "qty", "vmin", "vavg", "vmax"),
     "metric_registry": ("metric", "display_name", "unit_canonical", "agg_default", "category", "tier"),
-    "sleep_sessions": ("sleep_start", "sleep_end", "source", "total_sleep_h", "deep_h", "core_h", "rem_h", "awake_h"),
+    "sleep_sessions": (
+        "id",
+        "sleep_start",
+        "sleep_end",
+        "source",
+        "total_sleep_h",
+        "deep_h",
+        "core_h",
+        "rem_h",
+        "awake_h",
+    ),
     "stress_intraday": ("ts", "stress", "state"),
     "body_battery_intraday": ("ts", "level"),
     "workouts": ("start_time", "duration_s", "active_energy_kcal", "source"),
@@ -43,15 +53,19 @@ MEASURED_STRESS_STATES = ("rest", "low", "medium", "high")
 WATER_DRINKS = ("caffeine", "alcohol_consumption")
 DRINK_WATER_PREFIX = "dietary_water_from_"
 
-# A catch-up sync can send the same night twice: once cut off at the sync time and again in full, with the same
-# start. HealthLog keys a session on (sleep_end, source), so both rows stay and summing them double-counts the
-# night. A session that lies inside another one from the same source is that earlier partial copy and is skipped;
-# separate sessions (a nap and the night) don't overlap and still add up.
+# Health Auto Export can send the same night more than once: cut off at a catch-up sync's time, or re-captured
+# with a later start and a later end (04:48-12:14 and 06:53-12:54). Each copy is its own row in HealthLog, so
+# summing them double-counts the night. A session that overlaps another one from the same source with more total
+# sleep (ties: the earlier start, then the lower id) is a partial copy and is skipped; separate sessions (a nap
+# and the night) don't overlap and still add up. Upstream's sleep_nightly view goes further and keeps one row
+# per day, which drops naps.
 SLEEP_SESSIONS = (
     "(SELECT s.* FROM public.sleep_sessions s WHERE s.sleep_end IS NOT NULL AND s.total_sleep_h IS NOT NULL "
-    "AND NOT EXISTS (SELECT 1 FROM public.sleep_sessions o WHERE o.source = s.source AND o.sleep_end IS NOT NULL "
-    "AND o.sleep_start <= s.sleep_start AND o.sleep_end >= s.sleep_end "
-    "AND (o.sleep_start, o.sleep_end) <> (s.sleep_start, s.sleep_end))) AS sleep"
+    "AND NOT EXISTS (SELECT 1 FROM public.sleep_sessions o WHERE o.source = s.source AND o.id <> s.id "
+    "AND o.sleep_end IS NOT NULL AND o.total_sleep_h IS NOT NULL "
+    "AND o.sleep_start < s.sleep_end AND o.sleep_end > s.sleep_start "
+    "AND (o.total_sleep_h > s.total_sleep_h OR (o.total_sleep_h = s.total_sleep_h "
+    "AND (o.sleep_start, o.id) < (s.sleep_start, s.id))))) AS sleep"
 )
 
 
