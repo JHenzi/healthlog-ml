@@ -7,10 +7,11 @@
 # server outside this stack would need HealthLog back on `default`.
 services:
   healthlog-db:
-    # Held on the engine live runs until the move to upstream's TimescaleDB 2.31 is rehearsed on a copy
-    # (companion/docs/upgrading.md, "Moving the database engine"). Without this, any `up` recreates the
-    # database on the newer engine with no rehearsal. Set HEALTHLOG_DB_IMAGE to move.
-    image: ${HEALTHLOG_DB_IMAGE:-timescale/timescaledb:2.17.2-pg16}
+    # The engine live runs. An upstream bump of the image in docker-compose.yml doesn't change it: an engine move
+    # is its own rehearsed deploy (`deploy.sh database <image>`, companion/docs/upgrading.md "Moving the database
+    # engine"), which sets HEALTHLOG_DB_IMAGE in .env. Moved to 2.31.0 on 2026-11-18. companion/scripts/test.sh
+    # and the companion workflows test against this tag.
+    image: ${HEALTHLOG_DB_IMAGE:-timescale/timescaledb:2.31.0-pg16}
     networks:
       - private
 

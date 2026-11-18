@@ -11,8 +11,14 @@ set -eu
 
 repo=$(cd "$(dirname "$0")/../.." && pwd)
 db=healthlog-testdb
-image=timescale/timescaledb:2.17.2-pg16
+# The engine live runs (compose.local.yml's default), so the suite tests what production has.
+image=$(grep -oE 'timescale/timescaledb:[^[:space:]}]+' "$repo/compose.local.yml" | head -1)
 
+# A test database left from an older engine is replaced (it holds nothing worth keeping).
+if docker ps -a --format '{{.Names}}' | grep -qx "$db" \
+    && [ "$(docker inspect "$db" --format '{{.Config.Image}}')" != "$image" ]; then
+    docker rm -f "$db" >/dev/null
+fi
 if ! docker ps --format '{{.Names}}' | grep -qx "$db"; then
     if docker ps -a --format '{{.Names}}' | grep -qx "$db"; then
         docker start "$db" >/dev/null
