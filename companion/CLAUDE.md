@@ -22,7 +22,9 @@ pipeline; the Companion owns its own schema, engine and UI.
 - **R1: Only touch our paths.** On companion branches, change only
   `companion/**`, `compose.companion.yml`, `compose.local.yml`,
   `.github/workflows/companion*.yml`, `.github/dependabot.yml`,
-  `.github/SECURITY.md` and `.gitignore`. A change HealthLog
+  `.github/SECURITY.md`, `.github/README.md` (the fork's front page:
+  GitHub shows it in place of upstream's root `README.md`, which stays
+  untouched) and `.gitignore`. A change HealthLog
   needs goes upstream as its own PR, branched from `upstream/dev`.
 - **R2: Never depend on or write upstream database objects.** No views,
   foreign keys, triggers or SQL-body functions referencing schema `public`.
