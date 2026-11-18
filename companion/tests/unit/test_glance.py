@@ -136,3 +136,8 @@ def test_a_drop_is_not_a_spike():
     pair = [_assoc(t, "sleep.total_h") for t in T[:2]]
     drop = _insight(kind="change", feature_a="sleep.total_h", feature_b=None, details={"pct": -12.0})
     assert clumps([*pair, drop], DEFS, TAGS, habitual=set(T)) == []
+
+
+def test_a_clock_time_change_range_is_in_minutes():
+    r = likely_range(_insight(kind="change", feature_b=None, details={"shift_min": 40.0, "shift_ci": [22.0, 58.0]}))
+    assert r.text == "+22 to +58 min (0 is no change)" and r.clear

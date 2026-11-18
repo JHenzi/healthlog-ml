@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from . import (
     auth,
     capture,
+    clock,
     features,
     freshness,
     glance,
@@ -44,6 +45,9 @@ TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "web" / "templates"
 templates = Jinja2Templates(env=jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR), autoescape=True))
 templates.env.filters["tag_slug"] = tag_slug
 templates.env.globals["rendered_at"] = pwa.rendered_at
+templates.env.globals["num"] = metrics_view.num
+templates.env.globals["is_clock"] = clock.is_clock
+templates.env.globals["shift_text"] = clock.shift_text
 templates.env.globals["static_v"] = pwa.static_version()
 
 router = APIRouter()

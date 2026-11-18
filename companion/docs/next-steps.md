@@ -5,7 +5,7 @@ set up a machine to work on it, and the work queue in order. Strategy is in
 [`roadmap.md`](roadmap.md), the milestone checklist in [`plan.md`](plan.md),
 risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 
-*Last updated 2026-11-13.*
+*Last updated 2026-11-17.*
 
 > **Back from the vacation pause on 2026-10-29.** The notes from the road are in
 > [#45](https://github.com/JHenzi/healthlog-ml/issues/45) (`gh issue view 45 --comments`); what's
@@ -266,14 +266,21 @@ issue goes into `build.py` first.
 
 ### 4.4 M5 follow-ups and M6
 
+- **Timing against your day** (roadmap B19, §4f of
+  [`reflection-and-prediction.md`](reflection-and-prediction.md)): piece 1
+  (sleep timing, clock times) built 2026-11-17. Next: piece 2,
+  `X.after_wake_min` / `X.before_bed_min` for trackers, workouts, caffeine,
+  alcohol and mood, with the both-parents family rule; then piece 3, the
+  early/middle/late test with its validation suite.
+
 - **Reflection and prediction over time** (roadmap B16, research
   2026-10-30, [`reflection-and-prediction.md`](reflection-and-prediction.md)):
   decided 2026-10-30 (§0). ~~The look-back hides the evening answer~~:
   done 2026-11-13, and yesterday's good-day score is hidden too until the
   look-back is in. To build: a Sunday "How was last week?" at 18:00, set on
   the Reminders page like the others; the ratings become inputs to the
-  good-day score (how much each counts is learned, §4c). Also noted: sleep
-  timing features (§4d) and warnings (§4e). Readiness is shelved (§4b).
+  good-day score (how much each counts is learned, §4c). ~~Sleep timing
+  features (§4d)~~: done 2026-11-17 (B19 piece 1). Also noted: warnings (§4e). Readiness is shelved (§4b).
   The descriptive layer comes at ~30 days.
 - **exist.io import:** `companion import-days` (`app/importer.py`) brings
   your own tags, inputs and notes in, repeatably, so both apps can run side

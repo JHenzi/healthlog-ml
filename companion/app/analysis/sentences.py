@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from ..clock import clock_text, is_clock, shift_text
 from ..metrics_view import fmt
 from ..today import fmt_hours
 from .engine import FeatureMeta, Finding
@@ -22,6 +23,8 @@ WEEKDAY_NAMES = ("Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "S
 
 
 def value(v: float, meta: FeatureMeta) -> str:
+    if is_clock(meta.unit):
+        return clock_text(v, meta.unit)
     if meta.unit == "h":
         return fmt_hours(v)
     return fmt(v, meta.unit)
@@ -99,6 +102,12 @@ def association(f: Finding, meta: Mapping[str, FeatureMeta]) -> str:
 def change(f: Finding, meta: Mapping[str, FeatureMeta]) -> str:
     m = meta[f.a]
     d = f.details
+    if "shift_min" in d:
+        return (
+            f"{m.label} over the last {d['recent_days']} days averaged {value(d['recent_mean'], m)}, "
+            f"{shift_text(d['shift_min'])} than the {d['base_days']} days before ({value(d['base_mean'], m)}; "
+            f"{_evidence(f)})."
+        )
     above = "above" if d["pct"] > 0 else "below"
     return (
         f"{m.label} over the last {d['recent_days']} days averaged {value(d['recent_mean'], m)}, "

@@ -21,6 +21,7 @@ NEFF_MAX_LAG = 10
 CHANGE_HORIZONS = {"week": (7, 28), "month": (28, 56)}  # recent days, baseline days
 CHANGE_MIN_FRACTION = 0.7  # each window needs at least this share of its days observed
 CHANGE_PCT_FLOOR = 15.0  # % change floor
+CHANGE_CLOCK_FLOOR_MIN = 30.0  # clock-time series (bedtime): shift floor in minutes, since % has no meaning there
 CHANGE_CLIFF_FLOOR = 0.33
 
 # Weekday rhythm.

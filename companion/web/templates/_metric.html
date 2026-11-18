@@ -2,7 +2,7 @@
    the Good days page: clay (low for you) → sand (usual) → moss (high). It says "unusual for you", never good or bad. #}
 {% set BAND_WORDS = ["very low for you", "low for you", "usual for you", "high for you", "very high for you"] %}
 
-{% macro unit_of(u) %}{% if u and u != "count" %}{{ u }}{% endif %}{% endmacro %}
+{% macro unit_of(u) %}{% if u and u != "count" and not is_clock(u) %}{{ u }}{% endif %}{% endmacro %}
 
 {% macro spark(g, b, cls="mtile-spark") %}
 {% if g.spark %}
@@ -17,14 +17,14 @@
 {% set b = band(g.latest_rank) %}
 <a class="mtile{% if not d.analyse %} dim{% endif %}" href="/metrics/{{ d.feature }}">
   <span class="mtile-name">{{ d.label }}</span>
-  <span class="mtile-value"><strong>{{ fmt(s.latest) }}</strong> <span>{{ unit_of(d.unit) }}</span></span>
+  <span class="mtile-value"><strong>{{ num(s.latest, d.unit) }}</strong> <span>{{ unit_of(d.unit) }}</span></span>
   <span class="mtile-chart">{{ spark(g, b) }}</span>
   <span class="mtile-foot">
     {% if b is not none %}<span class="gd-cell gd-b{{ b }} mtile-band">{{ BAND_WORDS[b] }}</span>{% elif s.latest is not none %}<span class="mtile-band muted">too few days to compare</span>{% endif %}
     {% if s.latest_day %}<span class="muted">{{ s.latest_day.strftime("%b %-d") }}</span>{% endif %}
   </span>
   <span class="mtile-trend muted small">
-    {% if s.recent %}30-day average {{ fmt(s.recent.mean) }}{% if s.change_pct is not none %} · <span class="mtile-change">{{ "▲" if s.change_pct > 0 else "▼" if s.change_pct < 0 else "=" }} {{ "%.0f"|format(s.change_pct|abs) }}%</span> on the month before{% endif %}{% else %}Not enough days for a 30-day average{% endif %}
+    {% if s.recent %}30-day average {{ num(s.recent.mean, d.unit) }}{% if is_clock(d.unit) and s.prior %} · <span class="mtile-change">{{ shift_text(s.recent.mean - s.prior.mean) }}</span> than the month before{% elif s.change_pct is not none %} · <span class="mtile-change">{{ "▲" if s.change_pct > 0 else "▼" if s.change_pct < 0 else "=" }} {{ "%.0f"|format(s.change_pct|abs) }}%</span> on the month before{% endif %}{% else %}Not enough days for a 30-day average{% endif %}
     {% if not d.analyse %}<br>Not in the analysis{% endif %}
   </span>
 </a>
@@ -35,7 +35,7 @@
 {% endmacro %}
 
 {# The last 30 days as a calendar, Monday first. #}
-{% macro calendar(cells, fmt, counted=false, yes_no=false) %}
+{% macro calendar(cells, fmt, counted=false, yes_no=false, unit=none) %}
 <div class="gd-grid-wrap">
 <table class="gd-grid mcal">
   <thead><tr>{% for w in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] %}<th scope="col">{{ w }}</th>{% endfor %}</tr></thead>
@@ -48,7 +48,7 @@
     {% if c is none %}<td></td>
     {% elif c[1] is none %}<td class="gd-cell gd-missing" title="{{ c[0].strftime('%a %b %-d') }}: no data"><span class="mcal-day">{{ c[0].day }}</span>–</td>
     {% elif counted %}<td class="gd-cell{% if c[1] %} gd-b4{% endif %}" title="{{ c[0].strftime('%a %b %-d') }}"><span class="mcal-day">{{ c[0].day }}</span>{% if yes_no %}{{ "yes" if c[1] else "no" }}{% else %}{{ fmt(c[1]) }}{% endif %}</td>
-    {% else %}<td class="gd-cell{% if c[2] is not none %} gd-b{{ c[2] }}{% endif %}" title="{{ c[0].strftime('%a %b %-d') }}"><span class="mcal-day">{{ c[0].day }}</span>{{ fmt(c[1]) }}</td>{% endif %}
+    {% else %}<td class="gd-cell{% if c[2] is not none %} gd-b{{ c[2] }}{% endif %}" title="{{ c[0].strftime('%a %b %-d') }}"><span class="mcal-day">{{ c[0].day }}</span>{{ num(c[1], unit) }}</td>{% endif %}
     {% endfor %}
   </tr>
   {% endfor %}

@@ -82,7 +82,8 @@ def _signed(v: float, fmt: str) -> str:
 
 
 def likely_range(i: Insight) -> Range | None:
-    """The 95% likely range of an association's strength (−1…+1) or of a change (in %), if the run stored one."""
+    """The 95% likely range of an association's strength (−1…+1) or of a change (in %, or in minutes for a clock
+    time), if the run stored one."""
     details = i.details or {}
     if i.kind == "association" and details.get("ci"):
         lo, hi = details["ci"]
@@ -94,6 +95,12 @@ def likely_range(i: Insight) -> Range | None:
         bound = max(abs(lo), abs(hi), abs(est), 10.0) * 1.15
         scale = (-bound, bound)
         text = f"{_signed(lo, '.0f')}% to {_signed(hi, '.0f')}% (0 is no change)"
+    elif i.kind == "change" and details.get("shift_ci"):
+        lo, hi = details["shift_ci"]
+        est = details.get("shift_min", 0.0)
+        bound = max(abs(lo), abs(hi), abs(est), 15.0) * 1.15
+        scale = (-bound, bound)
+        text = f"{_signed(lo, '.0f')} to {_signed(hi, '.0f')} min (0 is no change)"
     else:
         return None
     return Range(_x(lo, *scale), _x(hi, *scale), _x(est, *scale), _x(0.0, *scale), text, lo > 0 or hi < 0)

@@ -266,6 +266,25 @@ def sleep_day_rows(db: Session, zone: ZoneInfo) -> list[SleepDayRow]:
     return [SleepDayRow(r.day, r.source or "", r.total, r.deep, r.core, r.rem, r.awake, int(r.n)) for r in rows]
 
 
+@dataclass(frozen=True)
+class SleepSession:
+    start: dt.datetime
+    end: dt.datetime
+    source: str
+    total_h: float
+
+
+def sleep_session_rows(db: Session) -> list[SleepSession]:
+    """Every sleep session (catch-up copies skipped, as above), for bedtime and wake time."""
+    rows = db.execute(
+        sa.text(
+            "SELECT sleep_start, sleep_end, coalesce(source, '') AS source, total_sleep_h "
+            f"FROM {SLEEP_SESSIONS} WHERE sleep_start IS NOT NULL ORDER BY sleep_start"
+        )
+    ).all()
+    return [SleepSession(r.sleep_start, r.sleep_end, r.source, float(r.total_sleep_h)) for r in rows]
+
+
 def workout_day_rows(db: Session, zone: ZoneInfo, boundary: dt.time) -> list[SourceDay]:
     """Workout minutes per Companion day and source (``n`` = number of workouts)."""
     day = sql_day_expr("start_time")

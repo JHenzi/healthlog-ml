@@ -240,3 +240,28 @@ def test_every_sentence_has_evidence_and_association_wording_only():
 def test_calendar_events_read_as_events():
     meta = FeatureMeta("Public holiday", kind="count", family="almanac")
     assert happening("almanac.holiday", meta) == "it was a public holiday"
+
+
+def test_a_clock_time_reads_as_a_clock_time_and_its_change_in_minutes():
+    meta = {"sleep.bedtime": FeatureMeta("Bedtime", "min after 18:00", family="sleep_timing")}
+    f = Finding(
+        "change",
+        "week",
+        "sleep.bedtime",
+        None,
+        None,
+        "mean_shift",
+        0.6,
+        0.001,
+        35,
+        7,
+        28,
+        strength="strong",
+        details={"recent_mean": 345.0, "base_mean": 300.0, "shift_min": 45.0, "recent_days": 7, "base_days": 28},
+    )
+    line = sentence(f, meta)
+    assert line == (
+        "Bedtime over the last 7 days averaged 23:45, 45 min later than the 28 days before (23:00; 7 vs 28 days, "
+        "strong)."
+    )
+    assert not FORBIDDEN.search(line)

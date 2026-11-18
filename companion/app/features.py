@@ -1,6 +1,6 @@
 """The daily feature table: one value per (Companion day, feature) over every source (design §4.1).
 
-Sources so far: every HealthLog metric (``hl.<metric>``), sleep, stress, energy
+Sources so far: every HealthLog metric (``hl.<metric>``), sleep and its timing, stress, energy
 reserve, workouts, State of Mind, the user's own trackers
 (``tracker.<key>.*``), the weather (``weather.*``, M3) and the almanac
 (``almanac.*``: day length, moon, holidays), and the good-day score
@@ -23,13 +23,13 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from . import almanac, dayrating, goodday, mood, outside, trackers, upstream
+from . import almanac, dayrating, goodday, mood, outside, sleeptiming, trackers, upstream
 from .auth import now_utc
 from .capture import spec_of
 from .models import DailyFeature, DayReview, FeatureDef, MetricSetting, Observation, StateOfMindEntry, Tracker
 from .timeutil import current_day
 from .today import pick_source
-from .upstream import MetricDayRow, SleepDayRow, SourceDay
+from .upstream import MetricDayRow, SleepDayRow, SleepSession, SourceDay
 
 log = logging.getLogger("companion.features")
 
@@ -180,11 +180,17 @@ def assemble(
     mood_entries: Iterable[mood.MoodEntry],
     zone: ZoneInfo,
     boundary: dt.time,
+    sleep_sessions: Iterable[SleepSession] = (),
 ) -> FeatureSet:
     out = metric_features(metric_rows, rules)
     for part in (sleep_features(sleep_rows),):
         out.defs |= part.defs
         out.values |= part.values
+    # When you slept: its own family, so bedtime is tested against how long you slept (sleep.*), not skipped.
+    timing = sleeptiming.timing_features(sleep_sessions, zone)
+    for feature, label, unit in sleeptiming.DEFS:
+        if timing[feature]:
+            out.add(Def(feature, label, unit, "sleep", family=sleeptiming.FAMILY), timing[feature])
     # Stress and energy reserve are computed from heart rate and HRV: same family as the vitals.
     out.add(
         Def("stress.mean", "Stress (mean of measured minutes)", None, "stress", family="vital"),
@@ -296,6 +302,7 @@ def rebuild(
         load_mood_entries(db),
         zone,
         boundary,
+        upstream.sleep_session_rows(db),
     )
     fs.defs |= tracked.defs
     fs.values |= tracked.values
