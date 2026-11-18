@@ -138,7 +138,7 @@ docker run -d \
   -e TIMESCALEDB_TELEMETRY=off \
   -v /mnt/user/appdata/healthlog-db:/var/lib/postgresql/data \
   --restart unless-stopped \
-  timescale/timescaledb:2.17.2-pg16     # pin the exact tag — see Operations
+  timescale/timescaledb:VERSION   # the exact tag from docker-compose.yml — see Operations
 ```
 
 **2. Start HealthLog** once the database is up:
@@ -182,7 +182,9 @@ Docker network as the database and point it at the DB container (`healthlog-db`
 in both the Compose and `docker run` setups). The repo ships
 ready-made **Grafana dashboards** — import them once by hand, or (recommended)
 let Grafana **provision** the datasource and dashboards straight from a checkout
-of this repo, so updates arrive with a `git pull`. Both paths are described in
+of this repo, so updates arrive with a `git pull`. With Compose, the optional
+`grafana` service does the latter (`docker compose --profile grafana up -d`). All
+paths are described in
 [`grafana/README.md`](https://github.com/anym001/healthlog/blob/HEAD/grafana/README.md).
 
 ## Image
@@ -329,8 +331,10 @@ Schedule: `INTRADAY_CRON`, default `15 * * * *` (hourly at :15); set it to
 Before trusting the findings, run a read-only data-quality audit — it reports the
 latest findings snapshot, per-metric coverage (flagging core metrics with no data or
 below the ~6-week `analysis.min_overlap` floor), units that diverge from canonical,
-workout names that map to no canonical sport (map them via `workouts.type_map`), and
-whether `TZ` matches the UTC offsets Health Auto Export stamps on your data:
+workout names that map to no canonical sport (map them via `workouts.type_map`),
+whether `TZ` matches the UTC offsets Health Auto Export stamps on your data, and
+whether new data is still arriving (the last new payload and the newest data point,
+flagged when older than `freshness.max_age_hours`, default 24):
 
 ```bash
 docker exec healthlog healthlog audit
@@ -662,7 +666,7 @@ HealthLog can push run outcomes and health alerts to a
 Matrix room). Configure the behaviour under `notify:` in `config.yaml`; the
 **token is the one secret** and comes from the `NOTIFY_TOKEN` environment
 variable (putting it in YAML is rejected). Leave `notify.url` empty to disable.
-Three independent sources can notify, chosen via `notify.events`:
+Four independent sources can notify, chosen via `notify.events`:
 
 - **`analysis`** — the nightly analysis run: a crash always pages; the clean OK
   summary is sent only at `level: always`.
@@ -675,6 +679,12 @@ Three independent sources can notify, chosen via `notify.events`:
   of level.
 - **`ingest`** — an *empty* HAE sync (a payload that produced no rows) always
   pages; each successful sync is reported only at `level: always`.
+- **`freshness`** — no new data for longer than `freshness.max_age_hours`
+  (default 24): no new payload from Health Auto Export, or payloads without any
+  new data point (the Watch hasn't synced). Checked hourly; one alert per gap,
+  and an all-clear once data arrives again. Sent regardless of level. Set the
+  threshold above your HAE sync interval. If your `config.yaml` lists
+  `notify.events` explicitly, add `freshness` there to get it.
 
 Messages carry only counters, metric names and dates — never raw health values.
 Notifications are strictly best-effort: a failed or misconfigured push is
@@ -712,16 +722,22 @@ chunks just take a little longer.
 
 ### Updating the database image
 
-Pin the **exact** TimescaleDB tag (`timescale/timescaledb:2.17.2-pg16`) — never
-`latest` or a floating tag — so recreating the container can't silently change
-the engine under your data. Then update deliberately:
+Pin the **exact** TimescaleDB tag — never `latest` or a floating tag — so
+recreating the container can't silently change the engine under your data. Use the
+tag from
+[`docker-compose.yml`](https://github.com/anym001/healthlog/blob/HEAD/docker-compose.yml):
+it is the one CI tests against, and release notes say when it changes. Then update
+deliberately:
 
 - **TimescaleDB patch/minor** within the same Postgres major (e.g.
-  `2.17.2 → 2.18.x`, still `-pg16`): pull the new image, recreate the container,
-  then upgrade the extension once (the new binary does not do this for you):
+  `2.31.0 → 2.32.x`, still `-pg16`): back up, pull the new image, recreate the
+  database container, then restart `healthlog`. The new binary does not upgrade the
+  installed extension by itself; HealthLog does it on start (log line `TimescaleDB
+  extension updated: …`). That needs its database user to be a superuser, which it
+  is in the default setup. Otherwise the log names the command to run as one:
 
   ```bash
-  docker exec -t healthlog-db psql -U healthlog -d healthlog -c "ALTER EXTENSION timescaledb UPDATE;"
+  docker exec -t healthlog-db psql -X -U healthlog -d healthlog -c "ALTER EXTENSION timescaledb UPDATE;"
   ```
 
 - **Postgres major bump** (`pg16 → pg17`): this changes the on-disk format and is

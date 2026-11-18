@@ -47,6 +47,33 @@ grafana/dashboards/all-metrics.json`). If a later sync shows a
 modify/delete conflict on them, read his change, port real bug fixes into
 `companion/grafana/build.py`, and keep the delete.
 
+**Upstream's optional Grafana** (since #137): `docker-compose.yml` has a
+`grafana` service under `--profile grafana`, with a published port and one
+dashboard mount. `compose.local.yml` resets its profile and port and
+overrides its volumes, so ours always runs, is published by
+`grafana-edge`, and mounts both dashboard folders once. Keep those three
+lines when a sync touches either file.
+
+### Moving the database engine
+
+Upstream moved TimescaleDB from 2.17.2 to 2.31.0 (#130). HealthLog updates
+the extension on start (`app.db_extensions`). `compose.local.yml` holds
+`healthlog-db` on the live engine (`HEALTHLOG_DB_IMAGE`, default
+`timescale/timescaledb:2.17.2-pg16`), because otherwise any `up` would
+recreate the database on the new engine with no rehearsal. To move:
+
+1. Rehearse on a copy. A TimescaleDB dump restores only into the
+   extension version it came from, so: restore into the old image (as
+   `upgrade_rehearsal.sh` does), stop that copy, start the new image on the
+   same data, start HealthLog against it (its start updates the extension),
+   then run the contract check and a refresh. `upgrade_rehearsal.sh` doesn't
+   do the swap yet (next-steps §4.5).
+2. Take a fresh backup, set `HEALTHLOG_DB_IMAGE=timescale/timescaledb:2.31.0-pg16`
+   in `.env`, `up -d healthlog-db healthlog`, and check
+   `SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'`.
+3. Move `companion/scripts/test.sh` and the companion workflows to the same
+   tag, then drop the default from `compose.local.yml`.
+
 The path check (R1) compares against `upstream/dev`, so after a sync only
 our own paths show as changed. Nothing is pulled from his registry, so
 nothing changes until we merge and deploy.

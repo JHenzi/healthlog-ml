@@ -7,6 +7,10 @@
 # server outside this stack would need HealthLog back on `default`.
 services:
   healthlog-db:
+    # Held on the engine live runs until the move to upstream's TimescaleDB 2.31 is rehearsed on a copy
+    # (companion/docs/upgrading.md, "Moving the database engine"). Without this, any `up` recreates the
+    # database on the newer engine with no rehearsal. Set HEALTHLOG_DB_IMAGE to move.
+    image: ${HEALTHLOG_DB_IMAGE:-timescale/timescaledb:2.17.2-pg16}
     networks:
       - private
 
@@ -57,6 +61,11 @@ services:
   grafana:
     image: grafana/grafana:11.6.16
     container_name: healthlog-grafana
+    # Upstream's docker-compose.yml has its own optional `grafana` (since #137): a profile, a published port and
+    # one dashboard mount. Ours always runs, is published by grafana-edge, and mounts both folders, so all three
+    # are replaced here rather than merged.
+    profiles: !reset []
+    ports: !reset []
     networks:
       - private
     environment:
@@ -73,7 +82,7 @@ services:
       GF_NEWS_NEWS_FEED_ENABLED: "false"
       GF_SECURITY_DISABLE_GRAVATAR: "true"
       GF_SNAPSHOTS_EXTERNAL_ENABLED: "false"
-    volumes:
+    volumes: !override
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       # Upstream's dashboards and our extras side by side; the provider reads the folder recursively.
