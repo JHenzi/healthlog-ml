@@ -56,10 +56,20 @@ def upstream_rows(admin_engine):
         conn.execute(
             text(
                 "INSERT INTO sleep_sessions (sleep_start, sleep_end, source, total_sleep_h) "
-                "VALUES (:s, :e, 'Watch', 6.5), (:s, :cut, 'Watch', 4.0)"
+                "VALUES (:s, :e, 'Watch', 6.5), (:s, :cut, 'Watch', 4.0), (:late, :after, 'Watch', 5.0), "
+                "(:nap, :nap_end, 'Watch', 0.5)"
             ),
-            # A catch-up sync also sent the night cut off at 04:00; that copy must not add to the 6.5 hours.
-            {"s": at(YESTERDAY, 23, 30), "e": at(TODAY, 6), "cut": at(TODAY, 4)},
+            # A catch-up sync also sent the night cut off at 04:00, and a re-capture started later and ran past
+            # the wake-up; neither copy may add to the 6.5 hours. The separate early-morning nap still counts.
+            {
+                "s": at(YESTERDAY, 23, 30),
+                "e": at(TODAY, 6),
+                "cut": at(TODAY, 4),
+                "late": at(TODAY, 1),
+                "after": at(TODAY, 6, 40),
+                "nap": at(TODAY, 8),
+                "nap_end": at(TODAY, 8, 30),
+            },
         )
         conn.execute(
             text(
@@ -82,7 +92,7 @@ def test_today_sentences_from_healthlog_tables(db, upstream_rows):
     view = load_today(db, NY, FOUR, TODAY)
     assert view.problems == []
     lines = "\n".join(view.sentences)
-    assert "You slept 6 h 30 min last night, 1 h 00 min below your 30-day average (7 h 30 min, 14 nights)." in lines
+    assert "You slept 7 h 00 min last night, 30 min below your 30-day average (7 h 30 min, 14 nights)." in lines
     assert "You walked 9,000 steps yesterday, 2,000 more than your 30-day average (7,000 steps, 14 days)." in lines
     assert "Average stress was 30 yesterday" in lines  # the active minute is not scored
     assert "Your energy reserve ranged from 35 to 80 yesterday." in lines

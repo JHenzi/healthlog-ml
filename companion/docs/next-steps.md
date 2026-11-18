@@ -349,6 +349,12 @@ issue goes into `build.py` first.
   session that lies inside a longer one from the same source (3 of 60 rows
   so far). The rows themselves stay in HealthLog; worth raising upstream,
   since their own sleep analysis sees the same duplicates.
+  **Widened 2026-11-18:** a re-capture can also start *and end* later
+  (04:48–12:14 plus 06:53–12:54), which containment missed: the night of
+  11-18 read 11 h 33 min against Grafana's 6 h 24 min. The rule is now
+  "overlaps a session from the same source with more total sleep"; it fixed
+  5 nights in the history. Upstream's `sleep_nightly` keeps one row per day
+  instead, which also drops naps.
 
 - **Overview reworked (2026-11-14, Joe):** order is ratings, yesterday vs
   usual, yesterday's score, one Momentum card (momentum, worth noting and
