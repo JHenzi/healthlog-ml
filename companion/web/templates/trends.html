@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon, arrow %}
+{% from "_noticing.html" import pin_tile %}
+{% block title %}Trends · Companion{% endblock %}
+{% block nav %}{% include "_nav.html" %}{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="kicker">The long view</p>
+  <h1>Trends</h1>
+  <p class="muted">Are things going up or down for you, lately and over the months? Everything here is measured against your own history only. ▲ and ▼ say up or down, never better or worse: which way is good is yours to judge.</p>
+</section>
+
+<section class="card" aria-labelledby="pinned-h">
+  <h2 id="pinned-h">Pinned</h2>
+  {% if pins %}
+  <ul class="pins pins-big">
+    {% for p in pins %}
+    {{ pin_tile(p, icon_for(p.feature, p.family), big=True) }}
+    {% endfor %}
+  </ul>
+  <p class="muted small">Each chart is weekly averages over up to 26 weeks (a week needs 4 days), with your highest and lowest two weeks on record. Pinned series show on the Overview and use a gentler bar than the search across everything: a clear change is about 2 standard errors from your usual, allowing for how much one day carries into the next.</p>
+  {% else %}
+  <p class="muted">Nothing pinned. Pin a series below to watch it on the Overview.</p>
+  {% endif %}
+</section>
+
+<section class="card" aria-labelledby="all-h">
+  <h2 id="all-h">Everything, last 4 weeks</h2>
+  <p class="muted small">The last 4 weeks against your usual before them. Clear changes first, largest first. Pin up to {{ max_pins }}.</p>
+  <ul class="trend-rows">
+    {% for r in rows %}
+    <li class="trend-row dir-{{ r.direction or 'none' }}">
+      <a href="/metrics/{{ r.feature }}" class="trend-name">{{ arrow(r.direction) }}<span>{{ r.label }}</span></a>
+      <span class="trend-value small">
+        {% if r.month %}{{ vfmt(r.month.recent, r.unit) }} <span class="muted">· usual {{ vfmt(r.month.usual, r.unit) }}</span>{% else %}<span class="muted">too few days</span>{% endif %}
+      </span>
+      <form method="post" action="/pins/{{ r.feature }}" class="inline">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="back" value="/trends">
+        <button type="submit" class="link small"{% if not r.pinned and pins|length >= max_pins %} disabled{% endif %}>{{ "Unpin" if r.pinned else "Pin" }}</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="muted small">Weather and the almanac aren't listed: they describe the place, not you. The analysis still tests them against everything on Discovery.</p>
+</section>
+{% endblock %}

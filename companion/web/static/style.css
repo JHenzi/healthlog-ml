@@ -537,3 +537,27 @@ a.brand img { border-radius: 6px; flex: none; }
 .fl-net { background: var(--color-text); height: 2px !important; }
 .fluids-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 var(--space-2); }
 .fluids-key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: baseline; }
+
+/* — worth noticing and trends (app/signals.py): pins, signals, the long view. Colour marks a clear change only;
+   the arrow says which way, never whether it's good. — */
+.pins { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-2); }
+.pins-big { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.pin { border: 1px solid var(--color-divider); min-width: 0; }
+.pin-link { display: grid; gap: 3px; padding: var(--space-3); color: inherit; text-decoration: none; height: 100%; box-sizing: border-box; }
+.pin-chart { width: 100%; height: 40px; margin: 2px 0; }
+.pin-big .pin-chart { height: 72px; }
+.pin-chart polyline { fill: none; stroke: var(--color-muted); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.pin.dir-up .pin-chart polyline, .pin.dir-down .pin-chart polyline { stroke: var(--color-accent); }
+.pin .tile-change { align-items: baseline; }
+.pin.dir-up .tile-change, .pin.dir-down .tile-change { color: var(--color-accent-strong); font-weight: 700; }
+.pin.dir-up, .pin.dir-down { border-color: color-mix(in srgb, var(--color-accent) 45%, transparent); }
+.pin-line { font-size: 13px; }
+.signals { list-style: none; margin: var(--space-2) 0 var(--space-3); padding: 0; }
+.signal { display: flex; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-divider); font-size: 15px; }
+.signal-mark { flex: none; width: 1em; text-align: center; color: var(--color-muted); }
+.trend-rows { list-style: none; margin: var(--space-2) 0; padding: 0; }
+.trend-row { display: grid; grid-template-columns: 1fr auto auto; align-items: baseline; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-divider); }
+.trend-name { display: flex; gap: 6px; align-items: baseline; color: inherit; min-width: 0; overflow-wrap: anywhere; }
+.trend-row.dir-up .trend-name, .trend-row.dir-down .trend-name { font-weight: 700; }
+.trend-value { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) { .trend-row { grid-template-columns: 1fr auto; } .trend-value { grid-column: 1; text-align: left; } }

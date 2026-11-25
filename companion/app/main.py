@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
-from . import api, pwa, upstream, web, web_reminders, web_trackers
+from . import api, pwa, upstream, web, web_reminders, web_trackers, web_trends
 from .db import session_scope
 
 log = logging.getLogger("companion")
@@ -74,6 +74,7 @@ def create_app(*, check_on_startup: bool = True) -> FastAPI:
     app.include_router(web.router)
     app.include_router(web_trackers.router)
     app.include_router(web_reminders.router)
+    app.include_router(web_trends.router)
     return app
 
 

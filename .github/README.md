@@ -44,6 +44,13 @@ leaves your machine: no telemetry, no cloud, no model APIs.
 - **Overview**: rate your day in the evening, then look back blind the next
   morning. Yesterday compared with your usual, a good-day score, and
   Momentum: streaks, records and what's moving.
+- **Trends and Worth noticing**: am I doing better or worse, and what's
+  changing right now? Pin the series you care about to the Overview: this
+  week against your usual, the last two weeks, your highest and lowest
+  stretches, and a 26-week chart. Anything else that clearly moves shows up
+  on its own, checked against noise first. Up and down, never good or bad.
+  An optional push when something new has clearly changed, at most twice a
+  week.
 - **Discovery**: relationships on the same day, the next day or spread over
   the following week. Week and month changes and weekday rhythms, each with
   its number of days, strength, likely range and an evidence page.

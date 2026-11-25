@@ -3,6 +3,7 @@
 {% from "_day_tags.html" import day_tags_block %}
 {% from "_icons.html" import icon, arrow, discovery_head %}
 {% from "_day_rating.html" import evening_row, lookback_row %}
+{% from "_noticing.html" import pin_tile, signal_list %}
 {% block title %}Overview · Companion{% endblock %}
 {% block nav %}{% include "_nav.html" %}{% endblock %}
 {% block content %}
@@ -35,6 +36,24 @@
   {{ evening_row(capture.rating_today, csrf, "/", capture.new_id, "How was today?") }}
   {{ lookback_row(capture.rating_yesterday, csrf, "/", capture.new_id, "Looking back, how was yesterday?") }}
   <p class="muted small">Rate each evening, then look back the next morning. Both are kept, and so is the change between them: they're your own measure of a good day.</p>
+</section>
+
+<section class="card" id="noticing" aria-labelledby="noticing-h">
+  <div class="row"><h2 id="noticing-h">Worth noticing</h2><a class="small" href="/trends">Trends ›</a></div>
+  {% if blind %}
+  <p class="muted small">Hidden until you look back on yesterday above, so the numbers don't answer for you.</p>
+  {% else %}
+  {% if noticing.pins %}
+  <ul class="pins">
+    {% for p in noticing.pins %}{{ pin_tile(p, icon_for(p.feature, p.family)) }}{% endfor %}
+  </ul>
+  {% endif %}
+  {% if noticing.signals %}
+  <h3>Changing elsewhere</h3>
+  {{ signal_list(noticing.signals) }}
+  {% endif %}
+  <p class="muted small">Your pinned series, this week against your usual (the 60 days before), and anything else that has clearly moved. ▲ and ▼ say up or down, never good or bad: that's yours to judge. <a href="/trends">Pin or unpin</a>.</p>
+  {% endif %}
 </section>
 
 <section class="card">

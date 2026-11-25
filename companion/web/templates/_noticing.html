@@ -1,0 +1,32 @@
+{# Pins and signals (app/signals.py). Arrows say up or down only: which way is good is yours to judge. #}
+{% from "_icons.html" import icon, arrow %}
+
+{% macro pin_tile(p, icon_name, big=False) %}
+<li class="pin dir-{{ p.direction or 'none' }}{% if big %} pin-big{% endif %}">
+  <a class="pin-link" href="/metrics/{{ p.feature }}">
+    <div class="tile-head">{{ icon(icon_name) }}<span>{{ p.label }}</span></div>
+    <div class="tile-value"><strong>{{ vfmt(p.week.recent, p.unit) if p.week else (vfmt(p.latest, p.unit) if p.latest is not none else "–") }}</strong> <span>{{ "this week" if p.week else "latest" }}</span></div>
+    {% if p.points %}
+    <svg class="pin-chart" viewBox="0 0 240 48" preserveAspectRatio="none" role="img" aria-label="{{ p.label }}, weekly averages over the last {{ p.weeks|length }} weeks">
+      {% for seg in p.points.split("|") %}<polyline points="{{ seg }}"></polyline>{% endfor %}
+    </svg>
+    {% endif %}
+    <div class="tile-change">{{ arrow(p.direction) }}<span>{{ p.headline }}</span></div>
+    {% if p.trend_line %}<div class="pin-line">{{ p.trend_line }}</div>{% endif %}
+    {% if p.week %}<div class="pin-foot muted small">{{ p.clear_word }} · {{ p.usual_text }}</div>{% endif %}
+    {% if big and p.high and p.low %}<div class="pin-foot muted small">Highest 2 weeks {{ vfmt(p.high.mean, p.unit) }} ({{ p.high.first.strftime("%b %-d") }}–{{ p.high.last.strftime("%b %-d") }}) · lowest {{ vfmt(p.low.mean, p.unit) }} ({{ p.low.first.strftime("%b %-d") }}–{{ p.low.last.strftime("%b %-d") }})</div>{% endif %}
+    {% if p.signal and p.signal.kind == "gap" %}<div class="pin-line">{{ p.signal.text }}</div>{% endif %}
+  </a>
+</li>
+{% endmacro %}
+
+{% macro signal_list(items) %}
+<ul class="signals">
+  {% for s in items %}
+  <li class="signal sig-{{ s.kind }}">
+    <span class="signal-mark" aria-hidden="true">{% if s.direction %}{{ arrow(s.direction) }}{% else %}…{% endif %}</span>
+    <span>{{ s.text }} <span class="muted small">{{ s.evidence }}</span></span>
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}

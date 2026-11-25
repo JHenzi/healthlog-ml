@@ -170,6 +170,7 @@ data immediately.
 | M10 Imports & interop | **started:** `import-days` (repeatable JSON import of day-by-day tags, trackers and notes). Next: CSV import from other tracking apps; export (§5) | M4 |
 | M12 Compare (opt-in, anonymous) | your figures against others': built-in published reference figures (offline); an anonymous summary you review field by field, and others' summaries to compare good-day weights and typical values against (roadmap B13). How summaries are exchanged is not decided | M7 for the weights; privacy review (risks.md E7, G6) |
 | M13 Weather along the route | per-workout weather and air quality from the GPS track, coarse grid, per hour, opt-in (roadmap B14; the privacy trade-off is debated first) | workouts with routes (on since 2026-10-28); M3 collector |
+| M7a Trends and signals | **built 2026-11-25** (roadmap B20): per-series now / trend / gap signals against your own usual, validated on noise; pins and *Worth noticing* on the Overview; the Trends page; an earned push. Up and down only | M5 feature table |
 | M11 Polish | reminders (web push), weekly summary, `proxy_header` auth, optional native iOS app; **purge** a tracker's or tag's entries on request (redacts the event log too, risks.md E5; removing or archiving keeps history) | — |
 
 Throughout: anything generic about getting Apple Health data in becomes an

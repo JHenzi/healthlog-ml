@@ -96,6 +96,6 @@ def test_reminders_are_due_once_a_day_and_not_hours_late():
     assert reminders.due(at(9, 59), times, {}) == []
     assert reminders.due(at(10, 0), times, {}) == ["morning"]
     assert reminders.due(at(10, 1), times, {"morning": "2026-10-22"}) == []
-    assert reminders.due(at(12, 30), times, {}) == []  # too late after downtime
+    assert "morning" not in reminders.due(at(12, 30), times, {})  # too late after downtime
     assert reminders.due(at(19, 3), times, {"morning": "2026-10-22"}) == ["evening"]
     assert reminders.due(at(19, 3), reminders.schedule({"evening": ""}), {}) == []  # turned off

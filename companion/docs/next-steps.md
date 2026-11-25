@@ -5,7 +5,7 @@ set up a machine to work on it, and the work queue in order. Strategy is in
 [`roadmap.md`](roadmap.md), the milestone checklist in [`plan.md`](plan.md),
 risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 
-*Last updated 2026-11-17.*
+*Last updated 2026-11-25.*
 
 > **Back from the vacation pause on 2026-10-29.** The notes from the road are in
 > [#45](https://github.com/JHenzi/healthlog-ml/issues/45) (`gh issue view 45 --comments`); what's
@@ -22,6 +22,7 @@ risks in [`risks.md`](risks.md), rules in [`../CLAUDE.md`](../CLAUDE.md).
 | Companion DB | schema `companion`; role `companion` read-only on HealthLog; password in `.env` as `COMPANION_DB_PASSWORD` |
 | Data | 106 daily series since 2026-07-15, weather (Cincinnati, since 2026-07-15) and the almanac included; sleep since 2026-09-24 (that is all Apple Health has); 3 heart rate notifications, 6 ECGs; 0 symptoms, 0 medications; workouts since 2026-10-28 (an HAE Workouts automation with workout metrics and route data on) |
 | Insights | engine live and validated; 0 findings yet: 3,459 tests over 51 of 105 series on 2026-10-20 (R17 tests everything both ways). Sleep reaches 56 days (spread-over-days) in mid-November |
+| Trends and signals | built 2026-11-25 (roadmap B20): *Worth noticing* on the Overview (pins: sleep, exercise, steps, resting heart rate by default), the **Trends** page, *Pin to Overview* on each metric, an 11:00 push only when something new clearly changes |
 | Good-day score | live since 2026-10-20 (Overview card, `/good-days`); scored days need two of active, sleep, water and mood, so they grow with sleep and mood |
 
 ## 2. Your to-dos (no code)
@@ -265,6 +266,14 @@ issue goes into `build.py` first.
   base line be swapped too.
 
 ### 4.4 M5 follow-ups and M6
+
+- **Trends and signals, next** (roadmap B20, built 2026-11-25): several
+  signals at once (HRV down, resting heart rate up and sleep short together:
+  a multivariate score, with M7); a Sunday summary push ("this week against
+  your usual", folding in Momentum's workout summary); the day rating and
+  good-day score as default pins once they have 60+ days; a "since you
+  pinned it" marker on each pin's chart. Watch the push for a week or two: if
+  it's noisy, raise `Z_BAR`; if it never fires, check the pins' bar first.
 
 - **Timing against your day** (roadmap B19, §4f of
   [`reflection-and-prediction.md`](reflection-and-prediction.md)): piece 1

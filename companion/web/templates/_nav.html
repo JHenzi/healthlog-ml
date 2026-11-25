@@ -2,6 +2,7 @@
 <nav class="nav" aria-label="Sections">
   <div class="tabs">
     <a href="/"{% if here == "/" %} aria-current="page"{% endif %}>Overview</a>
+    <a href="/trends"{% if here.startswith("/trends") %} aria-current="page"{% endif %}>Trends</a>
     <a href="/insights"{% if here.startswith("/insights") or here.startswith("/good-days") %} aria-current="page"{% endif %}>Discovery</a>
     <a href="/review"{% if here.startswith("/review") or here.startswith("/reminders") %} aria-current="page"{% endif %}>Capture</a>
     <a href="/metrics"{% if here.startswith("/metrics") %} aria-current="page"{% endif %}>My Metrics</a>

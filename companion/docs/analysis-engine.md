@@ -260,6 +260,42 @@ How it has to behave:
   look-back for the evening, the weekly rating for the week), never the
   same rating. Methods: [`reflection-and-prediction.md`](reflection-and-prediction.md) §4c.
 
+## Signals: what is changing (Overview, Trends)
+
+`app/signals.py`, roadmap B20, reflection-and-prediction.md §4e. Not part of
+the discovery run: no pairs, nothing joins the FDR family. Each series on its
+own, against its own usual (the up to 60 days before the window, at least
+21):
+
+- **Trend**: the last 14 days (10 recorded). The window and the usual are
+  turned into rank-normal scores together (Blom), so a skewed series can't
+  fake a change; the score is the difference in means over its standard
+  error, with each side's days discounted for carry-over (the exact AR(1)
+  effective size, lag-1 correlation from the usual with Kendall's small-sample
+  correction). Clear when |z| ≥ 3.5 and the shift is at least half a usual
+  day-to-day spread (the effect floor).
+- **Right now**: each of the last 3 days recorded and beyond the usual's 5th
+  or 95th percentile, all on one side, and |z| ≥ 3.0 on the same score, so a
+  slow carried-over drift doesn't pass for a sudden change.
+- **Gap**: nothing for 3 days from a series that arrived on 27+ of the 30
+  days before.
+- **Pins** (series you chose): the same score on the last 7 and 14 days with
+  a gentler bar, |z| ≥ 2.0: a handful you watch, not a search across 150.
+
+The Overview shows at most four, the strongest per family, so sleep total
+and deep sleep don't tell one story twice. The wording is up and down only
+(owner, 2026-11-25): direction is measured, which way is good is not
+(R17). The highest or lowest two weeks on record is context, not a test.
+
+**Validation** (`tests/stats/test_signals_validation.py`): on white,
+carried-over (φ 0.5, 0.8), skewed (log-normal) and gappy noise, at most 1.5%
+of series fire on a given day; the pin bar fires on at most 10% of
+carried-over noise; a 2.5-spread drop over two weeks is found (≥ 80%), as is
+a 4-spread jump over three days; a pinned series shows a 1.2-spread drop in
+≥ 70%. The first version (plain means, a z-bar of 3) failed the skewed and
+carried-over checks at 2–4%; the rank scores, the exact effective size and
+the higher bar came from that.
+
 ## Validation (tests/stats)
 
 Seeded synthetic data, 100 days. The suite runs 20 seeds per check on every

@@ -196,6 +196,7 @@ def main(out: str) -> None:
         )
         routes = {
             "overview": "/",
+            "trends": "/trends",
             "good-days": "/good-days",
             "discover": "/insights",
             "evidence": f"/insights/{first}",

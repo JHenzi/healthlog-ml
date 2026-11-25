@@ -275,6 +275,15 @@ not short).
 
 ## 4e. Warnings: "something is changing"
 
+> **Built 2026-11-25** (roadmap B20, `app/signals.py`): a trend (the last two
+> weeks against your usual, with the highest or lowest two weeks on record for
+> context), out of your range (each of the last 3 days beyond your 5th/95th
+> percentile), drift in timing (the same tests on the §4d timing features, so
+> "bedtime later" needs no special case) and gaps. Words are up and down only.
+> Shown on the Overview (*Worth noticing*) and the Trends page, with a push at
+> most twice a week. Not built: several at once (multivariate, with M7) and
+> goals slipping (needs the intention trackers of §4c).
+
 Instead of a readiness number, callouts when something departs from your
 own normal. Another ML angle, alongside the analysis:
 
@@ -387,7 +396,8 @@ Answered 2026-10-30 (§0). Still open:
 2. Readiness: shelved (§4b). Define it from data later, or rely on Apple?
 3. Intentions (§4c): a morning "what do you mean to do today?" as an
    optional tracker?
-4. Which warnings (§4e) are wanted first?
+4. ~~Which warnings (§4e) are wanted first?~~ Answered 2026-11-25: trends and
+   "right now", pinned on the Overview, with notifications (roadmap B20).
 
 ## References
 

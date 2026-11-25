@@ -32,13 +32,13 @@ data. It has no built-in theory of what matters (rule R17): everything is
 compared with everything, in both directions, and only what clears a strict
 false-discovery bar is shown.
 
-The app has five sections: **Overview**, **Discovery**, **Capture**,
-**My Metrics** and **Trackers**.
+The app has six sections: **Overview**, **Trends**, **Discovery**,
+**Capture**, **My Metrics** and **Trackers**.
 
 ### Overview: your day at a glance
 
-The Overview runs top to bottom: your ratings, yesterday against your usual,
-yesterday's score, Momentum, then today's tags and diary.
+The Overview runs top to bottom: your ratings, *Worth noticing*, yesterday
+against your usual, yesterday's score, Momentum, then today's tags and diary.
 
 - **Your day**: the built-in day rating. "How was today?" (1–10) in the
   evening, and a blind "Looking back, how was yesterday?" the next morning:
@@ -46,6 +46,18 @@ yesterday's score, Momentum, then today's tags and diary.
   hidden (here, in Capture and on Good days), so neither sways the answer.
   Nothing to set up. Both ratings and the change between them become daily
   series like any other.
+- **Worth noticing** (new): the answer to "am I doing better or worse, and
+  is anything changing right now?" Your **pinned** series (sleep, exercise,
+  steps and resting heart rate until you choose your own) each show this
+  week against your usual, how far it moved, whether that's *a clear change*
+  or *within your usual ups and downs*, the last two weeks when they've
+  clearly moved, and a 26-week chart of weekly averages. Below them,
+  *Changing elsewhere*: anything else that has clearly moved lately, at most
+  four, one per kind of series, each with the days behind it, plus a series
+  that usually arrives daily and has stopped (the Watch off, a stalled
+  sync). Arrows say **up** or **down**, never better or worse: which way is
+  good is yours to judge. Hidden until you've looked back on yesterday, like
+  the score. See *Trends* below.
 - **Yesterday, compared with your usual**: tiles for last night's sleep and
   yesterday's HRV, resting heart rate, steps, stress, energy reserve and mood,
   each with ▲/▼ against your 30-day average and the number of days behind it.
@@ -68,6 +80,31 @@ yesterday's score, Momentum, then today's tags and diary.
 
 <p align="center"><img src="docs/screenshots/overview-score.png" width="520" alt="Yesterday's score card: 53 out of 100, with bars for its four parts: active 73, sleep 14, water 89, mood 36. Higher than 51% of 55 scored days."></p>
 <p align="center"><sub>Yesterday's score on the Overview: each part ranked against your own history.</sub></p>
+
+### Trends: the long view, and what to watch
+
+"Am I doing better or worse? Was I better before, and slipping now?" The
+Trends page answers it per series, against your own history only:
+
+- **Pinned** series, large: this week against your usual (the 60 days
+  before), the last two weeks, a 26-week chart of weekly averages, and your
+  highest and lowest two weeks on record, so "you were at 7 h, now 5 h 40"
+  is one glance.
+- **Everything, last 4 weeks**: every series you have, the last four weeks
+  against your usual before them, clear changes first. **Pin** or **Unpin**
+  any of them (up to eight); each metric's own page has *Pin to Overview*
+  too.
+
+How "clear" is decided (`app/signals.py`, measured, never presumed, R17):
+each window is compared with your usual on rank scores (so a long tail, like
+a 20,000-step day, can't fake a change), allowing for how much one day
+carries into the next. The search across everything uses a strict bar, held
+to about 1% of series on pure noise by a validation suite
+(`tests/stats/test_signals_validation.py`); a pinned series, one you chose
+to watch, uses a gentler one (about 2 standard errors). "Right now" means
+each of the last three days beyond your own 5th or 95th percentile, all on
+the same side. Weather and the almanac aren't listed: they describe the
+place, not you (Discovery still tests them).
 
 ### Discovery: what goes together in your data
 
@@ -123,8 +160,10 @@ yesterday's score, Momentum, then today's tags and diary.
   unlogged count or yes/no you've used before counts as zero. A day with
   nothing logged at all stays *unknown*, never "none" (R7: missing is not
   zero).
-- **Reminders** (optional): a push at 10:00 for the look back, at 13:00 to
-  log your mood in Apple Health, and at 19:00 for the rating, skipped when already answered. Times are adjustable;
+- **Reminders** (optional): a push at 10:00 for the look back, at 11:00
+  with what's *worth noticing* (only when something new has clearly changed,
+  at most twice a week), at 13:00 to log your mood in Apple Health, and at
+  19:00 for the rating, skipped when already answered. Times are adjustable;
   **Send a test** checks the whole path.
 
 ### My Metrics: every series, readable
@@ -440,6 +479,15 @@ A nudge at 10:00 to look back on yesterday, at 13:00 to log your mood, and at
 19:00 to rate today (change the times, or turn one off, on the **Reminders**
 page, linked from *Your day*). A reminder whose question you've already
 answered isn't sent.
+
+**Worth noticing** (11:00) is different: it's sent only when a pinned series
+or anything else has clearly changed and you haven't been told about that
+change in the last 7 days, and never more than twice in 7 days. It names the
+change ("Sleep (total): Last 2 weeks 5 h 47 min, down 42 min on your usual.")
+and opens the Overview's card. It carries a health figure, so it shows on the
+lock screen unless iOS hides previews; it's encrypted for your phone like
+every reminder. Turn it off on the Reminders page if you'd rather look
+yourself.
 
 The mood reminder opens the **Mood** page: an **Open Health** button and the
 steps to log a *State of Mind* (Health → Browse → Mental Wellbeing → State of
