@@ -6,7 +6,12 @@
 <section class="card">
   <p class="kicker"><a href="/metrics">‹ My Metrics</a></p>
   <p><span class="tag{% if provenance == 'Logged' %} tag-accent{% endif %}">{{ provenance }}</span> <span class="tag tag-quiet">{{ d.source }}</span></p>
-  <h1>{{ d.label }}</h1>
+  <div class="row"><h1>{{ d.label }}</h1>
+  <form method="post" action="/pins/{{ d.feature }}" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="back" value="/metrics/{{ d.feature }}">
+    <button type="submit" class="secondary small">{{ "Unpin from Overview" if pinned else "Pin to Overview" }}</button>
+  </form></div>
   <p class="muted">{{ s.days }} days of data{% if d.unit %} · {{ d.unit }}{% endif %}</p>
   {% if not counted %}
   {% set b = band(g.latest_rank) %}

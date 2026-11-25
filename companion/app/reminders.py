@@ -1,5 +1,6 @@
-"""Reminders: a nudge at 10:00 to look back on yesterday, at 13:00 to log your mood in Apple Health, and at 19:00
-to rate today (all times are settings).
+"""Reminders: a nudge at 10:00 to look back on yesterday, at 11:00 with what's worth noticing (only when something
+new clears the bar, app/signals.py), at 13:00 to log your mood in Apple Health, and at 19:00 to rate today (all
+times are settings).
 
 Every minute the jobs process checks whether a reminder is due: its time has passed today, it hasn't gone out
 today, and it's at most ``LATE_LIMIT`` late (after downtime a 10:00 reminder isn't sent at 15:00). A reminder
@@ -16,7 +17,7 @@ from dataclasses import dataclass
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from . import capture, dayrating, push
+from . import capture, dayrating, push, signals
 from .auth import now_utc
 from .config import Settings
 from .models import PushSubscription, Setting, StateOfMindEntry, Tracker
@@ -41,6 +42,14 @@ class Kind:
 
 KINDS = (
     Kind("morning", "Morning", dt.time(10, 0), "Looking back", "How was yesterday, now that you've slept on it?"),
+    Kind(
+        "signals",
+        "Worth noticing",
+        dt.time(11, 0),
+        "Worth noticing",
+        "Sent only when something has clearly changed, at most twice a week.",
+        "/#noticing",
+    ),
     Kind(
         "mood",
         "Mood",
@@ -159,7 +168,14 @@ def run_due(db: Session, settings: Settings, now: dt.datetime) -> list[str]:
     today = current_day(now, settings.zone, settings.day_boundary)
     for key in handled:
         kind = BY_KEY[key]
-        if already_answered(db, key, today, settings):
+        if key == "signals":
+            body = signals.push_body(db, today)
+            if body is None:
+                log.info("reminder signals: nothing new worth noticing, skipped")
+            else:
+                sealed = send(db, settings, kind.title, body, kind.url)
+                log.info("reminder signals: sealed for %d device(s)", sealed)
+        elif already_answered(db, key, today, settings):
             log.info("reminder %s: already answered, skipped", key)
         else:
             sealed = send(db, settings, kind.title, kind.body, kind.url)

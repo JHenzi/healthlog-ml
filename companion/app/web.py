@@ -27,6 +27,7 @@ from . import (
     metrics_view,
     momentum,
     pwa,
+    signals,
     today,
     upstream,
 )
@@ -49,6 +50,8 @@ templates.env.globals["num"] = metrics_view.num
 templates.env.globals["is_clock"] = clock.is_clock
 templates.env.globals["shift_text"] = clock.shift_text
 templates.env.globals["static_v"] = pwa.static_version()
+templates.env.globals["vfmt"] = signals.fmt
+templates.env.globals["icon_for"] = glance.icon_for
 
 router = APIRouter()
 
@@ -151,6 +154,7 @@ def today_page(
             "goodday": goodday.load_view(db, day, blind=blind),
             "blind": blind,
             "momentum": momentum.load_momentum(db, day),
+            "noticing": signals.load_noticing(db, day),
             "freshness": freshness.load(db, dt.datetime.now(dt.UTC)),
             "zone": settings.zone,
             "error": error[:200],
@@ -326,6 +330,7 @@ def metric_detail(
         request,
         "metric_detail.html",
         {
+            "pinned": feature in signals.load_pins(db),
             "fluids": fluids,
             "fluid_links": fluid_links,
             "d": definition,

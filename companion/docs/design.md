@@ -25,6 +25,7 @@ Claude Design project "Personal analytics · Mobile wireframes · Mid-fi · v1"
 | Wireframe | Page | State |
 |---|---|---|
 | 1a Overview | `/` | built: coverage strip, "worth exploring", "worth noting" (streaks, records; `app/highlights.py`), baseline sentences, quick add |
+| Trends (new, B20) | `/trends`, card on `/` | built 2026-11-25 (`_noticing.html`): pins as tiles (this week, ▲/▼ only when it's a clear change, a 26-week weekly-average line, "a clear change" or "within your usual ups and downs", usual and days); *Worth noticing* on the Overview under *Your day*, hidden until the look-back; on Trends, pins large with highest and lowest two weeks, then every series' last 4 weeks with Pin/Unpin. Up and down only: colour marks a clear change, never good or bad |
 | 1b Discoveries | `/insights` | built, with the likely-range bar (2026-10-19); a **These clump** card when 3+ day tags (or 2 habitual tags and an above-normal series) share a series (2026-11-10); *since* dates and a quieter **Earlier discoveries** list for findings that dropped out (2026-11-04, B17) |
 | 1c Evidence | `/insights/{id}` | built: finding, method, effect, likely range, days, effective days, p. Raw-observation plot and "things that could explain this" to come |
 | 2a Daily log | `/review` | built: per-type controls, coloured ratings, tag chips, reviewed state. "Not recorded" toggling to come |

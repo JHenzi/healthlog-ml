@@ -45,7 +45,13 @@ milestone.
   reminder for your phone (RFC 8291 encryption, a VAPID signature) and
   leaves it in a folder. The courier, built from the collector's image with
   the same isolation, posts it to the phone's push service and nothing else.
-  The text is a fixed prompt ("How was today?"), never your values. Apple
+  The text is a fixed prompt ("How was today?"), except **Worth noticing**
+  (since 2026-11-25), which names one change ("Sleep (total): Last 2 weeks
+  5 h 47 min, down 42 min on your usual.") and is sent only when something
+  has clearly changed. It's encrypted for your device like the rest, so the
+  push service can't read it, but the phone can show it on the lock screen
+  (iOS: Settings → Notifications → Companion → Show Previews → When
+  Unlocked), and it can be turned off on the Reminders page. Apple
   (or Google, Mozilla, Microsoft for other browsers) learns only that a
   message went to your device, and when. Only those services' hosts are
   accepted, on subscribing and in the courier; redirects aren't followed;

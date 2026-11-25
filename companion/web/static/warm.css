@@ -159,3 +159,8 @@ ul.plain { list-style: none; margin: 0 0 var(--space-3); padding: 0; }
 ul.plain li { padding: var(--space-1) 0; border-bottom: 1px solid var(--color-divider); font-size: 14px; }
 a.brand { color: var(--color-accent-strong); }
 @media (max-width: 480px) { .brand { font-size: 17px; } }
+
+/* — pins (worth noticing, trends) — */
+.pin { border-radius: var(--radius-sm); background: var(--color-bg); border-color: var(--color-hairline); }
+.pin.dir-up, .pin.dir-down { background: var(--color-accent-tint); border-color: transparent; }
+.pin .tile-value strong { font-family: var(--font-display); font-weight: 600; }
