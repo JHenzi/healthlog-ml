@@ -115,6 +115,11 @@ English everywhere; ruff (line length 120, plus `DTZ` for the companion);
 pytest against a real TimescaleDB; Alembic-only schema; feature branches
 merged into the fork's `main`; docs updated in the same change.
 
+The public showcase page is henzis.com/health-companion (an Astro site). A major
+feature, a change to the method or its claims, a discovery worth telling, or a
+stale number on that page → a `pending` entry in
+[`site/updates.md`](site/updates.md) in the same PR (see [`site/README.md`](site/README.md)).
+
 ## Commands
 
 Handoff, setup and the work queue: [`docs/next-steps.md`](docs/next-steps.md).
