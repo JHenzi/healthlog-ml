@@ -26,7 +26,7 @@ Last refreshed: _(first publish, before this folder existed)_
 | Claim | Value on page | Where to check |
 |---|---|---|
 | Series compared | 106 | analysis run output |
-| Automated tests | 342 | `scripts/test.sh` summary |
+| Automated tests | 342 | `companion/scripts/test.sh` summary |
 | Upstream PRs merged | 6 | github.com/anym001/healthlog PRs by JHenzi |
 | Install time | ~20 minutes | README quick start |
 | License | AGPL-3.0 | `LICENSE` |

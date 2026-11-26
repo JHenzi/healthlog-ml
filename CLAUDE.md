@@ -91,9 +91,6 @@ When a change touches the **public surface**, update docs in the *same* PR:
   (and `backend/config.example.yaml`);
 - a data-model, ingestion, or analysis-method change → `docs/ARCHITECTURE.md`
   (training-load specifics → `docs/workout-analysis.md`).
-- a major feature, a change to the method or its claims, a discovery worth
-  telling, or a stale number on the public page → a `pending` entry in
-  `site/health-companion/updates.md` (the henzis.com showcase; see its README).
 
 Code cross-references the design docs by section anchor (e.g. `ARCHITECTURE.md
 §4.8`); if you renumber a section, fix the referrers (`grep -rn "ARCHITECTURE"
